@@ -21,10 +21,10 @@ include(":app")
 include(":geoman")
 
 // Include maplibre-geoman-android app module as :geoman
-// Use local.properties geoman.dir if set, otherwise default to sibling path
+// Use local.properties geoman.dir if set, otherwise default to bundled copy
 val geomanDir = settings.extensions.extraProperties.properties["geoman.dir"]?.toString()
     ?: providers.gradleProperty("geoman.dir").orNull
     ?: System.getProperty("geoman.dir")
     ?: System.getenv("GEOMAN_DIR")
-    ?: "../maplibre-geoman-android/app"
+    ?: "maplibre-geoman-android/app"
 project(":geoman").projectDir = file(geomanDir)
