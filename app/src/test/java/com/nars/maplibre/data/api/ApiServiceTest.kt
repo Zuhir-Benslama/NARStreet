@@ -130,7 +130,7 @@ class ApiServiceTest {
         engine = MockEngine { _ ->
             respond(
                 content = """[
-                    {"id": "1", "type": "road", "layer": "street", "data": {"lat": 36.0, "lng": 3.0}}
+                    {"id": "1", "type": "road", "geometry": {"type": "Point", "coordinates": [3.0, 36.0]}, "properties": {"name": "Test Road"}}
                 ]""",
                 status = HttpStatusCode.OK
             )
@@ -155,7 +155,7 @@ class ApiServiceTest {
         engine = MockEngine { _ ->
             respond(
                 content = """{"features": [
-                    {"id": "2", "type": "house_entrance", "layer": "main_entrance", "data": {"lat": 36.0, "lng": 3.0}}
+                    {"id": "2", "type": "house_entrance", "geometry": {"type": "Point", "coordinates": [3.0, 36.0]}, "properties": {"name": "Test Entrance"}}
                 ]}""",
                 status = HttpStatusCode.OK
             )
