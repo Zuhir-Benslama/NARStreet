@@ -8,6 +8,11 @@ import com.nars.maplibre.data.model.Phases
 import com.nars.maplibre.utils.NarsLogger
 import org.maplibre.android.maps.MapLibreMap
 
+val GEOMAN_SOURCE_NAMES = listOf(
+    GeomanCoreConstants.SOURCE_MARKERS, GeomanCoreConstants.SOURCE_LINES,
+    GeomanCoreConstants.SOURCE_POLYGONS, GeomanCoreConstants.SOURCE_CIRCLES
+)
+
 class FeatureDisplayManager(
     private val geoman: Geoman,
     private val featureRenderer: FeatureRenderer,
@@ -77,11 +82,7 @@ class FeatureDisplayManager(
     @Suppress("TooGenericExceptionCaught")
     fun removeFeature(featureId: String) {
         displayedFeatureIds.remove(featureId)
-        val geomanSourceNames = listOf(
-            GeomanCoreConstants.SOURCE_MARKERS, GeomanCoreConstants.SOURCE_LINES,
-            GeomanCoreConstants.SOURCE_POLYGONS, GeomanCoreConstants.SOURCE_CIRCLES
-        )
-        for (sourceName in geomanSourceNames) {
+        for (sourceName in GEOMAN_SOURCE_NAMES) {
             val featureData = geoman.features.getFeature(sourceName, featureId)
             if (featureData != null) {
                 geoman.features.removeFeature(sourceName, featureId)

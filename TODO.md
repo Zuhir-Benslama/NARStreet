@@ -28,3 +28,23 @@
 - [x] Cover remaining ViewModel edge cases (sequential undo/redo, concurrent phase changes)
 - [x] Fix duplicate operations in ViewModel.undo() — Create/Update paths no longer re-execute the operation already done by FeatureStore.executeUndo()
 - [x] Enable HTTPS in nginx for meaningful HSTS — HSTS annotations added to frontend ingress (`max-age=31536000`, `includeSubdomains`); `upgrade-insecure-requests` added to CSP in nginx config
+
+---
+
+## Remaining Issues (Found June 2026)
+
+### P1 — Fix Immediately
+- [ ] **P1 — Remove 10 stale detekt baseline entries**: References to deleted/fixed code in `app/detekt-baseline.xml` (ApiUtils.kt, ApiUtilsTest.kt, FeatureRenderer.kt, NarsGeoman.kt)
+- [ ] **P1 — Extract 22 hardcoded validation strings**: `Validation.kt` lines 68-242 embed user-visible error messages as string literals instead of `R.string.*` resources
+- [ ] **P1 — Extract hardcoded strings in MapViewModel.kt**: Lines 98, 103, 106, 109 (`"Nothing to undo"`, `"Restored:..."`, `"Removed:..."`) should use string resources
+- [ ] **P1 — Fix unsafe casts**: `Theme.kt:121` (`(view.context as Activity)` — crashes in non-Activity contexts); `GeomanEventHandler.kt:187` (`featureData.geometry as Polygon` — unchecked cast)
+- [ ] **P1 — Fix display bug in InfoPanel.kt:165**: `phase.label.take(3)` renders resource key string (e.g. `"phase_roads_label"` → `"pha"`) instead of display name; use `Phases.getDisplayLabel(phase, context)`
+
+### P2 — Address Soon
+- [ ] **P2 — Use Config constants in NarsMap.kt**: Lines 87-90 re-hardcode `28.0`, `2.5`, `5.0` instead of using existing `Config.MAP_DEFAULT_LAT/LNG/ZOOM/BEARING/PITCH`
+- [ ] **P2 — Extract duplicate source-name list**: `[SOURCE_MARKERS, SOURCE_LINES, SOURCE_POLYGONS, SOURCE_CIRCLES]` repeated across `NarsGeoman.kt` (x2), `FeatureDisplayManager.kt`, `GeomanEventHandler.kt` — extract to shared constant
+- [ ] **P2 — Reduce bare `catch (e: Exception)` in LabelAndMarkerManager/FeatureDisplayManager**: 10 instances across `LabelAndMarkerManager.kt` (8) and `FeatureDisplayManager.kt` (2) — catch more specific exceptions where possible
+
+### P3 — Nice-to-have
+- [ ] **P3 — Remove unused `@Suppress("UNUSED_PARAMETER")` in NarsMap.kt:112**: Remove the unused `context` parameter instead of suppressing
+- [ ] **P3 — Fix inefficient `getOrPut` in FeatureStore.kt:46**: Double map write (`getOrPut` then `currentMap[key] = ...`) — use `toMutableList()` instead

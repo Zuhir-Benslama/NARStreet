@@ -51,7 +51,7 @@ fun FeatureValidationModal(
     onDismiss: () -> Unit
 ) {
     var props by remember { mutableStateOf(feature.properties) }
-    var validationErrors by remember { mutableStateOf<Map<String, String>>(emptyMap()) }
+    var validationErrors by remember { mutableStateOf<Map<String, Int>>(emptyMap()) }
 
     Dialog(onDismissRequest = onDismiss) {
         Card(
@@ -139,9 +139,9 @@ fun FeatureValidationModal(
 
                 Spacer(modifier = Modifier.height(20.dp))
 
-                validationErrors.entries.forEach { (field, msg) ->
+                validationErrors.entries.forEach { (field, msgResId) ->
                     Text(
-                        text = "$field: $msg",
+                        text = "$field: ${stringResource(msgResId)}",
                         fontSize = 12.sp,
                         color = MaterialTheme.colorScheme.error,
                         modifier = Modifier.fillMaxWidth()

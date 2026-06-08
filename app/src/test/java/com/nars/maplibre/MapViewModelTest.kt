@@ -1,5 +1,7 @@
 package com.nars.maplibre
 
+import android.app.Application
+import com.nars.maplibre.R
 import com.nars.maplibre.data.api.ApiService
 import com.nars.maplibre.data.model.BaseLayerType
 import com.nars.maplibre.data.model.FeatureProperties
@@ -34,6 +36,7 @@ import org.junit.Test
 @OptIn(ExperimentalCoroutinesApi::class)
 class MapViewModelTest {
 
+    private val application = mockk<Application>(relaxed = true)
     private val featureStore = mockk<FeatureStore>(relaxed = true)
     private val appPreferences = mockk<AppPreferences>(relaxed = true)
     private val apiService = mockk<ApiService>(relaxed = true)
@@ -53,6 +56,15 @@ class MapViewModelTest {
         every { featureStore.referenceRoadDbId } returns referenceRoadFlow
         every { featureStore.getFeaturesByPhase(any()) } returns emptyList()
         every { appPreferences.baseLayer } returns BaseLayerType.SATELLITE
+        every { application.getString(R.string.map_nothing_undo) } returns "Nothing to undo"
+        every { application.getString(R.string.undo_restored_format, any()) } answers {
+            val args = arg<Any>(1)
+            "Restored: ${(args as Array<*>)[0]}"
+        }
+        every { application.getString(R.string.undo_removed_format, any()) } answers {
+            val args = arg<Any>(1)
+            "Removed: ${(args as Array<*>)[0]}"
+        }
     }
 
     @After
@@ -62,7 +74,7 @@ class MapViewModelTest {
     }
 
     private fun createViewModel(): MapViewModel {
-        val vm = MapViewModel(featureStore, appPreferences, apiService)
+        val vm = MapViewModel(application, featureStore, appPreferences, apiService)
         testDispatcher.scheduler.advanceUntilIdle()
         return vm
     }
@@ -133,7 +145,7 @@ class MapViewModelTest {
     @Test
     fun `goToPreviousPhase goes back`() = runTest {
         currentPhaseFlow.value = Phases.ALL[1]
-        val vm = MapViewModel(featureStore, appPreferences, apiService)
+        val vm = MapViewModel(application, featureStore, appPreferences, apiService)
         advanceUntilIdle()
 
         val result = vm.goToPreviousPhase()

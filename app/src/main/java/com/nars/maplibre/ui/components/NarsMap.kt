@@ -84,10 +84,10 @@ fun NarsMap(
 
                     // Set initial camera position (Algeria)
                     val cameraPosition = CameraPosition.Builder()
-                        .target(LatLng(28.0, 2.5))
-                        .zoom(5.0)
-                        .bearing(0.0)
-                        .tilt(0.0)
+                        .target(LatLng(Config.MAP_DEFAULT_LAT, Config.MAP_DEFAULT_LNG))
+                        .zoom(Config.MAP_DEFAULT_ZOOM)
+                        .bearing(Config.MAP_DEFAULT_BEARING)
+                        .tilt(Config.MAP_DEFAULT_PITCH)
                         .build()
                     mapLibreMap.setCameraPosition(cameraPosition)
 

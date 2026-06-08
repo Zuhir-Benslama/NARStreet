@@ -207,7 +207,7 @@ class ApiService(
         }
     }
 
-    suspend fun createEntranceFromInspection(roadId: String, data: String, label: String = "Entrance (field worker)"): Result<String> {
+    suspend fun createEntranceFromInspection(roadId: String, label: String = "Entrance (field worker)"): Result<String> {
         return try {
             val requestBody = buildJsonObject {
                 put("road_id", roadId)

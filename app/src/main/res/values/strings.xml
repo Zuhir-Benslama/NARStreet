@@ -189,4 +189,35 @@
     <string name="phase_key_roads">Roads</string>
     <string name="phase_key_entrances">Entrances</string>
     <string name="phase_key_panels">Panels</string>
+
+    <!-- Validation error messages -->
+    <string name="validation_road_name_required">Road name is required</string>
+    <string name="validation_road_type_required">Road type is required</string>
+    <string name="validation_road_traffic_required">Road traffic level is required</string>
+    <string name="validation_trad_activity_required">Traditional activity level is required</string>
+    <string name="validation_num_lanes_required">Number of lanes is required</string>
+    <string name="validation_has_median_required">Median presence is required</string>
+    <string name="validation_has_vegetation_required">Vegetation presence is required</string>
+    <string name="validation_is_dead_end_required">Dead-end status is required</string>
+    <string name="validation_has_sidewalk_required">Sidewalk presence is required</string>
+    <string name="validation_main_entrance_road_required">Main entrance must be assigned to a road</string>
+    <string name="validation_side_required">Side (left/right) is required</string>
+    <string name="validation_street_name_required">Street name is required</string>
+
+    <!-- Workflow validation messages -->
+    <string name="validation_entrance_not_found">Entrance not found</string>
+    <string name="validation_numbering_panel_not_found">Numbering panel not found</string>
+    <string name="validation_number_incorrect">Number is incorrect</string>
+    <string name="validation_numbering_panel_position_incorrect">Numbering panel position is incorrect</string>
+    <string name="validation_naming_panel_location_not_found">Naming panel location not found</string>
+    <string name="validation_naming_panel_not_found">Naming panel not found</string>
+    <string name="validation_street_name_incorrect">Street name is incorrect</string>
+    <string name="validation_naming_panel_position_incorrect">Naming panel position is incorrect</string>
+
+    <!-- Dynamic validation -->
+    <string name="validation_road_min_length">Road must be at least %d meters long</string>
+
+    <!-- Undo/Redo messages -->
+    <string name="undo_restored_format">Restored: %s</string>
+    <string name="undo_removed_format">Removed: %s</string>
 </resources>

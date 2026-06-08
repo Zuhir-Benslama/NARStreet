@@ -1,6 +1,7 @@
 package com.nars.maplibre
 
-import androidx.lifecycle.ViewModel
+import android.app.Application
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.nars.maplibre.data.api.ApiService
 import com.nars.maplibre.data.model.BaseLayerType
@@ -20,10 +21,11 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 class MapViewModel(
+    application: Application,
     val featureStore: FeatureStore,
     private val appPreferences: AppPreferences,
     private val apiService: ApiService
-) : ViewModel() {
+) : AndroidViewModel(application) {
 
     private val phaseNavigator = PhaseNavigator(featureStore)
 
@@ -94,19 +96,20 @@ class MapViewModel(
 
     fun undo(): Boolean {
         val action = featureStore.executeUndo()
+        val app = getApplication<Application>()
         if (action == null) {
-            showError("Nothing to undo")
+            showError(app.getString(R.string.map_nothing_undo))
             return false
         }
         when (action) {
             is UndoAction.Delete -> {
-                showSuccess("Restored: ${action.feature.properties.name}")
+                showSuccess(app.getString(R.string.undo_restored_format, action.feature.properties.name))
             }
             is UndoAction.Create -> {
-                showSuccess("Removed: ${action.feature.properties.name}")
+                showSuccess(app.getString(R.string.undo_removed_format, action.feature.properties.name))
             }
             is UndoAction.Update -> {
-                showSuccess("Restored: ${action.oldFeature.properties.name}")
+                showSuccess(app.getString(R.string.undo_restored_format, action.oldFeature.properties.name))
             }
         }
         return true

@@ -181,10 +181,12 @@ class GeomanEventHandler(
         val center = featureData.properties["center"] as? LngLat
         val radius = featureData.properties["radius"] as? Double
 
-        return if (center != null && radius != null) {
-            CircleGeometry(coordinates = listOf(center.longitude, center.latitude, radius))
-        } else if (featureData.geometry is Polygon) {
-            val polygon = featureData.geometry as Polygon
+        if (center != null && radius != null) {
+            return CircleGeometry(coordinates = listOf(center.longitude, center.latitude, radius))
+        }
+
+        val polygon = featureData.geometry as? Polygon
+        if (polygon != null) {
             val ring = polygon.getExteriorRing()
             if (ring.size >= 2) {
                 val sumLon = ring.sumOf { it.longitude }
@@ -196,13 +198,11 @@ class GeomanEventHandler(
                 val calcRadius = com.geoman.maplibre.geoman.utils.GeometryUtils.calculateDistance(
                     centerPoint, centerLngLat
                 )
-                CircleGeometry(coordinates = listOf(avgLon, avgLat, calcRadius))
-            } else {
-                CircleGeometry(coordinates = listOf(0.0, 0.0, 0.0))
+                return CircleGeometry(coordinates = listOf(avgLon, avgLat, calcRadius))
             }
-        } else {
-            CircleGeometry(coordinates = listOf(0.0, 0.0, 0.0))
         }
+
+        return CircleGeometry(coordinates = listOf(0.0, 0.0, 0.0))
     }
 
     fun extractGeometryFromFeatureData(featureData: FeatureData): Geometry {

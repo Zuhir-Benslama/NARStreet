@@ -43,7 +43,7 @@ class FeatureStore {
 
     fun addFeature(feature: NarsFeature, recordUndo: Boolean = false) {
         val currentMap = _featuresByPhase.value.toMutableMap()
-        val phaseFeatures = currentMap.getOrPut(feature.properties.phase) { emptyList() }
+        val phaseFeatures = currentMap.getOrDefault(feature.properties.phase, emptyList())
         currentMap[feature.properties.phase] = phaseFeatures + feature
         _featuresByPhase.value = currentMap
 
@@ -57,7 +57,7 @@ class FeatureStore {
     fun addFeatures(features: List<NarsFeature>) {
         val currentMap = _featuresByPhase.value.toMutableMap()
         features.forEach { feature ->
-            val phaseFeatures = currentMap.getOrPut(feature.properties.phase) { emptyList() }
+            val phaseFeatures = currentMap.getOrDefault(feature.properties.phase, emptyList())
             currentMap[feature.properties.phase] = phaseFeatures + feature
         }
         _featuresByPhase.value = currentMap

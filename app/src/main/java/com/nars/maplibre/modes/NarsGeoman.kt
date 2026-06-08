@@ -5,7 +5,6 @@ import com.nars.maplibre.utils.NarsLogger
 import com.geoman.maplibre.geoman.Geoman
 import com.geoman.maplibre.geoman.core.options.GmOptionsData
 import com.geoman.maplibre.geoman.core.options.SettingsOptions
-import com.geoman.maplibre.geoman.core.GeomanCoreConstants
 import com.geoman.maplibre.geoman.types.DrawModeName
 import com.geoman.maplibre.geoman.types.EditModeName
 import com.nars.maplibre.data.model.DrawType
@@ -141,13 +140,8 @@ class NarsGeoman internal constructor(
     fun commitEdits() {
         val originalFeature = eventHandler.getEditingFeature() ?: return
 
-        val sourceNames = listOf(
-            GeomanCoreConstants.SOURCE_MARKERS, GeomanCoreConstants.SOURCE_LINES,
-            GeomanCoreConstants.SOURCE_POLYGONS, GeomanCoreConstants.SOURCE_CIRCLES
-        )
-
         var updatedGeometry: com.nars.maplibre.data.model.Geometry? = null
-        for (sourceName in sourceNames) {
+        for (sourceName in GEOMAN_SOURCE_NAMES) {
             val featureData = geoman.features.getFeature(sourceName, originalFeature.id)
             if (featureData != null) {
                 updatedGeometry = eventHandler.extractGeometryFromFeatureData(featureData)
@@ -167,11 +161,7 @@ class NarsGeoman internal constructor(
 
     fun cancelEdits() {
         val featureId = eventHandler.getEditingFeatureId() ?: return
-        val sourceNames = listOf(
-            GeomanCoreConstants.SOURCE_MARKERS, GeomanCoreConstants.SOURCE_LINES,
-            GeomanCoreConstants.SOURCE_POLYGONS, GeomanCoreConstants.SOURCE_CIRCLES
-        )
-        for (sourceName in sourceNames) {
+        for (sourceName in GEOMAN_SOURCE_NAMES) {
             val featureData = geoman.features.getFeature(sourceName, featureId)
             if (featureData != null) {
                 geoman.features.removeFeature(sourceName, featureId)

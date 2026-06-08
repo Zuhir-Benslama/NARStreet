@@ -24,10 +24,12 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.platform.LocalContext
 import com.nars.maplibre.R
 import com.nars.maplibre.data.model.Phases
 import com.nars.maplibre.ui.theme.GlassBackground
-import com.nars.maplibre.ui.theme.GlassBorder
+import com.nars.maplibre.ui.theme.TextMuted
+import com.nars.maplibre.ui.theme.TextSecondary
 import com.nars.maplibre.ui.theme.TextPrimary
 import com.nars.maplibre.ui.theme.TextSecondary
 import com.nars.maplibre.ui.theme.TextMuted
@@ -162,7 +164,7 @@ fun CompactInfoPanel(
                             color = phaseColor
                         )
                         Text(
-                            text = phase.label.take(3),
+                            text = Phases.getDisplayLabel(phase, LocalContext.current).take(3),
                             fontSize = 9.sp,
                             color = TextMuted
                         )
