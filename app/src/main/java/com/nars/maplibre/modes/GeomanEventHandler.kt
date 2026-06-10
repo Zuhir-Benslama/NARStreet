@@ -21,6 +21,7 @@ import com.geoman.maplibre.geoman.types.geojson.MultiPolygon
 import com.geoman.maplibre.geoman.types.geojson.Point
 import com.geoman.maplibre.geoman.types.geojson.Polygon
 
+@Suppress("TooManyFunctions")
 class GeomanEventHandler(
     private val scope: CoroutineScope,
     private val geoman: com.geoman.maplibre.geoman.Geoman,

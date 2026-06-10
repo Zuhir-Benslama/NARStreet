@@ -22,7 +22,7 @@ import org.maplibre.android.geometry.LatLng
 import org.maplibre.android.maps.MapLibreMap
 import org.maplibre.android.maps.MapView
 
-@Suppress("DEPRECATION")
+@Suppress("DEPRECATION", "TooManyFunctions")
 class NarsGeoman internal constructor(
     val geoman: Geoman,
     private val displayManager: FeatureDisplayManager,

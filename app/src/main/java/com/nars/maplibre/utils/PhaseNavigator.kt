@@ -16,24 +16,17 @@ class PhaseNavigator(private val featureStore: FeatureStore) {
      */
     fun canAdvance(targetPhaseIndex: Int): String? {
         val currentPhase = featureStore.currentPhase.value ?: return "alert_no_phase"
-        val currentIndex = currentPhase.index
         val targetPhase = Phases.getByIndex(targetPhaseIndex) ?: return "alert_invalid_phase"
 
-        // Can only go forward
-        if (targetPhaseIndex <= currentIndex) return null
+        if (targetPhaseIndex <= currentPhase.index) return null
 
-        when (currentPhase.key) {
-            "roads" -> {
-                val roads = featureStore.getFeaturesByPhase("roads")
-                if (roads.isEmpty()) return "alert_at_least_one_road"
-            }
-            "houseEntrances" -> {
-                val entrances = featureStore.getFeaturesByPhase("houseEntrances")
-                if (entrances.isEmpty()) return "alert_at_least_one_entrance"
-            }
+        val roadsEmpty = featureStore.getFeaturesByPhase("roads").isEmpty()
+        val entrancesEmpty = featureStore.getFeaturesByPhase("houseEntrances").isEmpty()
+        return when (currentPhase.key) {
+            "roads" -> if (roadsEmpty) "alert_at_least_one_road" else null
+            "houseEntrances" -> if (entrancesEmpty) "alert_at_least_one_entrance" else null
+            else -> null
         }
-
-        return null
     }
 
     /**

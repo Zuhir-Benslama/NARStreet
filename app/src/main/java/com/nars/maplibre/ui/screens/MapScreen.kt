@@ -46,9 +46,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.nars.maplibre.MapViewModel
 import com.nars.maplibre.R
+import com.nars.maplibre.UiState
 import com.nars.maplibre.data.api.ApiService
 import com.nars.maplibre.data.api.SessionManager
+import com.nars.maplibre.data.model.BaseLayerType
 import com.nars.maplibre.data.model.NarsFeature
+import com.nars.maplibre.data.model.PhaseDefinition
 import com.nars.maplibre.data.model.Phases
 import com.nars.maplibre.ui.components.CompactInfoPanel
 import com.nars.maplibre.ui.components.FeatureValidationModal
@@ -57,6 +60,7 @@ import com.nars.maplibre.ui.components.ProfileMenu
 import com.nars.maplibre.ui.components.TileControl
 import com.nars.maplibre.ui.components.VerticalPhaseNav
 import com.nars.maplibre.ui.theme.GlassBackground
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import org.koin.androidx.compose.koinViewModel
 import org.koin.java.KoinJavaComponent.get
@@ -83,9 +87,6 @@ fun MapScreen(
     val drawingEnabled by viewModel.drawingEnabled.collectAsState()
     val editModeEnabled by viewModel.editModeEnabled.collectAsState()
 
-    var showFeatureModal by remember { mutableStateOf(false) }
-    var editingFeature by remember { mutableStateOf<NarsFeature?>(null) }
-
     val handlers = remember {
         MapScreenHandlers(viewModel, apiService, sessionManager, context, scope) { msg ->
             scope.launch { snackbarHostState.showSnackbar(msg) }
@@ -96,6 +97,36 @@ fun MapScreen(
         allFeatures.groupingBy { it.properties.phase }.eachCount()
     }
 
+    MapScreenEffects(viewModel, handlers, currentPhase, allFeatures, uiState, snackbarHostState)
+
+    MapScreenScaffold(
+        snackbarHostState = snackbarHostState,
+        viewModel = viewModel,
+        handlers = handlers,
+        sessionManager = sessionManager,
+        currentPhase = currentPhase,
+        allFeatures = allFeatures,
+        selectedFeature = selectedFeature,
+        baseLayer = baseLayer,
+        uiState = uiState,
+        drawingEnabled = drawingEnabled,
+        editModeEnabled = editModeEnabled,
+        featureCounts = featureCounts,
+        onNavigateToSettings = onNavigateToSettings,
+        onLogout = onLogout,
+        scope = scope
+    )
+}
+
+@Composable
+private fun MapScreenEffects(
+    viewModel: MapViewModel,
+    handlers: MapScreenHandlers,
+    currentPhase: PhaseDefinition?,
+    allFeatures: List<NarsFeature>,
+    uiState: UiState,
+    snackbarHostState: SnackbarHostState
+) {
     LaunchedEffect(uiState.errorMessage) {
         uiState.errorMessage?.let { snackbarHostState.showSnackbar(it); viewModel.clearError() }
     }
@@ -115,21 +146,166 @@ fun MapScreen(
             viewModel.setLoading(false)
         }
     }
+}
 
-    fun handleFeatureSave(feature: NarsFeature) {
-        val existing = editingFeature
-        if (existing != null && existing.dbId != null) {
-            viewModel.updateFeature(feature)
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun MapScreenScaffold(
+    snackbarHostState: SnackbarHostState,
+    viewModel: MapViewModel,
+    handlers: MapScreenHandlers,
+    sessionManager: SessionManager,
+    currentPhase: PhaseDefinition?,
+    allFeatures: List<NarsFeature>,
+    selectedFeature: NarsFeature?,
+    baseLayer: BaseLayerType,
+    uiState: UiState,
+    drawingEnabled: Boolean,
+    editModeEnabled: Boolean,
+    featureCounts: Map<String, Int>,
+    onNavigateToSettings: () -> Unit,
+    onLogout: () -> Unit,
+    scope: CoroutineScope
+) {
+    var showFeatureModal by remember { mutableStateOf(false) }
+    var editingFeature by remember { mutableStateOf<NarsFeature?>(null) }
+
+    MapScreenBody(
+        snackbarHostState = snackbarHostState,
+        viewModel = viewModel,
+        handlers = handlers,
+        sessionManager = sessionManager,
+        currentPhase = currentPhase,
+        allFeatures = allFeatures,
+        selectedFeature = selectedFeature,
+        baseLayer = baseLayer,
+        uiState = uiState,
+        drawingEnabled = drawingEnabled,
+        editModeEnabled = editModeEnabled,
+        featureCounts = featureCounts,
+        onNavigateToSettings = onNavigateToSettings,
+        onLogout = onLogout,
+        scope = scope,
+        showFeatureModal = showFeatureModal,
+        editingFeature = editingFeature,
+        onEditFeature = { feature -> editingFeature = feature; showFeatureModal = true },
+        onDismissModal = { showFeatureModal = false; editingFeature = null },
+        onSaveFeature = { feature ->
+            val existing = editingFeature
+            if (existing != null && existing.dbId != null) {
+                viewModel.updateFeature(feature)
+                handlers.narsGeoman?.commitEdits()
+                handlers.narsGeoman?.updateFeatureOnMap(feature)
+                handlers.updateFeature(feature)
+            } else if (existing != null) {
+                handlers.saveFeature(feature)
+            }
+            showFeatureModal = false
+            editingFeature = null
+        },
+        onSaveEdits = {
             handlers.narsGeoman?.commitEdits()
-            handlers.narsGeoman?.updateFeatureOnMap(feature)
-            handlers.updateFeature(feature)
-        } else if (existing != null) {
-            handlers.saveFeature(feature)
+            viewModel.clearSelection(); editingFeature = null
+        },
+        onCancelEdits = {
+            handlers.narsGeoman?.cancelEdits()
+            viewModel.clearSelection(); editingFeature = null
         }
-        showFeatureModal = false
-        editingFeature = null
-    }
+    )
+}
 
+
+@Composable
+private fun SelectedFeatureCardActions(
+    editModeEnabled: Boolean,
+    isCurrentlyEditing: Boolean,
+    onShowProperties: () -> Unit,
+    onEditGeometry: () -> Unit,
+    onSaveEdits: () -> Unit,
+    onCancelEdits: () -> Unit
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        if (editModeEnabled && isCurrentlyEditing) {
+            Button(
+                onClick = onSaveEdits,
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
+                modifier = Modifier.weight(1f)
+            ) { Icon(Icons.Default.Edit, contentDescription = null, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.width(4.dp)); Text(stringResource(R.string.map_save_geometry)) }
+            Button(
+                onClick = onCancelEdits,
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
+                modifier = Modifier.weight(1f)
+            ) { Text(stringResource(R.string.map_cancel)) }
+        } else {
+            Button(
+                onClick = onShowProperties,
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
+                modifier = Modifier.weight(1f)
+            ) { Text(stringResource(R.string.map_properties)) }
+            Button(
+                onClick = onEditGeometry,
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary),
+                modifier = Modifier.weight(1f)
+            ) { Icon(Icons.Default.Edit, contentDescription = null, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.width(4.dp)); Text(stringResource(R.string.map_edit_geometry)) }
+        }
+    }
+}
+
+@Composable
+private fun MapScreenFeatureSheet(
+    selectedFeature: NarsFeature?,
+    editModeEnabled: Boolean,
+    editingFeature: NarsFeature?,
+    onDismissFeature: () -> Unit,
+    onEditGeometry: () -> Unit,
+    onEditFeature: (NarsFeature) -> Unit,
+    onSaveEdits: () -> Unit,
+    onCancelEdits: () -> Unit
+) {
+    selectedFeature?.let { feature ->
+        SelectedFeatureCard(
+            feature = feature,
+            editModeEnabled = editModeEnabled,
+            isCurrentlyEditing = editingFeature?.id == feature.id,
+            onDismiss = onDismissFeature,
+            onEditGeometry = onEditGeometry,
+            onShowProperties = { onEditFeature(feature) },
+            onSaveEdits = onSaveEdits,
+            onCancelEdits = onCancelEdits
+        )
+    }
+}
+
+@Composable
+private fun MapScreenBody(
+    snackbarHostState: SnackbarHostState,
+    viewModel: MapViewModel,
+    handlers: MapScreenHandlers,
+    sessionManager: SessionManager,
+    currentPhase: PhaseDefinition?,
+    allFeatures: List<NarsFeature>,
+    selectedFeature: NarsFeature?,
+    baseLayer: BaseLayerType,
+    uiState: UiState,
+    drawingEnabled: Boolean,
+    editModeEnabled: Boolean,
+    featureCounts: Map<String, Int>,
+    onNavigateToSettings: () -> Unit,
+    onLogout: () -> Unit,
+    scope: CoroutineScope,
+    showFeatureModal: Boolean,
+    editingFeature: NarsFeature?,
+    onEditFeature: (NarsFeature) -> Unit,
+    onDismissModal: () -> Unit,
+    onSaveFeature: (NarsFeature) -> Unit,
+    onSaveEdits: () -> Unit,
+    onCancelEdits: () -> Unit
+) {
     Scaffold(
         snackbarHost = {
             SnackbarHost(hostState = snackbarHostState) { data ->
@@ -139,135 +315,207 @@ fun MapScreen(
             }
         }
     ) { paddingValues ->
+        MapScreenBoxContent(
+            paddingValues = paddingValues,
+            snackbarHostState = snackbarHostState,
+            viewModel = viewModel,
+            handlers = handlers,
+            sessionManager = sessionManager,
+            currentPhase = currentPhase,
+            allFeatures = allFeatures,
+            selectedFeature = selectedFeature,
+            baseLayer = baseLayer,
+            uiState = uiState,
+            drawingEnabled = drawingEnabled,
+            editModeEnabled = editModeEnabled,
+            featureCounts = featureCounts,
+            onNavigateToSettings = onNavigateToSettings,
+            onLogout = onLogout,
+            scope = scope,
+            showFeatureModal = showFeatureModal,
+            editingFeature = editingFeature,
+            onEditFeature = onEditFeature,
+            onDismissModal = onDismissModal,
+            onSaveFeature = onSaveFeature,
+            onSaveEdits = onSaveEdits,
+            onCancelEdits = onCancelEdits
+        )
+    }
+}
+
+@Composable
+private fun MapScreenBoxContent(
+    paddingValues: androidx.compose.foundation.layout.PaddingValues,
+    snackbarHostState: SnackbarHostState,
+    viewModel: MapViewModel,
+    handlers: MapScreenHandlers,
+    sessionManager: SessionManager,
+    currentPhase: PhaseDefinition?,
+    allFeatures: List<NarsFeature>,
+    selectedFeature: NarsFeature?,
+    baseLayer: BaseLayerType,
+    uiState: UiState,
+    drawingEnabled: Boolean,
+    editModeEnabled: Boolean,
+    featureCounts: Map<String, Int>,
+    onNavigateToSettings: () -> Unit,
+    onLogout: () -> Unit,
+    scope: CoroutineScope,
+    showFeatureModal: Boolean,
+    editingFeature: NarsFeature?,
+    onEditFeature: (NarsFeature) -> Unit,
+    onDismissModal: () -> Unit,
+    onSaveFeature: (NarsFeature) -> Unit,
+    onSaveEdits: () -> Unit,
+    onCancelEdits: () -> Unit
+) {
+    Box(
+        modifier = Modifier.fillMaxSize().background(GlassBackground).padding(paddingValues)
+    ) {
+        MapScreenMapOverlay(
+            viewModel = viewModel, handlers = handlers, drawingEnabled = drawingEnabled,
+            editModeEnabled = editModeEnabled, onEditFeature = onEditFeature
+        )
+        ProfileMenu(
+            user = sessionManager.getUser(), onSettingsClick = onNavigateToSettings,
+            onLogoutClick = { handlers.logout(onLogout) },
+            modifier = Modifier.align(Alignment.TopEnd).padding(end = 12.dp, top = 12.dp)
+        )
+        Box(Modifier.align(Alignment.CenterEnd).padding(end = 12.dp)) {
+            MapScreenSidePanel(
+                currentPhase = currentPhase, featureCounts = featureCounts,
+                baseLayer = baseLayer, viewModel = viewModel,
+                snackbarHostState = snackbarHostState, scope = scope
+            )
+        }
+        CompactInfoPanel(
+            featureCounts = featureCounts, totalFeatures = allFeatures.size,
+            modifier = Modifier.align(Alignment.BottomStart).padding(start = 12.dp, bottom = 12.dp).width(140.dp)
+        )
+        MapLoadingOverlay(isLoading = uiState.isLoading)
+        Box(Modifier.align(Alignment.BottomCenter).fillMaxWidth()) {
+            MapScreenFeatureSheet(
+                selectedFeature = selectedFeature, editModeEnabled = editModeEnabled,
+                editingFeature = editingFeature,
+                onDismissFeature = { viewModel.clearSelection() },
+                onEditGeometry = { handlers.toggleEditing(editModeEnabled) },
+                onEditFeature = onEditFeature, onSaveEdits = onSaveEdits,
+                onCancelEdits = onCancelEdits
+            )
+        }
+        val feature = editingFeature ?: return@Box
+        val phase = currentPhase ?: return@Box
+        if (showFeatureModal) {
+            FeatureValidationModal(
+                feature = feature, phase = phase,
+                onSave = onSaveFeature, onDismiss = onDismissModal
+            )
+        }
+    }
+}
+
+@Composable
+private fun MapScreenMapOverlay(
+    viewModel: MapViewModel,
+    handlers: MapScreenHandlers,
+    drawingEnabled: Boolean,
+    editModeEnabled: Boolean,
+    onEditFeature: (NarsFeature) -> Unit
+) {
+    NarsMap(
+        viewModel = viewModel,
+        onMapReady = { mv, map -> handlers.initializeNarsGeoman(mv, map) },
+        onMapClick = { latLng -> handlers.handleMapClick(latLng, drawingEnabled, editModeEnabled) },
+        onMapLongClick = { latLng ->
+            val clicked = handlers.handleMapLongClick(latLng)
+            if (clicked != null) { onEditFeature(clicked) }
+        },
+        shouldHandleClick = { !drawingEnabled && !editModeEnabled },
+        modifier = Modifier.fillMaxSize()
+    )
+}
+
+@Composable
+private fun MapScreenSidePanel(
+    currentPhase: PhaseDefinition?,
+    featureCounts: Map<String, Int>,
+    baseLayer: BaseLayerType,
+    viewModel: MapViewModel,
+    snackbarHostState: SnackbarHostState,
+    scope: CoroutineScope
+) {
+    val phaseChangedText = stringResource(R.string.map_phase_changed)
+    val cannotAdvanceText = stringResource(R.string.map_cannot_advance)
+    Column(
+        modifier = Modifier
+            .width(40.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        VerticalPhaseNav(
+            currentPhaseIndex = currentPhase?.let { Phases.getIndexByKey(it.key) } ?: 0,
+            phaseCounts = featureCounts,
+            onPhaseSelected = { phase ->
+                viewModel.setCurrentPhase(phase)?.let {
+                    scope.launch { snackbarHostState.showSnackbar("$phaseChangedText: ${phase.label}") }
+                } ?: scope.launch { snackbarHostState.showSnackbar(cannotAdvanceText) }
+            },
+            modifier = Modifier.width(40.dp)
+        )
+        TileControl(currentLayer = baseLayer, onLayerSelected = { viewModel.setBaseLayer(it) })
+    }
+}
+
+@Composable
+private fun MapLoadingOverlay(isLoading: Boolean) {
+    if (isLoading) {
         Box(
-            modifier = Modifier.fillMaxSize().background(GlassBackground).padding(paddingValues)
-        ) {
-            NarsMap(
-                viewModel = viewModel,
-                onMapReady = { mv, map ->
-                    handlers.initializeNarsGeoman(mv, map)
-                },
-                onMapClick = { latLng -> handlers.handleMapClick(latLng, drawingEnabled, editModeEnabled) },
-                onMapLongClick = { latLng ->
-                    val clicked = handlers.handleMapLongClick(latLng)
-                    if (clicked != null) { editingFeature = clicked; showFeatureModal = true }
-                },
-                shouldHandleClick = { !drawingEnabled && !editModeEnabled },
-                modifier = Modifier.fillMaxSize()
-            )
+            modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.3f)),
+            contentAlignment = Alignment.Center
+        ) { CircularProgressIndicator(color = MaterialTheme.colorScheme.primary) }
+    }
+}
 
-            ProfileMenu(
-                user = sessionManager.getUser(),
-                onSettingsClick = onNavigateToSettings,
-                onLogoutClick = { handlers.logout(onLogout) },
-                modifier = Modifier.align(Alignment.TopEnd).padding(end = 12.dp, top = 12.dp)
-            )
-
-            val phaseChangedText = stringResource(R.string.map_phase_changed)
-            val cannotAdvanceText = stringResource(R.string.map_cannot_advance)
-            Column(
-                modifier = Modifier.align(Alignment.CenterEnd).padding(end = 12.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(12.dp)
+@Composable
+private fun SelectedFeatureCard(
+    feature: NarsFeature,
+    editModeEnabled: Boolean,
+    isCurrentlyEditing: Boolean,
+    onDismiss: () -> Unit,
+    onEditGeometry: () -> Unit,
+    onShowProperties: () -> Unit,
+    onSaveEdits: () -> Unit,
+    onCancelEdits: () -> Unit
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth().padding(16.dp),
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(containerColor = GlassBackground.copy(alpha = 0.9f)),
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+    ) {
+        Column(modifier = Modifier.fillMaxWidth().padding(12.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                VerticalPhaseNav(
-                    currentPhaseIndex = currentPhase?.let { Phases.getIndexByKey(it.key) } ?: 0,
-                    phaseCounts = featureCounts,
-                    onPhaseSelected = { phase ->
-                        viewModel.setCurrentPhase(phase)?.let {
-                            scope.launch { snackbarHostState.showSnackbar("$phaseChangedText: ${phase.label}") }
-                        } ?: scope.launch { snackbarHostState.showSnackbar(cannotAdvanceText) }
-                    },
-                    modifier = Modifier.width(40.dp)
-                )
-                TileControl(currentLayer = baseLayer, onLayerSelected = { viewModel.setBaseLayer(it) })
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(text = feature.properties.name ?: feature.type.value, fontSize = 14.sp)
+                    Text(text = feature.properties.phase, fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                IconButton(onClick = onDismiss) {
+                    Icon(Icons.Default.Close, contentDescription = stringResource(R.string.map_close))
+                }
             }
-
-            CompactInfoPanel(
-                featureCounts = featureCounts, totalFeatures = allFeatures.size,
-                modifier = Modifier.align(Alignment.BottomStart).padding(start = 12.dp, bottom = 12.dp).width(140.dp)
+            SelectedFeatureCardActions(
+                editModeEnabled = editModeEnabled,
+                isCurrentlyEditing = isCurrentlyEditing,
+                onShowProperties = onShowProperties,
+                onEditGeometry = onEditGeometry,
+                onSaveEdits = onSaveEdits,
+                onCancelEdits = onCancelEdits
             )
-
-            if (uiState.isLoading) {
-                Box(
-                    modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.3f)),
-                    contentAlignment = Alignment.Center
-                ) { CircularProgressIndicator(color = MaterialTheme.colorScheme.primary) }
-            }
-
-            selectedFeature?.let { feature ->
-                Card(
-                    modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth().padding(16.dp),
-                    shape = RoundedCornerShape(12.dp),
-                    colors = CardDefaults.cardColors(containerColor = GlassBackground.copy(alpha = 0.9f)),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
-                ) {
-                    Column(modifier = Modifier.fillMaxWidth().padding(12.dp)) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(text = feature.properties.name ?: feature.type.value, fontSize = 14.sp)
-                                Text(text = feature.properties.phase, fontSize = 12.sp,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            }
-                            IconButton(onClick = { viewModel.clearSelection() }) {
-                                Icon(Icons.Default.Close, contentDescription = stringResource(R.string.map_close))
-                            }
-                        }
-                        Row(
-                            modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            if (editModeEnabled && editingFeature?.id == feature.id) {
-                                Button(
-                                    onClick = {
-                                        handlers.narsGeoman?.commitEdits()
-                                        viewModel.clearSelection(); editingFeature = null
-                                    },
-                                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
-                                    modifier = Modifier.weight(1f)
-                                ) { Icon(Icons.Default.Edit, contentDescription = null, modifier = Modifier.size(18.dp))
-                                    Spacer(Modifier.width(4.dp)); Text(stringResource(R.string.map_save_geometry)) }
-                                Button(
-                                    onClick = {
-                                        handlers.narsGeoman?.cancelEdits()
-                                        viewModel.clearSelection(); editingFeature = null
-                                    },
-                                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
-                                    modifier = Modifier.weight(1f)
-                                ) { Text(stringResource(R.string.map_cancel)) }
-                            } else {
-                                Button(
-                                    onClick = { editingFeature = feature; showFeatureModal = true },
-                                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
-                                    modifier = Modifier.weight(1f)
-                                ) { Text(stringResource(R.string.map_properties)) }
-                                Button(
-                                    onClick = { handlers.toggleEditing(editModeEnabled) },
-                                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary),
-                                    modifier = Modifier.weight(1f)
-                                ) { Icon(Icons.Default.Edit, contentDescription = null, modifier = Modifier.size(18.dp))
-                                    Spacer(Modifier.width(4.dp)); Text(stringResource(R.string.map_edit_geometry)) }
-                            }
-                        }
-                    }
-                }
-            }
-
-            if (showFeatureModal && editingFeature != null && currentPhase != null) {
-                editingFeature?.let { feature ->
-                    currentPhase?.let { phase ->
-                        FeatureValidationModal(
-                            feature = feature, phase = phase,
-                            onSave = { handleFeatureSave(it) },
-                            onDismiss = { showFeatureModal = false; editingFeature = null }
-                        )
-                    }
-                }
-            }
         }
     }
 }

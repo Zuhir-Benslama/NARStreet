@@ -32,11 +32,12 @@ class SessionManager(
         return result
     }
 
+    @Suppress("TooGenericExceptionCaught")
     suspend fun logout() {
         try {
             apiService.logout()
         } catch (e: Exception) {
-            NarsLogger.w(TAG, "Logout API call failed: ${e.message}")
+            NarsLogger.w(TAG, "Logout API call failed", e)
         }
         appPreferences.authToken = null
         appPreferences.sessionCookie = null

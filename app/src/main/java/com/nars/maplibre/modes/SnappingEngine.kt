@@ -25,52 +25,99 @@ class SnappingEngine {
         for (feature in features) {
             when (val geom = feature.geometry) {
                 is PointGeometry -> {
-                    val fp = LatLng(geom.coordinates[1], geom.coordinates[0])
-                    val d = point.distanceTo(fp)
-                    if (d < minDistance) { minDistance = d; closestPoint = fp }
+                    val result = snapToPoint(point, geom, closestPoint, minDistance)
+                    closestPoint = result.first; minDistance = result.second
                 }
                 is LineStringGeometry -> {
-                    val coords = geom.coordinates.chunked(2)
-                    for (i in 0 until coords.size - 1) {
-                        val p1 = LatLng(coords[i][1], coords[i][0])
-                        val p2 = LatLng(coords[i + 1][1], coords[i + 1][0])
-                        val snapped = nearestPointOnSegment(point, p1, p2)
-                        val d = point.distanceTo(snapped)
-                        if (d < minDistance) { minDistance = d; closestPoint = snapped }
-                    }
-                    for (coord in coords) {
-                        val vp = LatLng(coord[1], coord[0])
-                        val d = point.distanceTo(vp)
-                        if (d < minDistance) { minDistance = d; closestPoint = vp }
-                    }
+                    val result = snapToLineString(point, geom, closestPoint, minDistance)
+                    closestPoint = result.first; minDistance = result.second
                 }
                 is PolygonGeometry -> {
-                    val coords = geom.coordinates.chunked(2)
-                    for (i in 0 until coords.size - 1) {
-                        val p1 = LatLng(coords[i][1], coords[i][0])
-                        val p2 = LatLng(coords[i + 1][1], coords[i + 1][0])
-                        val snapped = nearestPointOnSegment(point, p1, p2)
-                        val d = point.distanceTo(snapped)
-                        if (d < minDistance) { minDistance = d; closestPoint = snapped }
-                    }
-                    for (coord in coords) {
-                        val vp = LatLng(coord[1], coord[0])
-                        val d = point.distanceTo(vp)
-                        if (d < minDistance) { minDistance = d; closestPoint = vp }
-                    }
+                    val result = snapToPolygon(point, geom, closestPoint, minDistance)
+                    closestPoint = result.first; minDistance = result.second
                 }
                 is CircleGeometry -> {
-                    val cp = LatLng(geom.coordinates[1], geom.coordinates[0])
-                    val d = point.distanceTo(cp)
-                    if (d < minDistance) { minDistance = d; closestPoint = cp }
+                    val result = snapToCircle(point, geom, closestPoint, minDistance)
+                    closestPoint = result.first; minDistance = result.second
                 }
             }
         }
 
         if (minDistance < snapThresholdMeters) {
-            NarsLogger.d(TAG, "Snapped point: ${point.latitude},${point.longitude} -> ${closestPoint.latitude},${closestPoint.longitude} (${minDistance.toInt()}m)")
+            NarsLogger.d(TAG, "Snapped point: ${point.latitude},${point.longitude} -> " +
+                "${closestPoint.latitude},${closestPoint.longitude} (${minDistance.toInt()}m)")
         }
         return closestPoint
+    }
+
+    private fun snapToPoint(
+        point: LatLng,
+        geometry: PointGeometry,
+        currentClosest: LatLng,
+        currentMinDist: Double
+    ): Pair<LatLng, Double> {
+        val fp = LatLng(geometry.coordinates[1], geometry.coordinates[0])
+        val d = point.distanceTo(fp)
+        return if (d < currentMinDist) fp to d else currentClosest to currentMinDist
+    }
+
+    private fun snapToLineString(
+        point: LatLng,
+        geometry: LineStringGeometry,
+        currentClosest: LatLng,
+        currentMinDist: Double
+    ): Pair<LatLng, Double> {
+        var closest = currentClosest
+        var minDist = currentMinDist
+        val coords = geometry.coordinates.chunked(2)
+        for (i in 0 until coords.size - 1) {
+            val p1 = LatLng(coords[i][1], coords[i][0])
+            val p2 = LatLng(coords[i + 1][1], coords[i + 1][0])
+            val snapped = nearestPointOnSegment(point, p1, p2)
+            val d = point.distanceTo(snapped)
+            if (d < minDist) { minDist = d; closest = snapped }
+        }
+        for (coord in coords) {
+            val vp = LatLng(coord[1], coord[0])
+            val d = point.distanceTo(vp)
+            if (d < minDist) { minDist = d; closest = vp }
+        }
+        return closest to minDist
+    }
+
+    private fun snapToPolygon(
+        point: LatLng,
+        geometry: PolygonGeometry,
+        currentClosest: LatLng,
+        currentMinDist: Double
+    ): Pair<LatLng, Double> {
+        var closest = currentClosest
+        var minDist = currentMinDist
+        val coords = geometry.coordinates.chunked(2)
+        for (i in 0 until coords.size - 1) {
+            val p1 = LatLng(coords[i][1], coords[i][0])
+            val p2 = LatLng(coords[i + 1][1], coords[i + 1][0])
+            val snapped = nearestPointOnSegment(point, p1, p2)
+            val d = point.distanceTo(snapped)
+            if (d < minDist) { minDist = d; closest = snapped }
+        }
+        for (coord in coords) {
+            val vp = LatLng(coord[1], coord[0])
+            val d = point.distanceTo(vp)
+            if (d < minDist) { minDist = d; closest = vp }
+        }
+        return closest to minDist
+    }
+
+    private fun snapToCircle(
+        point: LatLng,
+        geometry: CircleGeometry,
+        currentClosest: LatLng,
+        currentMinDist: Double
+    ): Pair<LatLng, Double> {
+        val cp = LatLng(geometry.coordinates[1], geometry.coordinates[0])
+        val d = point.distanceTo(cp)
+        return if (d < currentMinDist) cp to d else currentClosest to currentMinDist
     }
 
     fun nearestPointOnSegment(point: LatLng, p1: LatLng, p2: LatLng): LatLng {

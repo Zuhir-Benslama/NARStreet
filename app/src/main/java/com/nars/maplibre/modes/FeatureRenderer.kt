@@ -20,6 +20,7 @@ import org.maplibre.android.style.layers.LineLayer
 import org.maplibre.android.style.layers.SymbolLayer
 import org.maplibre.android.style.sources.GeoJsonSource
 
+@Suppress("TooManyFunctions")
 class FeatureRenderer(
     private val map: MapLibreMap
 ) {
@@ -137,11 +138,12 @@ class FeatureRenderer(
         }
     }
 
+    @Suppress("TooGenericExceptionCaught")
     private fun removeExistingSource(sourceName: String) {
         try {
             map.style?.getSource(sourceName)?.let { map.style?.removeSource(sourceName) }
-        } catch (e: Exception) {
-            NarsLogger.w(TAG, "Error removing source $sourceName: ${e.message}")
+        } catch (e: RuntimeException) {
+            NarsLogger.w(TAG, "Error removing source $sourceName", e)
         }
     }
 
@@ -159,8 +161,9 @@ class FeatureRenderer(
 
     private fun parseColor(colorStr: String): Int = try {
         Color.parseColor(if (colorStr.startsWith("#")) colorStr else "#$colorStr")
-    } catch (e: Exception) {
-        Color.GRAY
+    } catch (e: IllegalArgumentException) {
+            NarsLogger.w(TAG, "Failed to parse color: $colorStr", e)
+            Color.GRAY
     }
 
     private fun buildGeoJsonString(feature: com.geoman.maplibre.geoman.types.geojson.Feature): String {

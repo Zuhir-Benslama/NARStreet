@@ -31,8 +31,6 @@ import com.nars.maplibre.ui.theme.GlassBackground
 import com.nars.maplibre.ui.theme.TextMuted
 import com.nars.maplibre.ui.theme.TextSecondary
 import com.nars.maplibre.ui.theme.TextPrimary
-import com.nars.maplibre.ui.theme.TextSecondary
-import com.nars.maplibre.ui.theme.TextMuted
 
 /**
  * Info panel showing feature counts
@@ -115,62 +113,9 @@ fun CompactInfoPanel(
             .background(GlassBackground.copy(alpha = 0.7f))
             .padding(12.dp)
     ) {
-        Column(
-            verticalArrangement = Arrangement.spacedBy(4.dp)
-        ) {
-            // Header
-            Row(
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = stringResource(R.string.map_features),
-                    fontSize = 12.sp,
-                    fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,
-                    color = TextSecondary
-                )
-
-                // Total badge (small)
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(MaterialTheme.colorScheme.primary)
-                        .padding(horizontal = 6.dp, vertical = 2.dp)
-                ) {
-                    Text(
-                        text = totalFeatures.toString(),
-                        fontSize = 11.sp,
-                        color = Color.White
-                    )
-                }
-            }
-
-            // Quick counts
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceEvenly
-            ) {
-                Phases.ALL.take(4).forEach { phase ->
-                    val count = featureCounts[phase.key] ?: 0
-                    val phaseColor = phase.parsedColor
-
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        Text(
-                            text = count.toString(),
-                            fontSize = 14.sp,
-                            fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
-                            color = phaseColor
-                        )
-                        Text(
-                            text = Phases.getDisplayLabel(phase, LocalContext.current).take(3),
-                            fontSize = 9.sp,
-                            color = TextMuted
-                        )
-                    }
-                }
-            }
+        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            CompactInfoHeader(totalFeatures = totalFeatures)
+            CompactPhaseCounts(featureCounts = featureCounts)
         }
     }
 }
@@ -200,6 +145,53 @@ private fun TotalBadge(total: Int) {
             fontSize = 10.sp,
             color = Color.White.copy(alpha = 0.75f)
         )
+    }
+}
+
+@Composable
+private fun CompactInfoHeader(totalFeatures: Int) {
+    Row(
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = stringResource(R.string.map_features),
+            fontSize = 12.sp,
+            fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,
+            color = TextSecondary
+        )
+        Box(
+            modifier = Modifier
+                .clip(RoundedCornerShape(8.dp))
+                .background(MaterialTheme.colorScheme.primary)
+                .padding(horizontal = 6.dp, vertical = 2.dp)
+        ) {
+            Text(text = totalFeatures.toString(), fontSize = 11.sp, color = Color.White)
+        }
+    }
+}
+
+@Composable
+private fun CompactPhaseCounts(featureCounts: Map<String, Int>) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceEvenly
+    ) {
+        Phases.ALL.take(4).forEach { phase ->
+            val count = featureCounts[phase.key] ?: 0
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(
+                    text = count.toString(),
+                    fontSize = 14.sp,
+                    fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+                    color = phase.parsedColor
+                )
+                Text(
+                    text = Phases.getDisplayLabel(phase, LocalContext.current),
+                    fontSize = 9.sp, color = TextMuted
+                )
+            }
+        }
     }
 }
 
@@ -241,7 +233,10 @@ private fun PhaseCountRow(
         Text(
             text = count.toString(),
             fontSize = 13.sp,
-            fontWeight = if (isHighlighted) androidx.compose.ui.text.font.FontWeight.SemiBold else androidx.compose.ui.text.font.FontWeight.Normal,
+            fontWeight = if (isHighlighted)
+                androidx.compose.ui.text.font.FontWeight.SemiBold
+            else
+                androidx.compose.ui.text.font.FontWeight.Normal,
             color = if (isHighlighted) phaseColor else TextSecondary.copy(alpha = 0.7f)
         )
     }

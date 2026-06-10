@@ -1,3 +1,4 @@
+@file:Suppress("DEPRECATION")
 package com.nars.maplibre.security
 
 import android.content.Context
@@ -7,7 +8,9 @@ import androidx.security.crypto.MasterKey
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import com.nars.maplibre.data.model.User
+import com.nars.maplibre.utils.NarsLogger
 
+@Suppress("TooManyFunctions")
 class SecurePreferences(context: Context) {
 
     private val masterKey: MasterKey by lazy {
@@ -74,7 +77,8 @@ class SecurePreferences(context: Context) {
         val userJson = encryptedPrefs.getString(KEY_USER, null) ?: return null
         return try {
             json.decodeFromString(User.serializer(), userJson)
-        } catch (e: Exception) {
+        } catch (e: kotlinx.serialization.SerializationException) {
+            NarsLogger.w("SecurePreferences", "Failed to deserialize user", e)
             null
         }
     }

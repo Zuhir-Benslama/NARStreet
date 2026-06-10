@@ -95,93 +95,17 @@ fun SettingsScreen(
                     title = stringResource(R.string.settings_appearance),
                     icon = Icons.Default.Palette
                 ) {
-                    ThemeMode.entries.forEach { mode ->
-                        SettingsItem(
-                            icon = when (mode) {
-                                ThemeMode.LIGHT -> Icons.Default.BrightnessHigh
-                                ThemeMode.DARK -> Icons.Default.BrightnessLow
-                                ThemeMode.AUTO -> Icons.Default.BrightnessAuto
-                            },
-                            title = when (mode) {
-                                ThemeMode.LIGHT -> stringResource(R.string.theme_light)
-                                ThemeMode.DARK -> stringResource(R.string.theme_dark)
-                                ThemeMode.AUTO -> stringResource(R.string.theme_auto)
-                            },
-                            subtitle = when (mode) {
-                                ThemeMode.LIGHT -> stringResource(R.string.settings_theme)
-                                ThemeMode.DARK -> stringResource(R.string.settings_theme)
-                                ThemeMode.AUTO -> stringResource(R.string.settings_theme)
-                            },
-                            selected = themeMode == mode,
-                            onClick = {
-                                viewModel.setThemeMode(mode)
-                            }
-                        )
-                    }
+                    SettingsAppearanceContent(
+                        themeMode = themeMode,
+                        onThemeModeSelected = { viewModel.setThemeMode(it) }
+                    )
                 }
 
                 SettingsSection(
                     title = stringResource(R.string.settings_about),
                     icon = Icons.Default.Palette
                 ) {
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.surfaceVariant
-                        )
-                    ) {
-                        Column(
-                            modifier = Modifier.padding(16.dp)
-                        ) {
-                            Text(
-                                text = stringResource(R.string.settings_app_name),
-                                fontSize = 16.sp,
-                                color = TextPrimary
-                            )
-                            Spacer(modifier = Modifier.height(4.dp))
-                            Text(
-                                text = stringResource(R.string.settings_app_description),
-                                fontSize = 12.sp,
-                                color = TextSecondary
-                            )
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Text(
-                                text = stringResource(R.string.settings_version),
-                                fontSize = 12.sp,
-                                color = TextSecondary.copy(alpha = 0.5f)
-                            )
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(DangerColor.copy(alpha = 0.2f))
-                            .clickable(onClick = onLogout)
-                            .padding(16.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Row(
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Icon(
-                                imageVector = Icons.AutoMirrored.Filled.Logout,
-                                contentDescription = stringResource(R.string.settings_logout),
-                                tint = DangerColor,
-                                modifier = Modifier.size(20.dp)
-                            )
-                            Text(
-                                text = stringResource(R.string.settings_logout),
-                                fontSize = 15.sp,
-                                fontWeight = FontWeight.SemiBold,
-                                color = DangerColor
-                            )
-                        }
-                    }
+                    SettingsAboutContent(onLogout = onLogout)
                 }
             }
         }
@@ -227,6 +151,66 @@ private fun SettingsSection(
             ) {
                 content()
             }
+        }
+    }
+}
+
+@Composable
+private fun SettingsAppearanceContent(themeMode: ThemeMode, onThemeModeSelected: (ThemeMode) -> Unit) {
+    ThemeMode.entries.forEach { mode ->
+        SettingsItem(
+            icon = when (mode) {
+                ThemeMode.LIGHT -> Icons.Default.BrightnessHigh
+                ThemeMode.DARK -> Icons.Default.BrightnessLow
+                ThemeMode.AUTO -> Icons.Default.BrightnessAuto
+            },
+            title = when (mode) {
+                ThemeMode.LIGHT -> stringResource(R.string.theme_light)
+                ThemeMode.DARK -> stringResource(R.string.theme_dark)
+                ThemeMode.AUTO -> stringResource(R.string.theme_auto)
+            },
+            subtitle = stringResource(R.string.settings_theme),
+            selected = themeMode == mode,
+            onClick = { onThemeModeSelected(mode) }
+        )
+    }
+}
+
+@Composable
+private fun SettingsAboutContent(onLogout: () -> Unit) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text(text = stringResource(R.string.settings_app_name), fontSize = 16.sp, color = TextPrimary)
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(text = stringResource(R.string.settings_app_description), fontSize = 12.sp, color = TextSecondary)
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = stringResource(R.string.settings_version), fontSize = 12.sp,
+                color = TextSecondary.copy(alpha = 0.5f)
+            )
+        }
+    }
+    Spacer(modifier = Modifier.height(16.dp))
+    SettingsLogoutButton(onLogout = onLogout)
+}
+
+@Composable
+private fun SettingsLogoutButton(onLogout: () -> Unit) {
+    Box(
+        modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp))
+            .background(DangerColor.copy(alpha = 0.2f)).clickable(onClick = onLogout).padding(16.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+            Icon(Icons.AutoMirrored.Filled.Logout, contentDescription = stringResource(R.string.settings_logout),
+                tint = DangerColor, modifier = Modifier.size(20.dp))
+            Text(
+                text = stringResource(R.string.settings_logout), fontSize = 15.sp,
+                fontWeight = FontWeight.SemiBold, color = DangerColor
+            )
         }
     }
 }

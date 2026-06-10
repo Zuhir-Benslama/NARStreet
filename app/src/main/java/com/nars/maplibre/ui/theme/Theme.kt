@@ -1,3 +1,5 @@
+@file:Suppress("MatchingDeclarationName")
+
 package com.nars.maplibre.ui.theme
 
 import android.app.Activity

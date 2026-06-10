@@ -44,6 +44,60 @@ import com.nars.maplibre.ui.theme.TextPrimary
 import com.nars.maplibre.ui.theme.TextSecondary
 
 @Composable
+fun ProfileAvatar(
+    user: User?,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val initials = user?.getInitials() ?: "U"
+
+    Box(
+        modifier = modifier
+            .size(40.dp)
+            .clip(RoundedCornerShape(20.dp))
+            .background(
+                Brush.linearGradient(
+                    colors = listOf(PrimaryGradientStart, PrimaryGradientEnd)
+                )
+            )
+            .clickable { onClick() },
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = initials,
+            fontSize = 16.sp,
+            fontWeight = FontWeight.Bold,
+            color = Color.White
+        )
+    }
+}
+
+@Composable
+private fun ProfileMenuContent(
+    user: User?,
+    onDismissRequest: () -> Unit,
+    onSettingsClick: () -> Unit,
+    onLogoutClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    compact: Boolean = false
+) {
+    DropdownMenu(
+        expanded = true,
+        onDismissRequest = onDismissRequest,
+        modifier = modifier
+            .background(color = DropdownBackground, shape = RoundedCornerShape(12.dp))
+    ) {
+        if (compact) {
+            ProfileMenuCompactInfo(user = user)
+            Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(GlassBorder.copy(alpha = 0.3f)))
+        }
+        ProfileMenuSettingsItem(onDismissRequest = onDismissRequest, onSettingsClick = onSettingsClick)
+        Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(GlassBorder.copy(alpha = 0.3f)))
+        ProfileMenuLogoutItem(onDismissRequest = onDismissRequest, onLogoutClick = onLogoutClick)
+    }
+}
+
+@Composable
 fun ProfileMenu(
     user: User?,
     onSettingsClick: () -> Unit,
@@ -52,124 +106,75 @@ fun ProfileMenu(
     compact: Boolean = false
 ) {
     var dropdownExpanded by remember { mutableStateOf(false) }
-    val initials = user?.getInitials() ?: "U"
 
     Box(modifier = modifier) {
-        Box(
-            modifier = Modifier
-                .size(40.dp)
-                .clip(RoundedCornerShape(20.dp))
-                .background(
-                    Brush.linearGradient(
-                        colors = listOf(PrimaryGradientStart, PrimaryGradientEnd)
-                    )
-                )
-                .clickable { dropdownExpanded = true },
-            contentAlignment = Alignment.Center
-        ) {
-            Text(
-                text = initials,
-                fontSize = 16.sp,
-                fontWeight = FontWeight.Bold,
-                color = Color.White
-            )
-        }
+        ProfileAvatar(
+            user = user,
+            onClick = { dropdownExpanded = true }
+        )
 
-        DropdownMenu(
-            expanded = dropdownExpanded,
-            onDismissRequest = { dropdownExpanded = false },
-            modifier = Modifier
-                .background(
-                    color = DropdownBackground,
-                    shape = RoundedCornerShape(12.dp)
-                )
-        ) {
-            if (compact) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(12.dp)
-                ) {
-                    Text(
-                        text = user?.username ?: stringResource(R.string.profile_user),
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = TextPrimary
-                    )
-                    val userName = user?.name ?: ""
-                    if (userName.isNotBlank()) {
-                        Text(
-                            text = userName,
-                            fontSize = 12.sp,
-                            color = TextSecondary
-                        )
-                    }
-                }
-
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(1.dp)
-                        .background(GlassBorder.copy(alpha = 0.3f))
-                )
-            }
-
-            DropdownMenuItem(
-                text = {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(10.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Settings,
-                            contentDescription = null,
-                            tint = DropdownItem,
-                            modifier = Modifier.size(18.dp)
-                        )
-                        Text(
-                            text = stringResource(R.string.profile_settings),
-                            fontSize = 13.sp,
-                            color = DropdownItem
-                        )
-                    }
-                },
-                onClick = {
-                    dropdownExpanded = false
-                    onSettingsClick()
-                }
-            )
-
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(1.dp)
-                    .background(GlassBorder.copy(alpha = 0.3f))
-            )
-
-            DropdownMenuItem(
-                text = {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(10.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.Logout,
-                            contentDescription = stringResource(R.string.profile_logout),
-                            tint = DangerColor,
-                            modifier = Modifier.size(18.dp)
-                        )
-                        Text(
-                            text = stringResource(R.string.profile_logout),
-                            fontSize = 13.sp,
-                            color = DangerColor
-                        )
-                    }
-                },
-                onClick = {
-                    dropdownExpanded = false
-                    onLogoutClick()
-                }
+        if (dropdownExpanded) {
+            ProfileMenuContent(
+                user = user,
+                onDismissRequest = { dropdownExpanded = false },
+                onSettingsClick = onSettingsClick,
+                onLogoutClick = onLogoutClick,
+                compact = compact
             )
         }
     }
+}
+
+@Composable
+private fun ProfileMenuCompactInfo(user: User?) {
+    Column(
+        modifier = Modifier.fillMaxWidth().padding(12.dp)
+    ) {
+        Text(
+            text = user?.username ?: stringResource(R.string.profile_user),
+            fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = TextPrimary
+        )
+        val userName = user?.name ?: ""
+        if (userName.isNotBlank()) {
+            Text(text = userName, fontSize = 12.sp, color = TextSecondary)
+        }
+    }
+}
+
+@Composable
+private fun ProfileMenuSettingsItem(onDismissRequest: () -> Unit, onSettingsClick: () -> Unit) {
+    DropdownMenuItem(
+        text = {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                Icon(
+                    Icons.Default.Settings, contentDescription = null,
+                    tint = DropdownItem, modifier = Modifier.size(18.dp)
+                )
+                Text(text = stringResource(R.string.profile_settings), fontSize = 13.sp, color = DropdownItem)
+            }
+        },
+        onClick = { onDismissRequest(); onSettingsClick() }
+    )
+}
+
+@Composable
+private fun ProfileMenuLogoutItem(onDismissRequest: () -> Unit, onLogoutClick: () -> Unit) {
+    DropdownMenuItem(
+        text = {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                Icon(
+                    Icons.AutoMirrored.Filled.Logout, contentDescription = stringResource(R.string.profile_logout),
+                    tint = DangerColor, modifier = Modifier.size(18.dp)
+                )
+                Text(text = stringResource(R.string.profile_logout), fontSize = 13.sp, color = DangerColor)
+            }
+        },
+        onClick = { onDismissRequest(); onLogoutClick() }
+    )
 }

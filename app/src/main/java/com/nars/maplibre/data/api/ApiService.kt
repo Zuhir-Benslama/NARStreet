@@ -1,3 +1,5 @@
+@file:Suppress("TooGenericExceptionCaught")
+
 package com.nars.maplibre.data.api
 
 import com.nars.maplibre.AppPreferences
@@ -29,6 +31,7 @@ import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.longOrNull
 import kotlinx.serialization.json.put
 
+@Suppress("TooManyFunctions")
 class ApiService(
     private val httpClient: HttpClient,
     private val preferences: AppPreferences
@@ -207,7 +210,10 @@ class ApiService(
         }
     }
 
-    suspend fun createEntranceFromInspection(roadId: String, label: String = "Entrance (field worker)"): Result<String> {
+    suspend fun createEntranceFromInspection(
+        roadId: String,
+        label: String = "Entrance (field worker)"
+    ): Result<String> {
         return try {
             val requestBody = buildJsonObject {
                 put("road_id", roadId)

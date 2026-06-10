@@ -1,3 +1,5 @@
+@file:Suppress("MatchingDeclarationName")
+
 package com.nars.maplibre.data.model
 
 enum class BaseLayerType(val value: String, val displayName: String) {

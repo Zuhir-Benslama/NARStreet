@@ -84,6 +84,7 @@ class ValidationError(
  * Retry utility matching web version (errors.ts: withRetry)
  * Implements exponential backoff with jitter
  */
+@Suppress("TooGenericExceptionCaught")
 suspend fun <T> withRetry(
     operation: suspend () -> T,
     config: RetryConfig = RetryConfig(),

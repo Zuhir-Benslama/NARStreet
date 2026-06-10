@@ -21,6 +21,7 @@ class MapScreenHandlers(
 ) {
     companion object {
         private const val TAG = "MapScreenHandlers"
+        private const val MIN_CIRCLE_RADIUS = 10.0
         private const val ANIM_DURATION_MS = 1500
         private const val MAP_ZOOM = 14.0
         private const val LONG_CLICK_DISTANCE_THRESHOLD = 50.0
@@ -66,7 +67,11 @@ class MapScreenHandlers(
         narsGeoman?.addFeature(feature)
     }
 
-    fun handleMapClick(latLng: org.maplibre.android.geometry.LatLng, drawingEnabled: Boolean, editModeEnabled: Boolean) {
+    fun handleMapClick(
+        latLng: org.maplibre.android.geometry.LatLng,
+        drawingEnabled: Boolean,
+        editModeEnabled: Boolean
+    ) {
         if (drawingEnabled || editModeEnabled) {
             val snapped = if (drawingEnabled) {
                 narsGeoman?.snapPoint(latLng, viewModel.allFeatures.value) ?: latLng
@@ -202,7 +207,7 @@ class MapScreenHandlers(
             }
             is com.nars.maplibre.data.model.CircleGeometry -> {
                 val cp = org.maplibre.android.geometry.LatLng(geometry.coordinates[1], geometry.coordinates[0])
-                latLng.distanceTo(cp) < geometry.coordinates[2].coerceAtLeast(10.0)
+                latLng.distanceTo(cp) < geometry.coordinates[2].coerceAtLeast(MIN_CIRCLE_RADIUS)
             }
             is com.nars.maplibre.data.model.LineStringGeometry -> {
                 geometry.coordinates.chunked(2).any { coord ->

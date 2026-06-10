@@ -20,13 +20,20 @@ class AppPreferences(context: Context) {
     private val json = Json { ignoreUnknownKeys = true }
 
     var themeMode: ThemeMode
-        get() = runCatching { ThemeMode.valueOf(prefs.getString(KEY_THEME, ThemeMode.AUTO.name) ?: ThemeMode.AUTO.name) }
-            .getOrDefault(ThemeMode.AUTO)
+        get() = runCatching {
+                ThemeMode.valueOf(prefs.getString(KEY_THEME, ThemeMode.AUTO.name) ?: ThemeMode.AUTO.name)
+            }
+                .getOrDefault(ThemeMode.AUTO)
         set(value) = prefs.edit { putString(KEY_THEME, value.name) }
 
     var baseLayer: BaseLayerType
-        get() = runCatching { BaseLayerType.valueOf(prefs.getString(KEY_BASE_LAYER, BaseLayerType.SATELLITE.name) ?: BaseLayerType.SATELLITE.name) }
-            .getOrDefault(BaseLayerType.SATELLITE)
+        get() = runCatching {
+                BaseLayerType.valueOf(
+                    prefs.getString(KEY_BASE_LAYER, BaseLayerType.SATELLITE.name)
+                        ?: BaseLayerType.SATELLITE.name
+                )
+            }
+                .getOrDefault(BaseLayerType.SATELLITE)
         set(value) = prefs.edit { putString(KEY_BASE_LAYER, value.name) }
 
     var currentPhase: String?

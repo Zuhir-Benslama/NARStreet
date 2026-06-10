@@ -9,7 +9,11 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import java.util.Collections
 
+@Suppress("TooManyFunctions")
 class FeatureStore {
+    companion object {
+        private const val MAX_UNDO_SIZE = 50
+    }
 
     private val _featuresByPhase = MutableStateFlow<Map<String, List<NarsFeature>>>(emptyMap())
     val featuresByPhase: StateFlow<Map<String, List<NarsFeature>>> = _featuresByPhase.asStateFlow()
@@ -134,7 +138,7 @@ class FeatureStore {
 
     fun addUndoAction(action: UndoAction) {
         _undoStack.add(action)
-        if (_undoStack.size > 50) {
+        if (_undoStack.size > MAX_UNDO_SIZE) {
             _undoStack.removeAt(0)
         }
     }

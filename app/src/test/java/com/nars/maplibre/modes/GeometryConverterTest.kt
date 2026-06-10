@@ -79,7 +79,9 @@ class GeometryConverterTest {
 
     @Test
     fun `getSourceNameForGeometry returns correct source for LineString`() {
-        val sourceName = converter.getSourceNameForGeometry(LineStringGeometry(coordinates = listOf(0.0, 0.0, 1.0, 1.0)))
+        val sourceName = converter.getSourceNameForGeometry(
+            LineStringGeometry(coordinates = listOf(0.0, 0.0, 1.0, 1.0))
+        )
         assertEquals("gm_lines", sourceName)
     }
 

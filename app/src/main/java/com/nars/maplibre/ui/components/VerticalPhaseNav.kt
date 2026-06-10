@@ -96,6 +96,34 @@ fun VerticalPhaseNav(
     }
 }
 
+private data class PhaseBadgeColors(
+    val background: Color,
+    val border: Color,
+    val badge: Color
+)
+
+private fun phaseBadgeColors(isDone: Boolean, isActive: Boolean): PhaseBadgeColors {
+    return if (isDone) {
+        PhaseBadgeColors(
+            background = Color.White.copy(alpha = 0.15f),
+            border = Color.White.copy(alpha = 0.35f),
+            badge = Color.White
+        )
+    } else if (isActive) {
+        PhaseBadgeColors(
+            background = Color.White.copy(alpha = 0.28f),
+            border = Color.White.copy(alpha = 0.80f),
+            badge = Color.White
+        )
+    } else {
+        PhaseBadgeColors(
+            background = Color.White.copy(alpha = 0.05f),
+            border = Color.White.copy(alpha = 0.15f),
+            badge = Color.White.copy(alpha = 0.30f)
+        )
+    }
+}
+
 /**
  * Phase badge (circle with number or checkmark)
  */
@@ -108,32 +136,14 @@ private fun PhaseBadge(
     count: Int,
     onClick: () -> Unit
 ) {
-    val backgroundColor = when {
-        isDone -> Color.White.copy(alpha = 0.15f)
-        isActive -> Color.White.copy(alpha = 0.28f)
-        else -> Color.White.copy(alpha = 0.05f)
-    }
-
-    val borderColor = when {
-        isDone -> Color.White.copy(alpha = 0.35f)
-        isActive -> Color.White.copy(alpha = 0.80f)
-        else -> Color.White.copy(alpha = 0.15f)
-    }
-
-    val badgeColor = when {
-        isDone -> Color.White
-        isActive -> Color.White
-        else -> Color.White.copy(alpha = 0.30f)
-    }
-
+    val colors = phaseBadgeColors(isDone, isActive)
     val badgeContent = if (isDone) "✓" else "${Phases.ALL.indexOf(phase) + 1}"
 
-    // Clickable badge - using pointerInput for reliable touch over MapView
     Box(
         modifier = Modifier
             .size(28.dp)
             .clip(CircleShape)
-            .background(backgroundColor)
+            .background(colors.background)
             .pointerInput(isLocked, phase.key) {
                 detectTapGestures(
                     onTap = {
@@ -149,44 +159,60 @@ private fun PhaseBadge(
             },
         contentAlignment = Alignment.Center
     ) {
-        // Border
+        PhaseBadgeContent(colors, badgeContent, isActive)
+    }
+
+    PhaseCountDot(
+        isDone = isDone,
+        isActive = isActive,
+        isLocked = isLocked,
+        count = count
+    )
+}
+
+@Composable
+private fun PhaseBadgeContent(
+    colors: PhaseBadgeColors,
+    badgeContent: String,
+    isActive: Boolean
+) {
+    Box(
+        modifier = Modifier
+            .size(28.dp)
+            .clip(CircleShape)
+            .background(colors.border)
+    )
+    Box(
+        modifier = Modifier
+            .size(16.dp)
+            .clip(CircleShape)
+            .background(colors.badge),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = badgeContent,
+            fontSize = 9.sp,
+            fontWeight = FontWeight.Bold,
+            color = GlassBackground
+        )
+    }
+    if (isActive) {
         Box(
             modifier = Modifier
                 .size(28.dp)
                 .clip(CircleShape)
-                .background(borderColor)
+                .background(PrimaryColor.copy(alpha = 0.18f))
         )
-
-        // Badge circle
-        Box(
-            modifier = Modifier
-                .size(16.dp)
-                .clip(CircleShape)
-                .background(badgeColor),
-            contentAlignment = Alignment.Center
-        ) {
-            Text(
-                text = badgeContent,
-                fontSize = 9.sp,
-                fontWeight = FontWeight.Bold,
-                color = GlassBackground
-            )
-        }
-
-        // Active glow
-        if (isActive) {
-            Box(
-                modifier = Modifier
-                    .size(28.dp)
-                    .clip(CircleShape)
-                    .background(
-                        PrimaryColor.copy(alpha = 0.18f)
-                    )
-            )
-        }
     }
+}
 
-    // Feature count indicator (shown as small dot)
+@Composable
+private fun PhaseCountDot(
+    isDone: Boolean,
+    isActive: Boolean,
+    isLocked: Boolean,
+    count: Int
+) {
     if (count > 0 && !isLocked) {
         Box(
             modifier = Modifier

@@ -195,12 +195,12 @@ private fun getStyleJson(layer: BaseLayerType): String {
         )
     }
     return buildJsonObject {
-        put("version", 8)
+        put("version", Config.STYLE_VERSION)
         putJsonObject("sources") {
             putJsonObject(cfg.sourceId) {
                 put("type", "raster")
                 putJsonArray("tiles") { add(cfg.tiles) }
-                put("tileSize", 256)
+                put("tileSize", Config.TILE_SIZE)
                 put("attribution", cfg.attribution)
             }
         }
@@ -211,7 +211,7 @@ private fun getStyleJson(layer: BaseLayerType): String {
                 put("type", "raster")
                 put("source", cfg.sourceId)
                 put("minzoom", 0)
-                put("maxzoom", 19)
+                put("maxzoom", Config.MAP_MAX_ZOOM)
             }
         }
     }.toString()

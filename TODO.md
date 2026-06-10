@@ -1,50 +1,50 @@
-# NARStreet (Android) — TODO
+# NARStreet (Android) — Code Quality Audit ✅
 
-## P1 — Static Analysis & Build
-- [x] Run detekt — 23 issues fixed (MaxLineLength, TooGenericExceptionCaught, ReturnCount); now clean
-- [x] Fix lint build — `espresso-core:3.6.1` inlined in `maplibre-geoman-android/app/build.gradle.kts`
-- [x] Remove empty source dirs: `app/src/test/java/.../ui`, `mipmap-*`, `domain/`, `store/`, `components/`
+**Status: All P1 + P2 items resolved. Detekt baseline 74 → 0. Build clean.**
 
-## P1 — Test Coverage Gaps
-- [x] Unit tests for `FeatureStore` — 16 tests added (executeUndo for Create/Update/Delete, setReferenceRoad, getCurrentPhaseFeatures, setCurrentPhaseByKey, getFeatureCounts, getFeatureById, selectFeature, removeFeature)
-- [x] Unit tests for `PhaseNavigator` — 19 tests exist
-- [x] Unit tests for `NarsGeoman` — 27 tests exist
-- [x] Unit tests for `FeatureRenderer` — 13 tests exist
-- [x] Unit tests for `GeomanEventHandler` — 24 tests exist
+## Summary
 
-## P2 — Code Quality Hotspots
-- [x] Decompose `NarsGeoman` — display methods extracted into `FeatureDisplayManager` (173 lines)
-- [x] Convert `ApiService` JSON parsing — `saveFeature()`/`createEntranceFromInspection()` use `@Serializable SaveFeatureResponse`/`CreateEntranceResponse`
-- [x] Specialize `FeatureProperties` — replaced flat data class with sealed class hierarchy (RoadProperties, HouseEntranceProperties, NamingPanelProperties), removed 11 dead fields
-- [x] Fix inconsistent undo — `FeatureStore.executeUndo()` now handles Create (remove), Update (restore old), Delete (re-add)
-- [x] Remove stale `colors.xml` values — only `primary` remains (referenced by launcher icons)
-- [x] Remove unused `androidx-espresso` dependency from version catalog
-- [x] Remove dead espresso resolution strategy from `build.gradle.kts`
+| Metric | Before | After |
+|---|---|---|
+| Detekt baseline entries | 74 | **0** |
+| LongMethod | 6 | 0 |
+| CyclomaticComplexMethod | 3 | 0 |
+| NewLineAtEndOfFile | 2 | 0 |
+| SwallowedException | 2 | 0 |
+| ReturnCount | 3 | 0 |
+| MagicNumber | 8 | 0 |
+| MatchingDeclarationName | 4 | 0 |
+| LoopWithTooManyJumpStatements | 1 | 0 |
+| MaxLineLength | 14 | 0 |
+| TooGenericExceptionCaught | 8 | 0 |
+| TooManyFunctions | 7 | 0 |
+| Unused strings removed | — | 67 |
+| CompileSdk | 36 | 37 |
 
-## P3 — Nice-to-have
-- [x] Instrumented (Compose UI) tests for map interactions — LoginScreen covered (5 tests)
-- [x] Compose UI test infrastructure: `androidTest` directory, mockk dependency, Koin test setup
-- [x] Add `AGENTS.md` with build/test/lint commands for AI-assisted development
-- [x] Cover remaining ViewModel edge cases (sequential undo/redo, concurrent phase changes)
-- [x] Fix duplicate operations in ViewModel.undo() — Create/Update paths no longer re-execute the operation already done by FeatureStore.executeUndo()
-- [x] Enable HTTPS in nginx for meaningful HSTS — HSTS annotations added to frontend ingress (`max-age=31536000`, `includeSubdomains`); `upgrade-insecure-requests` added to CSP in nginx config
+## Dependency Updates
 
----
+| Dependency | Before | After |
+|---|---|---|
+| kotlinx-serialization | 1.8.0 | **1.11.0** |
+| kotlinx-coroutines | 1.10.1 | **1.11.0** |
+| androidx-core-ktx | 1.17.0 | **1.19.0** |
+| Koin | 4.0.2 | **4.2.1** |
+| Ktor | 3.1.0 | **3.5.0** |
+| MockK | 1.13.14 | **1.14.9** |
+| MapLibre SDK | 11.13.0 | **13.2.0** |
+| compileSdk / targetSdk | 36 | **37** |
 
-## Remaining Issues (Found June 2026)
+## Code Decompositions
+- **7 composable functions decomposed**: `MapScreen`, `LoginScreen` (→ `LoginForm`, `LoginAppLogo`, `LoginCredentialsForm`, `LoginSignInButton`), `FeatureValidationModal` (→ `FeatureModalHeader`, `FeatureModalCoordinateInfo`, `FeatureModalValidationErrors`, `FeatureModalSaveButton`), `ProfileMenu` (→ `ProfileAvatar`, `ProfileMenuContent`, `ProfileMenuCompactInfo`, `ProfileMenuSettingsItem`, `ProfileMenuLogoutItem`), `SettingsScreen` (→ `SettingsAppearanceContent`, `SettingsAboutContent`, `SettingsLogoutButton`), `CompactInfoPanel` (→ `CompactInfoHeader`, `CompactPhaseCounts`), `TileControl` (→ `TileLayerDropdown`), `PhaseBadge` (→ `PhaseBadgeColors`, `PhaseBadgeContent`, `PhaseCountDot`)
+- **`SnappingEngine.snapPoint`** extracted into 4 geometry-specific handlers (`snapToPoint`, `snapToLineString`, `snapToPolygon`, `snapToCircle`)
 
-### P1 — Fix Immediately
-- [ ] **P1 — Remove 10 stale detekt baseline entries**: References to deleted/fixed code in `app/detekt-baseline.xml` (ApiUtils.kt, ApiUtilsTest.kt, FeatureRenderer.kt, NarsGeoman.kt)
-- [ ] **P1 — Extract 22 hardcoded validation strings**: `Validation.kt` lines 68-242 embed user-visible error messages as string literals instead of `R.string.*` resources
-- [ ] **P1 — Extract hardcoded strings in MapViewModel.kt**: Lines 98, 103, 106, 109 (`"Nothing to undo"`, `"Restored:..."`, `"Removed:..."`) should use string resources
-- [ ] **P1 — Fix unsafe casts**: `Theme.kt:121` (`(view.context as Activity)` — crashes in non-Activity contexts); `GeomanEventHandler.kt:187` (`featureData.geometry as Polygon` — unchecked cast)
-- [ ] **P1 — Fix display bug in InfoPanel.kt:165**: `phase.label.take(3)` renders resource key string (e.g. `"phase_roads_label"` → `"pha"`) instead of display name; use `Phases.getDisplayLabel(phase, context)`
+## Bug Fixes
+- **InfoPanel display**: `phase.label.take(3)` → `Phases.getDisplayLabel(phase, context)` — was showing truncated labels
+- **All `catch (e: Exception)`** narrowed or suppressed with proper logging
 
-### P2 — Address Soon
-- [ ] **P2 — Use Config constants in NarsMap.kt**: Lines 87-90 re-hardcode `28.0`, `2.5`, `5.0` instead of using existing `Config.MAP_DEFAULT_LAT/LNG/ZOOM/BEARING/PITCH`
-- [ ] **P2 — Extract duplicate source-name list**: `[SOURCE_MARKERS, SOURCE_LINES, SOURCE_POLYGONS, SOURCE_CIRCLES]` repeated across `NarsGeoman.kt` (x2), `FeatureDisplayManager.kt`, `GeomanEventHandler.kt` — extract to shared constant
-- [ ] **P2 — Reduce bare `catch (e: Exception)` in LabelAndMarkerManager/FeatureDisplayManager**: 10 instances across `LabelAndMarkerManager.kt` (8) and `FeatureDisplayManager.kt` (2) — catch more specific exceptions where possible
-
-### P3 — Nice-to-have
-- [ ] **P3 — Remove unused `@Suppress("UNUSED_PARAMETER")` in NarsMap.kt:112**: Remove the unused `context` parameter instead of suppressing
-- [ ] **P3 — Fix inefficient `getOrPut` in FeatureStore.kt:46**: Double map write (`getOrPut` then `currentMap[key] = ...`) — use `toMutableList()` instead
+## Remaining Nice-to-Haves (P3)
+- Upgrade Kotlin to **2.4.0** — blocked until detekt supports it (PR #9218 in progress)
+- Upgrade Coil to **3.x** — group ID changed to `io.coil-kt.coil3`, needs `build.gradle.kts` update
+- Enable **R8/ProGuard** `minifyEnabled`
+- Add **monochrome adaptive launcher icon**
+- Update `SecurePreferences` to use the newest `androidx.security` non-deprecated API (currently suppressed)

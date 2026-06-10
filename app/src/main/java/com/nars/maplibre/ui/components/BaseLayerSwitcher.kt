@@ -73,63 +73,83 @@ fun TileControl(
             )
         }
 
-        // Dropdown menu
-        DropdownMenu(
-            expanded = dropdownExpanded,
-            onDismissRequest = { dropdownExpanded = false },
-            modifier = Modifier
-                .background(
-                    color = DropdownBackground,
-                    shape = RoundedCornerShape(12.dp)
-                )
-        ) {
-            BaseLayerType.entries.forEach { layer ->
-                DropdownMenuItem(
-                    text = {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(10.dp)
-                        ) {
-                            // Layer color indicator
-                            Box(
-                                modifier = Modifier
-                                    .size(20.dp)
-                                    .clip(RoundedCornerShape(4.dp))
-                                    .background(
-                                        when (layer) {
-                                            BaseLayerType.SATELLITE -> Color(0xFF1a1a1a)
-                                            BaseLayerType.STREET -> Color(0xFFf0f0f0)
-                                            BaseLayerType.LIGHT -> Color(0xFFffffff)
-                                            BaseLayerType.DARK -> Color(0xFF1f1f1f)
-                                        }
-                                    )
-                            )
+        TileLayerDropdown(
+            currentLayer = currentLayer,
+            onLayerSelected = { layer ->
+                onLayerSelected(layer)
+                dropdownExpanded = false
+            },
+            dropdownExpanded = dropdownExpanded,
+            onDismissRequest = { dropdownExpanded = false }
+        )
+    }
+}
 
-                            Text(
-                                text = layer.displayName,
-                                fontSize = 13.sp,
-                                color = DropdownItem
-                            )
-                        }
-                    },
-                    trailingIcon = {
-                        if (layer == currentLayer) {
-                            Icon(
-                                imageVector = Icons.Default.Check,
-                                contentDescription = stringResource(R.string.map_selected),
-                                tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(18.dp)
-                            )
-                        }
-                    },
-                    onClick = {
-                        onLayerSelected(layer)
-                        dropdownExpanded = false
+@Composable
+private fun TileLayerDropdown(
+    currentLayer: BaseLayerType,
+    onLayerSelected: (BaseLayerType) -> Unit,
+    dropdownExpanded: Boolean,
+    onDismissRequest: () -> Unit
+) {
+    DropdownMenu(
+        expanded = dropdownExpanded,
+        onDismissRequest = onDismissRequest,
+        modifier = Modifier
+            .background(
+                color = DropdownBackground,
+                shape = RoundedCornerShape(12.dp)
+            )
+    ) {
+        BaseLayerType.entries.forEach { layer ->
+            DropdownMenuItem(
+                text = { TileLayerDropdownItemText(layer) },
+                trailingIcon = {
+                    if (layer == currentLayer) {
+                        Icon(
+                            imageVector = Icons.Default.Check,
+                            contentDescription = stringResource(R.string.map_selected),
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(18.dp)
+                        )
                     }
-                )
-            }
+                },
+                onClick = { onLayerSelected(layer) }
+            )
         }
     }
+}
+
+@Composable
+private fun TileLayerDropdownItemText(layer: BaseLayerType) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(10.dp)
+    ) {
+        Box(
+            modifier = Modifier
+                .size(20.dp)
+                .clip(RoundedCornerShape(4.dp))
+                .background(layerColor(layer))
+        )
+        Text(
+            text = layer.displayName,
+            fontSize = 13.sp,
+            color = DropdownItem
+        )
+    }
+}
+
+private val SATELLITE_COLOR = Color(0xFF1a1a1a)
+private val STREET_COLOR = Color(0xFFf0f0f0)
+private val LIGHT_COLOR = Color(0xFFffffff)
+private val DARK_COLOR = Color(0xFF1f1f1f)
+
+private fun layerColor(layer: BaseLayerType): Color = when (layer) {
+    BaseLayerType.SATELLITE -> SATELLITE_COLOR
+    BaseLayerType.STREET -> STREET_COLOR
+    BaseLayerType.LIGHT -> LIGHT_COLOR
+    BaseLayerType.DARK -> DARK_COLOR
 }
 
 /**
@@ -186,14 +206,7 @@ private fun CompactLayerButton(
             modifier = Modifier
                 .size(24.dp)
                 .clip(RoundedCornerShape(12.dp))
-                .background(
-                    when (layer) {
-                        BaseLayerType.SATELLITE -> Color(0xFF1a1a1a)
-                        BaseLayerType.STREET -> Color(0xFFf0f0f0)
-                        BaseLayerType.LIGHT -> Color(0xFFffffff)
-                        BaseLayerType.DARK -> Color(0xFF1f1f1f)
-                    }
-                )
+                .background(layerColor(layer))
         )
     }
 }

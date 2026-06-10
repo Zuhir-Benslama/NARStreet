@@ -62,96 +62,28 @@ fun FeatureValidationModal(
             Column(
                 modifier = Modifier.fillMaxWidth().padding(16.dp).verticalScroll(rememberScrollState())
             ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = when (phase.key) {
-                            "roads" -> stringResource(R.string.feature_road_attributes)
-                            "houseEntrances" -> stringResource(R.string.feature_entrance_check)
-                            "namingPanels" -> stringResource(R.string.feature_panel_check)
-                            else -> stringResource(R.string.feature_details)
-                        },
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                    Box(
-                        modifier = Modifier.size(32.dp).clip(RoundedCornerShape(8.dp))
-                            .background(MaterialTheme.colorScheme.surfaceVariant)
-                            .clickable { onDismiss() },
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Close,
-                            contentDescription = stringResource(R.string.map_close),
-                            tint = MaterialTheme.colorScheme.onSurface
-                        )
-                    }
-                }
-
+                FeatureModalHeader(phase = phase, onDismiss = onDismiss)
                 Spacer(modifier = Modifier.height(16.dp))
-
-                val roadName = feature.properties.name ?: stringResource(R.string.feature_unnamed_road)
-                Text(
-                    text = roadName,
-                    fontSize = 22.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-
-                val coords = when (val geom = feature.geometry) {
-                    is com.nars.maplibre.data.model.LineStringGeometry -> {
-                        val c = geom.coordinates.chunked(2)
-                        if (c.isNotEmpty()) "Lat: ${c[0][1].formatDecimal(6)}, Lng: ${c[0][0].formatDecimal(6)}" else null
-                    }
-                    is com.nars.maplibre.data.model.PointGeometry -> {
-                        if (geom.coordinates.size >= 2) "Lat: ${geom.coordinates[1].formatDecimal(6)}, Lng: ${geom.coordinates[0].formatDecimal(6)}" else null
-                    }
-                    else -> null
-                }
-                coords?.let {
-                    Text(
-                        text = it,
-                        fontSize = 12.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-
+                FeatureModalCoordinateInfo(feature = feature)
                 Spacer(modifier = Modifier.height(16.dp))
 
                 when (val typedProps = props) {
                     is FeatureProperties.RoadProperties -> RoadsValidationFields(
-                        props = typedProps,
-                        onPropsChanged = { props = it }
+                        props = typedProps, onPropsChanged = { props = it }
                     )
                     is FeatureProperties.HouseEntranceProperties -> HouseEntranceValidationFields(
-                        props = typedProps,
-                        onPropsChanged = { props = it }
+                        props = typedProps, onPropsChanged = { props = it }
                     )
                     is FeatureProperties.NamingPanelProperties -> NamingPanelValidationFields(
-                        props = typedProps,
-                        onPropsChanged = { props = it }
+                        props = typedProps, onPropsChanged = { props = it }
                     )
                 }
 
                 Spacer(modifier = Modifier.height(20.dp))
-
-                validationErrors.entries.forEach { (field, msgResId) ->
-                    Text(
-                        text = "$field: ${stringResource(msgResId)}",
-                        fontSize = 12.sp,
-                        color = MaterialTheme.colorScheme.error,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                }
-
+                FeatureModalValidationErrors(errors = validationErrors)
                 Spacer(modifier = Modifier.height(8.dp))
-
-                Button(
-                    onClick = {
+                FeatureModalSaveButton(
+                    onSave = {
                         val result = validateFeatureProperties(props)
                         if (result.valid) {
                             onSave(feature.copy(properties = props))
@@ -159,13 +91,79 @@ fun FeatureValidationModal(
                         } else {
                             validationErrors = result.errors
                         }
-                    },
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
-                ) {
-                    Text(stringResource(R.string.feature_save))
-                }
+                    }
+                )
             }
         }
+    }
+}
+
+@Composable
+private fun FeatureModalHeader(phase: PhaseDefinition, onDismiss: () -> Unit) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = when (phase.key) {
+                "roads" -> stringResource(R.string.feature_road_attributes)
+                "houseEntrances" -> stringResource(R.string.feature_entrance_check)
+                "namingPanels" -> stringResource(R.string.feature_panel_check)
+                else -> stringResource(R.string.feature_details)
+            },
+            fontSize = 18.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface
+        )
+        Box(
+            modifier = Modifier.size(32.dp).clip(RoundedCornerShape(8.dp))
+                .background(MaterialTheme.colorScheme.surfaceVariant)
+                .clickable { onDismiss() },
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(Icons.Default.Close, contentDescription = stringResource(R.string.map_close),
+                tint = MaterialTheme.colorScheme.onSurface)
+        }
+    }
+}
+
+@Composable
+private fun FeatureModalCoordinateInfo(feature: NarsFeature) {
+    val roadName = feature.properties.name ?: stringResource(R.string.feature_unnamed_road)
+    Text(text = roadName, fontSize = 22.sp, fontWeight = FontWeight.Bold,
+        color = MaterialTheme.colorScheme.onSurface)
+
+    val coords = when (val geom = feature.geometry) {
+        is com.nars.maplibre.data.model.LineStringGeometry -> {
+            val c = geom.coordinates.chunked(2)
+            if (c.isNotEmpty()) "Lat: ${c[0][1].formatDecimal(6)}, Lng: ${c[0][0].formatDecimal(6)}" else null
+        }
+        is com.nars.maplibre.data.model.PointGeometry -> {
+            if (geom.coordinates.size >= 2) {
+                "Lat: ${geom.coordinates[1].formatDecimal(6)}, Lng: ${geom.coordinates[0].formatDecimal(6)}"
+            } else null
+        }
+        else -> null
+    }
+    coords?.let {
+        Text(text = it, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
+}
+
+@Composable
+private fun FeatureModalValidationErrors(errors: Map<String, Int>) {
+    errors.entries.forEach { (field, msgResId) ->
+        Text(text = "$field: ${stringResource(msgResId)}", fontSize = 12.sp,
+            color = MaterialTheme.colorScheme.error, modifier = Modifier.fillMaxWidth())
+    }
+}
+
+@Composable
+private fun FeatureModalSaveButton(onSave: () -> Unit) {
+    Button(
+        onClick = onSave,
+        modifier = Modifier.fillMaxWidth(),
+        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+    ) {
+        Text(stringResource(R.string.feature_save))
     }
 }

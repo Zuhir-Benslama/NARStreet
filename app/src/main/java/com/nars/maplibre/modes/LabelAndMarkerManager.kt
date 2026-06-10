@@ -13,6 +13,7 @@ import org.maplibre.android.style.layers.CircleLayer
 import org.maplibre.android.style.layers.SymbolLayer
 import org.maplibre.android.style.sources.GeoJsonSource
 
+@Suppress("TooGenericExceptionCaught")
 class LabelAndMarkerManager(
     private val map: MapLibreMap
 ) {
@@ -29,8 +30,8 @@ class LabelAndMarkerManager(
         val labelLayerName = "${layerName}_label"
         try {
             map.style?.getLayer(labelLayerName)?.let { map.style?.removeLayer(labelLayerName) }
-        } catch (e: Exception) {
-            NarsLogger.w(TAG, "Failed to remove existing label layer: ${e.message}")
+        } catch (e: RuntimeException) {
+            NarsLogger.w(TAG, "Failed to remove existing label layer", e)
         }
 
         val labelLayer = SymbolLayer(labelLayerName, sourceName).apply {
@@ -47,37 +48,38 @@ class LabelAndMarkerManager(
         }
         try {
             map.style?.addLayer(labelLayer)
-        } catch (e: Exception) {
-            NarsLogger.w(TAG, "Error adding label: ${e.message}")
+        } catch (e: RuntimeException) {
+            NarsLogger.w(TAG, "Error adding label", e)
         }
     }
 
     fun addRoadEndpointMarkers(allFeatures: List<NarsFeature>) {
-        val roads = allFeatures.filter { it.properties.phase == "roads" }
-        if (roads.isEmpty()) return
-
-        for (road in roads) {
-            val geometry = road.geometry as? LineStringGeometry ?: continue
-            val coords = geometry.coordinates.chunked(2)
-            if (coords.size < 2) continue
-
-            addEndpointMarker(id = "${road.id}_start", lon = coords[0][0], lat = coords[0][1], isStart = true)
-            addEndpointMarker(id = "${road.id}_end", lon = coords.last()[0], lat = coords.last()[1], isStart = false)
-
-            val midIdx = coords.size / 2
-            addLabelAt(layerName = "${road.id}_label", labelText = road.properties.name, lon = coords[midIdx][0], lat = coords[midIdx][1])
-        }
+        allFeatures
+            .filter { it.properties.phase == "roads" }
+            .mapNotNull { road -> (road.geometry as? LineStringGeometry)?.let { road to it } }
+            .filter { (_, geometry) -> geometry.coordinates.chunked(2).size >= 2 }
+            .forEach { (road, geometry) ->
+                val coords = geometry.coordinates.chunked(2)
+                addEndpointMarker(id = "${road.id}_start",
+                    lon = coords[0][0], lat = coords[0][1], isStart = true)
+                addEndpointMarker(id = "${road.id}_end",
+                    lon = coords.last()[0], lat = coords.last()[1], isStart = false)
+                val midIdx = coords.size / 2
+                addLabelAt(layerName = "${road.id}_label",
+                    labelText = road.properties.name, lon = coords[midIdx][0], lat = coords[midIdx][1])
+            }
     }
 
     private fun addEndpointMarker(id: String, lon: Double, lat: Double, isStart: Boolean) {
         val layerName = "nars_$id"
         val sourceName = "${layerName}_src"
-        val geoJson = """{"type": "FeatureCollection", "features": [{"type": "Feature", "geometry": {"type": "Point", "coordinates": [$lon, $lat]}, "properties": {}}]}"""
+        val geoJson = """{"type": "FeatureCollection", "features": """ +
+            """[{"type": "Feature", "geometry": {"type": "Point", "coordinates": [$lon, $lat]}, "properties": {}}]}"""
 
         try {
             map.style?.addSource(GeoJsonSource(sourceName, geoJson))
-        } catch (e: Exception) {
-            NarsLogger.w(TAG, "Failed to add endpoint marker source: ${e.message}")
+        } catch (e: RuntimeException) {
+            NarsLogger.w(TAG, "Failed to add endpoint marker source", e)
             return
         }
 
@@ -90,8 +92,8 @@ class LabelAndMarkerManager(
                 org.maplibre.android.style.layers.PropertyFactory.circleStrokeWidth(3f)
             )
         }
-        try { map.style?.addLayer(circleLayer) } catch (e: Exception) {
-            NarsLogger.w(TAG, "Failed to add circle layer: ${e.message}")
+        try { map.style?.addLayer(circleLayer) } catch (e: RuntimeException) {
+            NarsLogger.w(TAG, "Failed to add circle layer", e)
         }
     }
 
@@ -99,10 +101,12 @@ class LabelAndMarkerManager(
         if (labelText.isNullOrBlank()) return
         val sourceName = "${layerName}_src"
         val escapedText = escapeJson(labelText)
-        val geoJson = """{"type": "FeatureCollection", "features": [{"type": "Feature", "geometry": {"type": "Point", "coordinates": [$lon, $lat]}, "properties": {"text": "$escapedText"}}]}"""
+        val geoJson = """{"type": "FeatureCollection", "features": """ +
+            """[{"type": "Feature", "geometry": {"type": "Point", "coordinates": """ +
+            """[$lon, $lat]}, "properties": {"text": "$escapedText"}}]}"""
 
-        try { map.style?.addSource(GeoJsonSource(sourceName, geoJson)) } catch (e: Exception) {
-            NarsLogger.w(TAG, "Failed to add label source: ${e.message}")
+        try { map.style?.addSource(GeoJsonSource(sourceName, geoJson)) } catch (e: RuntimeException) {
+            NarsLogger.w(TAG, "Failed to add label source", e)
         }
 
         val symbolLayer = SymbolLayer(layerName, sourceName).apply {
@@ -116,8 +120,8 @@ class LabelAndMarkerManager(
                 org.maplibre.android.style.layers.PropertyFactory.textHaloWidth(3f)
             )
         }
-        try { map.style?.addLayer(symbolLayer) } catch (e: Exception) {
-            NarsLogger.w(TAG, "Failed to add label layer: ${e.message}")
+        try { map.style?.addLayer(symbolLayer) } catch (e: RuntimeException) {
+            NarsLogger.w(TAG, "Failed to add label layer", e)
         }
     }
 
@@ -134,7 +138,8 @@ class LabelAndMarkerManager(
 
             try {
                 map.style?.getSource(vertexSourceName)?.let { map.style?.removeSource(vertexSourceName) }
-                val geoJson = """{"type": "Feature", "geometry": {"type": "Point", "coordinates": [${coord[0]}, ${coord[1]}]}, "properties": {"isVertex": true}}"""
+                val geoJson = """{"type": "Feature", "geometry": {"type": "Point", "coordinates": """ +
+                    """[${coord[0]}, ${coord[1]}]}, "properties": {"isVertex": true}}"""
                 map.style?.addSource(GeoJsonSource(vertexSourceName, geoJson))
 
                 val circleLayer = CircleLayer(vertexLayerName, vertexSourceName).apply {
@@ -147,8 +152,8 @@ class LabelAndMarkerManager(
                 }
                 map.style?.addLayer(circleLayer)
                 vertexMarkerIds.add(vertexLayerName)
-            } catch (e: Exception) {
-                NarsLogger.w(TAG, "Error adding vertex marker: ${e.message}")
+            } catch (e: RuntimeException) {
+                NarsLogger.w(TAG, "Error adding vertex marker", e)
             }
         }
     }
@@ -164,8 +169,8 @@ class LabelAndMarkerManager(
                     map.style?.removeSource(sourceName)
                 }
                 vertexMarkerIds.remove(markerId)
-            } catch (e: Exception) {
-                NarsLogger.w(TAG, "Failed to remove vertex marker $markerId: ${e.message}")
+            } catch (e: RuntimeException) {
+                NarsLogger.w(TAG, "Failed to remove vertex marker $markerId", e)
             }
         }
     }

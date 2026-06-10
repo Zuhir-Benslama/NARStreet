@@ -129,111 +129,59 @@ private fun validateNamingPanelFieldProperties(
 
 fun validateHouseEntranceFieldWorkflow(properties: FeatureProperties.HouseEntranceProperties): HouseEntranceValidation {
     val issues = mutableListOf<Int>()
+    val hasEntrance = properties.hasEntrance == true
+    val hasNumberingPanel: Boolean? = if (hasEntrance) properties.hasNumberingPanel == true else null
+    val numberingPanelCorrect: Boolean? =
+        if (hasNumberingPanel == true) properties.numberingPanelCorrect == true else null
+    val numberingPanelPositionCorrect: Boolean? =
+        if (numberingPanelCorrect == true) properties.numberingPanelPositionCorrect == true else null
 
-    if (properties.hasEntrance != true) {
+    if (!hasEntrance) {
         issues.add(R.string.validation_entrance_not_found)
-        return HouseEntranceValidation(
-            hasEntrance = false,
-            needsNotification = true,
-            issues = issues
-        )
-    }
-
-    if (properties.hasNumberingPanel != true) {
+    } else if (hasNumberingPanel == false) {
         issues.add(R.string.validation_numbering_panel_not_found)
-        return HouseEntranceValidation(
-            hasEntrance = true,
-            hasNumberingPanel = false,
-            needsNotification = true,
-            issues = issues
-        )
-    }
-
-    if (properties.numberingPanelCorrect != true) {
+    } else if (numberingPanelCorrect == false) {
         issues.add(R.string.validation_number_incorrect)
-        return HouseEntranceValidation(
-            hasEntrance = true,
-            hasNumberingPanel = true,
-            numberingPanelCorrect = false,
-            needsNotification = true,
-            issues = issues
-        )
-    }
-
-    if (properties.numberingPanelPositionCorrect != true) {
+    } else if (numberingPanelPositionCorrect == false) {
         issues.add(R.string.validation_numbering_panel_position_incorrect)
-        return HouseEntranceValidation(
-            hasEntrance = true,
-            hasNumberingPanel = true,
-            numberingPanelCorrect = true,
-            numberingPanelPositionCorrect = false,
-            needsNotification = true,
-            issues = issues
-        )
     }
 
     return HouseEntranceValidation(
-        hasEntrance = true,
-        hasNumberingPanel = true,
-        numberingPanelCorrect = true,
-        numberingPanelPositionCorrect = true,
-        needsNotification = false,
-        issues = emptyList()
+        hasEntrance = hasEntrance,
+        hasNumberingPanel = hasNumberingPanel,
+        numberingPanelCorrect = numberingPanelCorrect,
+        numberingPanelPositionCorrect = numberingPanelPositionCorrect,
+        needsNotification = issues.isNotEmpty(),
+        issues = issues
     )
 }
 
 fun validateNamingPanelFieldWorkflow(properties: FeatureProperties.NamingPanelProperties): NamingPanelValidation {
     val issues = mutableListOf<Int>()
+    val hasLocation = properties.hasNamingPanelLocation == true
+    val hasNamingPanel: Boolean? = if (hasLocation) properties.hasNamingPanel == true else null
+    val namingCorrect: Boolean? =
+        if (hasNamingPanel == true) properties.namingCorrect == true else null
+    val namingPanelPositionCorrect: Boolean? =
+        if (namingCorrect == true) properties.namingPanelPositionCorrect == true else null
 
-    if (properties.hasNamingPanelLocation != true) {
+    if (!hasLocation) {
         issues.add(R.string.validation_naming_panel_location_not_found)
-        return NamingPanelValidation(
-            hasLocation = false,
-            needsNotification = true,
-            issues = issues
-        )
-    }
-
-    if (properties.hasNamingPanel != true) {
+    } else if (hasNamingPanel == false) {
         issues.add(R.string.validation_naming_panel_not_found)
-        return NamingPanelValidation(
-            hasLocation = true,
-            hasNamingPanel = false,
-            needsNotification = true,
-            issues = issues
-        )
-    }
-
-    if (properties.namingCorrect != true) {
+    } else if (namingCorrect == false) {
         issues.add(R.string.validation_street_name_incorrect)
-        return NamingPanelValidation(
-            hasLocation = true,
-            hasNamingPanel = true,
-            namingCorrect = false,
-            needsNotification = true,
-            issues = issues
-        )
-    }
-
-    if (properties.namingPanelPositionCorrect != true) {
+    } else if (namingPanelPositionCorrect == false) {
         issues.add(R.string.validation_naming_panel_position_incorrect)
-        return NamingPanelValidation(
-            hasLocation = true,
-            hasNamingPanel = true,
-            namingCorrect = true,
-            namingPanelPositionCorrect = false,
-            needsNotification = true,
-            issues = issues
-        )
     }
 
     return NamingPanelValidation(
-        hasLocation = true,
-        hasNamingPanel = true,
-        namingCorrect = true,
-        namingPanelPositionCorrect = true,
-        needsNotification = false,
-        issues = emptyList()
+        hasLocation = hasLocation,
+        hasNamingPanel = hasNamingPanel,
+        namingCorrect = namingCorrect,
+        namingPanelPositionCorrect = namingPanelPositionCorrect,
+        needsNotification = issues.isNotEmpty(),
+        issues = issues
     )
 }
 
