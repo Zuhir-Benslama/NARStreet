@@ -64,7 +64,6 @@ fun LoginScreen(
     var isLoading by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
 
-    val context = androidx.compose.ui.platform.LocalContext.current
     val sessionManager: SessionManager = koinInject()
 
     LaunchedEffect(Unit) {
@@ -73,10 +72,11 @@ fun LoginScreen(
         }
     }
 
+    val loginFailed = stringResource(R.string.login_failed)
+    val loginError = stringResource(R.string.login_error)
+
     fun performLogin() {
         if (!isLoading && username.isNotBlank() && password.isNotBlank()) {
-            val loginFailed = context.getString(R.string.login_failed)
-            val loginError = context.getString(R.string.login_error)
             scope.launch {
                 isLoading = true
                 errorMessage = null

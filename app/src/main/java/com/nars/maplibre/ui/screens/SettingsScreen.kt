@@ -61,6 +61,7 @@ fun SettingsScreen(
     onLogout: () -> Unit
 ) {
     val viewModel: SettingsViewModel = koinViewModel()
+    val themeMode by viewModel.themeMode.collectAsState()
 
     Scaffold(
         topBar = {
@@ -111,7 +112,7 @@ fun SettingsScreen(
                                 ThemeMode.DARK -> stringResource(R.string.settings_theme)
                                 ThemeMode.AUTO -> stringResource(R.string.settings_theme)
                             },
-                            selected = viewModel.themeMode.value == mode,
+                            selected = themeMode == mode,
                             onClick = {
                                 viewModel.setThemeMode(mode)
                             }

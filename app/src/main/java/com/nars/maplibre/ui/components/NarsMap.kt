@@ -44,10 +44,10 @@ import org.maplibre.android.style.sources.GeoJsonSource
 fun NarsMap(
     viewModel: MapViewModel,
     onMapReady: (MapView, MapLibreMap) -> Unit,
+    modifier: Modifier = Modifier,
     onMapClick: ((LatLng) -> Unit)? = null,
     onMapLongClick: ((LatLng) -> Unit)? = null,
     shouldHandleClick: (() -> Boolean)? = null,
-    modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
     val baseLayer = viewModel.baseLayer.collectAsState()
