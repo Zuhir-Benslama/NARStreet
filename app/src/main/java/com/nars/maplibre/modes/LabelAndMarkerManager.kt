@@ -13,7 +13,6 @@ import org.maplibre.android.style.layers.CircleLayer
 import org.maplibre.android.style.layers.SymbolLayer
 import org.maplibre.android.style.sources.GeoJsonSource
 
-@Suppress("TooGenericExceptionCaught")
 class LabelAndMarkerManager(
     private val map: MapLibreMap
 ) {
@@ -30,7 +29,7 @@ class LabelAndMarkerManager(
         val labelLayerName = "${layerName}_label"
         try {
             map.style?.getLayer(labelLayerName)?.let { map.style?.removeLayer(labelLayerName) }
-        } catch (e: RuntimeException) {
+        } catch (e: IllegalArgumentException) {
             NarsLogger.w(TAG, "Failed to remove existing label layer", e)
         }
 
@@ -48,7 +47,7 @@ class LabelAndMarkerManager(
         }
         try {
             map.style?.addLayer(labelLayer)
-        } catch (e: RuntimeException) {
+        } catch (e: IllegalArgumentException) {
             NarsLogger.w(TAG, "Error adding label", e)
         }
     }
@@ -78,7 +77,7 @@ class LabelAndMarkerManager(
 
         try {
             map.style?.addSource(GeoJsonSource(sourceName, geoJson))
-        } catch (e: RuntimeException) {
+        } catch (e: IllegalArgumentException) {
             NarsLogger.w(TAG, "Failed to add endpoint marker source", e)
             return
         }
@@ -92,7 +91,7 @@ class LabelAndMarkerManager(
                 org.maplibre.android.style.layers.PropertyFactory.circleStrokeWidth(3f)
             )
         }
-        try { map.style?.addLayer(circleLayer) } catch (e: RuntimeException) {
+        try { map.style?.addLayer(circleLayer) } catch (e: IllegalArgumentException) {
             NarsLogger.w(TAG, "Failed to add circle layer", e)
         }
     }
@@ -105,7 +104,7 @@ class LabelAndMarkerManager(
             """[{"type": "Feature", "geometry": {"type": "Point", "coordinates": """ +
             """[$lon, $lat]}, "properties": {"text": "$escapedText"}}]}"""
 
-        try { map.style?.addSource(GeoJsonSource(sourceName, geoJson)) } catch (e: RuntimeException) {
+        try { map.style?.addSource(GeoJsonSource(sourceName, geoJson)) } catch (e: IllegalArgumentException) {
             NarsLogger.w(TAG, "Failed to add label source", e)
         }
 
@@ -120,7 +119,7 @@ class LabelAndMarkerManager(
                 org.maplibre.android.style.layers.PropertyFactory.textHaloWidth(3f)
             )
         }
-        try { map.style?.addLayer(symbolLayer) } catch (e: RuntimeException) {
+        try { map.style?.addLayer(symbolLayer) } catch (e: IllegalArgumentException) {
             NarsLogger.w(TAG, "Failed to add label layer", e)
         }
     }
@@ -152,7 +151,7 @@ class LabelAndMarkerManager(
                 }
                 map.style?.addLayer(circleLayer)
                 vertexMarkerIds.add(vertexLayerName)
-            } catch (e: RuntimeException) {
+            } catch (e: IllegalArgumentException) {
                 NarsLogger.w(TAG, "Error adding vertex marker", e)
             }
         }
@@ -169,7 +168,7 @@ class LabelAndMarkerManager(
                     map.style?.removeSource(sourceName)
                 }
                 vertexMarkerIds.remove(markerId)
-            } catch (e: RuntimeException) {
+            } catch (e: IllegalArgumentException) {
                 NarsLogger.w(TAG, "Failed to remove vertex marker $markerId", e)
             }
         }

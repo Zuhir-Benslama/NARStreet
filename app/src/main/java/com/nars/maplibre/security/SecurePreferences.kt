@@ -1,4 +1,3 @@
-@file:Suppress("DEPRECATION")
 package com.nars.maplibre.security
 
 import android.content.Context
@@ -10,11 +9,10 @@ import kotlinx.serialization.json.Json
 import com.nars.maplibre.data.model.User
 import com.nars.maplibre.utils.NarsLogger
 
-@Suppress("TooManyFunctions")
 class SecurePreferences(context: Context) {
 
     private val masterKey: MasterKey by lazy {
-        MasterKey.Builder(context)
+        MasterKey.Builder(context, MasterKey.DEFAULT_MASTER_KEY_ALIAS)
             .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
             .build()
     }

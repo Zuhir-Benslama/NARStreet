@@ -1,5 +1,3 @@
-@file:Suppress("MatchingDeclarationName")
-
 package com.nars.maplibre.ui.navigation
 
 import androidx.compose.runtime.Composable
@@ -9,12 +7,6 @@ import androidx.navigation.compose.rememberNavController
 import com.nars.maplibre.ui.screens.LoginScreen
 import com.nars.maplibre.ui.screens.MapScreen
 import com.nars.maplibre.ui.screens.SettingsScreen
-
-object Routes {
-    const val LOGIN = "login"
-    const val MAP = "map"
-    const val SETTINGS = "settings"
-}
 
 @Composable
 fun NarsNavHost() {

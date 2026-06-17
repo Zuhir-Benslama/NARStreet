@@ -185,7 +185,7 @@ class MapScreenHandlers(
     fun loadFeaturesOnMapReady() {
         scope.launch {
             NarsLogger.d(TAG, "Loading features from backend...")
-            viewModel.setLoading(true)
+            viewModel.updateUiState(isLoading = true)
             val result = apiService.loadFeatures()
             result.onSuccess { features ->
                 viewModel.featureStore.addFeatures(features)
@@ -194,7 +194,7 @@ class MapScreenHandlers(
                     else context.getString(R.string.map_features_loaded, features.size))
             }
             result.onFailure { snackbar("${context.getString(R.string.map_save_failed)}: ${it.message}") }
-            viewModel.setLoading(false)
+            viewModel.updateUiState(isLoading = false)
         }
     }
 

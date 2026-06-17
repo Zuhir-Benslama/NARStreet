@@ -54,6 +54,19 @@ complexity:
     allowedLines: 600
   TooManyFunctions:
     active: true
+    allowedFunctionsPerClass: 15
+  CyclomaticComplexMethod:
+    active: true
+    allowedComplexity: 15
+  LongParameterList:
+    active: true
+    allowedFunctionParameters: 6
+    allowedConstructorParameters: 7
+    ignoreDefaultParameters: true
+    ignoreDataClasses: true
+  NestedBlockDepth:
+    active: true
+    allowedDepth: 4
 
 exceptions:
   SwallowedException:

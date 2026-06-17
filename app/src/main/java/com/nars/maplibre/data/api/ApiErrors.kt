@@ -84,7 +84,6 @@ class ValidationError(
  * Retry utility matching web version (errors.ts: withRetry)
  * Implements exponential backoff with jitter
  */
-@Suppress("TooGenericExceptionCaught")
 suspend fun <T> withRetry(
     operation: suspend () -> T,
     config: RetryConfig = RetryConfig(),
@@ -95,24 +94,24 @@ suspend fun <T> withRetry(
     repeat(config.maxRetries + 1) { attempt ->
         try {
             return operation()
-        } catch (e: Exception) {
-            lastException = e
+        } catch (ignored: Exception) {
+            lastException = ignored
             
             // Don't retry on the last attempt
             if (attempt >= config.maxRetries) {
-                throw e
+                throw ignored
             }
             
             // Don't retry on certain errors
-            if (e is AuthError || e is ValidationError || e is NotFoundError) {
-                throw e
+            if (ignored is AuthError || ignored is ValidationError || ignored is NotFoundError) {
+                throw ignored
             }
             
             // Calculate delay with exponential backoff and jitter
             val delayMs = calculateBackoff(attempt + 1, config)
             
             // Log retry attempt
-            onRetry?.invoke(e, attempt + 1)
+            onRetry?.invoke(ignored, attempt + 1)
             
             delay(delayMs)
         }

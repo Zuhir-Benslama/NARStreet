@@ -1,5 +1,3 @@
-@file:Suppress("MatchingDeclarationName")
-
 package com.nars.maplibre.ui.theme
 
 import android.app.Activity
@@ -13,15 +11,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
-
-/**
- * Theme modes
- */
-enum class ThemeMode {
-    LIGHT,
-    DARK,
-    AUTO
-}
 
 // Glass-morphism colors (matching nars-vite-maplibre)
 val GlassBackground = Color(0xFF0f1932)

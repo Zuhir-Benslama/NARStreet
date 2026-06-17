@@ -26,14 +26,13 @@ class NarsApplication : Application() {
         MapLibre.getInstance(this, null, WellKnownTileServer.MapTiler)
 
         applicationScope.launch {
-            @Suppress("TooGenericExceptionCaught")
             try {
                 val prefs: AppPreferences = org.koin.java.KoinJavaComponent.get(AppPreferences::class.java)
                 prefs.authToken?.let { jwtToken ->
                     NarsLogger.d("NarsApplication", "User session found on startup")
                 }
-            } catch (e: RuntimeException) {
-                NarsLogger.w("NarsApplication", "Session check skipped", e)
+            } catch (ignored: RuntimeException) {
+                NarsLogger.w("NarsApplication", "Session check skipped", ignored)
             }
         }
     }

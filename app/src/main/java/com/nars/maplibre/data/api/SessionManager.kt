@@ -3,6 +3,7 @@ package com.nars.maplibre.data.api
 import com.nars.maplibre.AppPreferences
 import com.nars.maplibre.data.model.LoginResponse
 import com.nars.maplibre.utils.NarsLogger
+import kotlinx.coroutines.CancellationException
 
 class SessionManager(
     private val apiService: ApiService,
@@ -32,11 +33,12 @@ class SessionManager(
         return result
     }
 
-    @Suppress("TooGenericExceptionCaught")
     suspend fun logout() {
         try {
             apiService.logout()
-        } catch (e: Exception) {
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: java.io.IOException) {
             NarsLogger.w(TAG, "Logout API call failed", e)
         }
         appPreferences.authToken = null

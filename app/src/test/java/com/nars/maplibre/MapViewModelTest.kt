@@ -193,7 +193,7 @@ class MapViewModelTest {
         vm.updateFeature(newFeature)
 
         verify { featureStore.updateFeature("f1", newFeature) }
-        verify { featureStore.addUndoAction(any()) }
+        verify { featureStore.undoManager.addUndoAction(any()) }
     }
 
     @Test
@@ -208,7 +208,7 @@ class MapViewModelTest {
         vm.deleteFeature("f1")
 
         verify { featureStore.removeFeature("f1") }
-        verify { featureStore.addUndoAction(any()) }
+        verify { featureStore.undoManager.addUndoAction(any()) }
     }
 
     @Test
@@ -249,7 +249,7 @@ class MapViewModelTest {
 
         vm.undo()
 
-        verify { featureStore.executeUndo() }
+        verify { featureStore.undoManager.executeUndo() }
     }
 
     @Test
@@ -281,52 +281,52 @@ class MapViewModelTest {
     }
 
     @Test
-    fun `showError updates uiState`() {
+    fun `updateUiState sets error message`() {
         val vm = createViewModel()
 
-        vm.showError("Test error")
+        vm.updateUiState(errorMessage = "Test error")
 
         assertEquals("Test error", vm.uiState.value.errorMessage)
     }
 
     @Test
-    fun `clearError resets error message`() {
+    fun `updateUiState clears error message`() {
         val vm = createViewModel()
-        vm.showError("Test error")
+        vm.updateUiState(errorMessage = "Test error")
 
-        vm.clearError()
+        vm.updateUiState(errorMessage = null)
 
         assertNull(vm.uiState.value.errorMessage)
     }
 
     @Test
-    fun `showSuccess updates uiState`() {
+    fun `updateUiState sets success message`() {
         val vm = createViewModel()
 
-        vm.showSuccess("Test success")
+        vm.updateUiState(successMessage = "Test success")
 
         assertEquals("Test success", vm.uiState.value.successMessage)
     }
 
     @Test
-    fun `clearSuccess resets success message`() {
+    fun `updateUiState clears success message`() {
         val vm = createViewModel()
-        vm.showSuccess("Test success")
+        vm.updateUiState(successMessage = "Test success")
 
-        vm.clearSuccess()
+        vm.updateUiState(successMessage = null)
 
         assertNull(vm.uiState.value.successMessage)
     }
 
     @Test
-    fun `setLoading updates uiState`() {
+    fun `updateUiState sets loading`() {
         val vm = createViewModel()
 
-        vm.setLoading(true)
+        vm.updateUiState(isLoading = true)
 
         assertTrue(vm.uiState.value.isLoading)
 
-        vm.setLoading(false)
+        vm.updateUiState(isLoading = false)
 
         assertFalse(vm.uiState.value.isLoading)
     }
@@ -346,7 +346,7 @@ class MapViewModelTest {
             properties = FeatureProperties.RoadProperties(name = "Restored Road"))
         val undoAction = io.mockk.mockk<com.nars.maplibre.data.store.UndoAction.Delete>(relaxed = true)
         every { undoAction.feature } returns feature
-        every { featureStore.executeUndo() } returns undoAction
+        every { featureStore.undoManager.executeUndo() } returns undoAction
 
         val vm = createViewModel()
         vm.undo()
@@ -361,7 +361,7 @@ class MapViewModelTest {
             properties = FeatureProperties.RoadProperties(name = "Removed Road"))
         val undoAction = io.mockk.mockk<com.nars.maplibre.data.store.UndoAction.Create>(relaxed = true)
         every { undoAction.feature } returns feature
-        every { featureStore.executeUndo() } returns undoAction
+        every { featureStore.undoManager.executeUndo() } returns undoAction
 
         val vm = createViewModel()
         val result = vm.undo()
@@ -377,7 +377,7 @@ class MapViewModelTest {
             properties = FeatureProperties.RoadProperties(name = "Old Name"))
         val undoAction = io.mockk.mockk<com.nars.maplibre.data.store.UndoAction.Update>(relaxed = true)
         every { undoAction.oldFeature } returns oldFeature
-        every { featureStore.executeUndo() } returns undoAction
+        every { featureStore.undoManager.executeUndo() } returns undoAction
 
         val vm = createViewModel()
         val result = vm.undo()
@@ -388,7 +388,7 @@ class MapViewModelTest {
 
     @Test
     fun `undo returns false when nothing to undo`() {
-        every { featureStore.executeUndo() } returns null
+        every { featureStore.undoManager.executeUndo() } returns null
         val vm = createViewModel()
 
         val result = vm.undo()
@@ -403,7 +403,7 @@ class MapViewModelTest {
         every { undoAction.feature } returns NarsFeature(id = "f1", type = NarsFeatureType.ROAD,
             geometry = PointGeometry(coordinates = listOf(0.0, 0.0)),
             properties = FeatureProperties.RoadProperties())
-        every { featureStore.executeUndo() } returns undoAction
+        every { featureStore.undoManager.executeUndo() } returns undoAction
 
         val vm = createViewModel()
         val result = vm.undo()
@@ -423,7 +423,7 @@ class MapViewModelTest {
             properties = FeatureProperties.RoadProperties(name = "Second"))
 
         var callCount = 0
-        every { featureStore.executeUndo() } answers {
+        every { featureStore.undoManager.executeUndo() } answers {
             callCount++
             when (callCount) {
                 1 -> secondAction
@@ -436,16 +436,16 @@ class MapViewModelTest {
 
         assertTrue(vm.undo())
         assertEquals("Restored: Second", vm.uiState.value.successMessage)
-        verify(exactly = 1) { featureStore.executeUndo() }
+        verify(exactly = 1) { featureStore.undoManager.executeUndo() }
 
         assertTrue(vm.undo())
         assertEquals("Restored: First", vm.uiState.value.successMessage)
-        verify(exactly = 2) { featureStore.executeUndo() }
+        verify(exactly = 2) { featureStore.undoManager.executeUndo() }
     }
 
     @Test
     fun `canUndo delegates to featureStore`() {
-        every { featureStore.canUndo } returns true
+        every { featureStore.undoManager.canUndo } returns true
         val vm = createViewModel()
 
         assertTrue(vm.canUndo)

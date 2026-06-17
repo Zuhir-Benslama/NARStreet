@@ -128,10 +128,16 @@ private fun MapScreenEffects(
     snackbarHostState: SnackbarHostState
 ) {
     LaunchedEffect(uiState.errorMessage) {
-        uiState.errorMessage?.let { snackbarHostState.showSnackbar(it); viewModel.clearError() }
+        uiState.errorMessage?.let {
+            snackbarHostState.showSnackbar(it)
+            viewModel.updateUiState(errorMessage = null)
+        }
     }
     LaunchedEffect(uiState.successMessage) {
-        uiState.successMessage?.let { snackbarHostState.showSnackbar(it); viewModel.clearSuccess() }
+        uiState.successMessage?.let {
+            snackbarHostState.showSnackbar(it)
+            viewModel.updateUiState(successMessage = null)
+        }
     }
 
     LaunchedEffect(handlers.narsGeoman) {
@@ -143,7 +149,7 @@ private fun MapScreenEffects(
             NarsLogger.d("MapScreen", "Phase changed: ${phase.label}")
             handlers.narsGeoman?.setCurrentPhase(phase)
             handlers.narsGeoman?.updateDisplayedFeatures(allFeatures)
-            viewModel.setLoading(false)
+            viewModel.updateUiState(isLoading = false)
         }
     }
 }

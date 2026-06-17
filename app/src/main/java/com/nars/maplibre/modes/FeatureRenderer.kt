@@ -20,7 +20,6 @@ import org.maplibre.android.style.layers.LineLayer
 import org.maplibre.android.style.layers.SymbolLayer
 import org.maplibre.android.style.sources.GeoJsonSource
 
-@Suppress("TooManyFunctions")
 class FeatureRenderer(
     private val map: MapLibreMap
 ) {
@@ -138,11 +137,10 @@ class FeatureRenderer(
         }
     }
 
-    @Suppress("TooGenericExceptionCaught")
     private fun removeExistingSource(sourceName: String) {
         try {
             map.style?.getSource(sourceName)?.let { map.style?.removeSource(sourceName) }
-        } catch (e: RuntimeException) {
+        } catch (e: IllegalArgumentException) {
             NarsLogger.w(TAG, "Error removing source $sourceName", e)
         }
     }

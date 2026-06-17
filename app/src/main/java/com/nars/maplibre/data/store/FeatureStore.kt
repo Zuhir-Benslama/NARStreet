@@ -3,17 +3,12 @@ package com.nars.maplibre.data.store
 import com.nars.maplibre.data.model.NarsFeature
 import com.nars.maplibre.data.model.PhaseDefinition
 import com.nars.maplibre.data.model.Phases
-import com.nars.maplibre.utils.NarsLogger
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import java.util.Collections
 
-@Suppress("TooManyFunctions")
 class FeatureStore {
-    companion object {
-        private const val MAX_UNDO_SIZE = 50
-    }
+    val undoManager = UndoManager(this)
 
     private val _featuresByPhase = MutableStateFlow<Map<String, List<NarsFeature>>>(emptyMap())
     val featuresByPhase: StateFlow<Map<String, List<NarsFeature>>> = _featuresByPhase.asStateFlow()
@@ -29,9 +24,6 @@ class FeatureStore {
 
     private val _referenceRoadDbId = MutableStateFlow<String?>(null)
     val referenceRoadDbId: StateFlow<String?> = _referenceRoadDbId.asStateFlow()
-
-    private val _undoStack = Collections.synchronizedList(mutableListOf<UndoAction>())
-    val canUndo: Boolean get() = _undoStack.isNotEmpty()
 
     init {
         _currentPhase.value = Phases.ALL.first()
@@ -54,7 +46,7 @@ class FeatureStore {
         _allFeatures.value = _allFeatures.value + feature
 
         if (recordUndo) {
-            addUndoAction(UndoAction.Create(feature, feature.properties.phase))
+            undoManager.addUndoAction(UndoAction.Create(feature, feature.properties.phase))
         }
     }
 
@@ -134,51 +126,6 @@ class FeatureStore {
 
     fun setReferenceRoad(dbId: String?) {
         _referenceRoadDbId.value = dbId
-    }
-
-    fun addUndoAction(action: UndoAction) {
-        _undoStack.add(action)
-        if (_undoStack.size > MAX_UNDO_SIZE) {
-            _undoStack.removeAt(0)
-        }
-    }
-
-    fun popUndoAction(): UndoAction? {
-        if (_undoStack.isEmpty()) return null
-        return _undoStack.removeAt(_undoStack.lastIndex)
-    }
-
-    fun executeUndo(): UndoAction? {
-        val action = popUndoAction() ?: return null
-
-        when (action) {
-            is UndoAction.Delete -> {
-                val feature = action.feature
-                if (getFeatureById(feature.id) == null) addFeature(feature)
-                val roadDbId = when (val props = feature.properties) {
-                    is com.nars.maplibre.data.model.FeatureProperties.HouseEntranceProperties -> props.roadDbId
-                    else -> null
-                }
-                if (roadDbId != null) {
-                    val roadPhase = _featuresByPhase.value["roads"] ?: emptyList()
-                    val road = roadPhase.find { it.id == roadDbId || it.dbId == roadDbId }
-                    if (road != null) {
-                        NarsLogger.d(
-                            "FeatureStore",
-                            "Cross-reference restored: entrance for road ${road.properties.name}"
-                        )
-                    }
-                }
-            }
-            is UndoAction.Create -> {
-                removeFeature(action.feature.id)
-            }
-            is UndoAction.Update -> {
-                updateFeature(action.newFeature.id, action.oldFeature)
-            }
-        }
-
-        return action
     }
 
     fun getAllRoads(): List<NarsFeature> {

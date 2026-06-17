@@ -1,6 +1,5 @@
 package com.nars.maplibre.ui.components
 
-import android.content.Context
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -80,7 +79,7 @@ fun NarsMap(
             mapView.apply {
                 getMapAsync { mapLibreMap ->
                     // Configure map
-                    configureMap(mapLibreMap, ctx, onMapClick, onMapLongClick, shouldHandleClick)
+                    configureMap(mapLibreMap, onMapClick, onMapLongClick, shouldHandleClick)
 
                     // Set initial camera position (Algeria)
                     val cameraPosition = CameraPosition.Builder()
@@ -108,7 +107,6 @@ fun NarsMap(
  */
 private fun configureMap(
     map: MapLibreMap,
-    @Suppress("UNUSED_PARAMETER") context: Context,
     onMapClick: ((LatLng) -> Unit)?,
     onMapLongClick: ((LatLng) -> Unit)?,
     shouldHandleClick: (() -> Boolean)? = null

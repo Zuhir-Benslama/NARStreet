@@ -20,7 +20,6 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
-@Suppress("TooManyFunctions")
 class MapViewModel(
     application: Application,
     val featureStore: FeatureStore,
@@ -49,7 +48,7 @@ class MapViewModel(
     val editModeEnabled: StateFlow<Boolean> = _editModeEnabled.asStateFlow()
 
     val referenceRoadDbId: StateFlow<String?> = featureStore.referenceRoadDbId
-    val canUndo: Boolean get() = featureStore.canUndo
+    val canUndo: Boolean get() = featureStore.undoManager.canUndo
 
     init {
         featureStore.setCurrentPhase(Phases.ALL.first())
@@ -67,7 +66,7 @@ class MapViewModel(
         if (phase.index > currentIndex) {
             val error = phaseNavigator.canAdvance(phase.index)
             if (error != null) {
-                showError(error)
+                updateUiState(errorMessage = error)
                 NarsLogger.d("MapViewModel", "Phase validation failed: $error")
                 return null
             }
@@ -85,7 +84,7 @@ class MapViewModel(
         if (nextPhase == null) {
             val currentIndex = featureStore.currentPhase.value?.index ?: 0
             val error = phaseNavigator.canAdvance(currentIndex + 1)
-            if (error != null) showError(error)
+            if (error != null) updateUiState(errorMessage = error)
         }
         return nextPhase
     }
@@ -96,21 +95,24 @@ class MapViewModel(
     fun setReferenceRoad(dbId: String?) = featureStore.setReferenceRoad(dbId)
 
     fun undo(): Boolean {
-        val action = featureStore.executeUndo()
+        val action = featureStore.undoManager.executeUndo()
         val app = getApplication<Application>()
         if (action == null) {
-            showError(app.getString(R.string.map_nothing_undo))
+            updateUiState(errorMessage = app.getString(R.string.map_nothing_undo))
             return false
         }
         when (action) {
             is UndoAction.Delete -> {
-                showSuccess(app.getString(R.string.undo_restored_format, action.feature.properties.name))
+                val msg = app.getString(R.string.undo_restored_format, action.feature.properties.name)
+                updateUiState(successMessage = msg)
             }
             is UndoAction.Create -> {
-                showSuccess(app.getString(R.string.undo_removed_format, action.feature.properties.name))
+                val msg = app.getString(R.string.undo_removed_format, action.feature.properties.name)
+                updateUiState(successMessage = msg)
             }
             is UndoAction.Update -> {
-                showSuccess(app.getString(R.string.undo_restored_format, action.oldFeature.properties.name))
+                val msg = app.getString(R.string.undo_restored_format, action.oldFeature.properties.name)
+                updateUiState(successMessage = msg)
             }
         }
         return true
@@ -122,7 +124,7 @@ class MapViewModel(
         val oldFeature = featureStore.getFeatureById(feature.id)
         featureStore.updateFeature(feature.id, feature)
         oldFeature?.let {
-            featureStore.addUndoAction(UndoAction.Update(
+            featureStore.undoManager.addUndoAction(UndoAction.Update(
                 oldFeature = it,
                 newFeature = feature,
                 phaseKey = feature.properties.phase
@@ -133,7 +135,7 @@ class MapViewModel(
     fun deleteFeature(featureId: String) {
         val feature = featureStore.getFeatureById(featureId)
         if (feature != null) {
-            featureStore.addUndoAction(UndoAction.Delete(
+            featureStore.undoManager.addUndoAction(UndoAction.Delete(
                 feature = feature,
                 phaseKey = feature.properties.phase
             ))
@@ -163,24 +165,12 @@ class MapViewModel(
 
     fun clearSelection() = featureStore.selectFeature(null)
 
-    fun setLoading(loading: Boolean) {
-        _uiState.value = _uiState.value.copy(isLoading = loading)
-    }
-
-    fun showError(message: String) {
-        _uiState.value = _uiState.value.copy(errorMessage = message)
-    }
-
-    fun clearError() {
-        _uiState.value = _uiState.value.copy(errorMessage = null)
-    }
-
-    fun showSuccess(message: String) {
-        _uiState.value = _uiState.value.copy(successMessage = message)
-    }
-
-    fun clearSuccess() {
-        _uiState.value = _uiState.value.copy(successMessage = null)
+    fun updateUiState(isLoading: Boolean? = null, errorMessage: String? = null, successMessage: String? = null) {
+        _uiState.value = _uiState.value.copy(
+            isLoading = isLoading ?: _uiState.value.isLoading,
+            errorMessage = errorMessage,
+            successMessage = successMessage
+        )
     }
 }
 

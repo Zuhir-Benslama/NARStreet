@@ -21,6 +21,7 @@ import com.nars.maplibre.R
 import com.nars.maplibre.data.api.SessionManager
 import com.nars.maplibre.utils.NarsLogger
 import com.nars.maplibre.ui.theme.GlassBackground
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
 import androidx.compose.foundation.background
@@ -76,7 +77,6 @@ fun LoginScreen(
     val loginFailed = stringResource(R.string.login_failed)
     val loginError = stringResource(R.string.login_error)
 
-    @Suppress("TooGenericExceptionCaught")
     fun performLogin() {
         if (!isLoading && username.isNotBlank() && password.isNotBlank()) {
             scope.launch {
@@ -86,7 +86,9 @@ fun LoginScreen(
                     val result = sessionManager.login(username, password)
                     result.onSuccess { onLoginSuccess() }
                     result.onFailure { error -> errorMessage = "$loginFailed: ${error.message}" }
-                } catch (e: Exception) {
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: java.io.IOException) {
                     NarsLogger.e("LoginScreen", "Login failed", e)
                     errorMessage = "$loginError: ${e.message}"
                 } finally {

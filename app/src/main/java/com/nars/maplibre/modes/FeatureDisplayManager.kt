@@ -79,7 +79,6 @@ class FeatureDisplayManager(
         }
     }
 
-    @Suppress("TooGenericExceptionCaught")
     fun removeFeature(featureId: String) {
         displayedFeatureIds.remove(featureId)
         for (sourceName in GEOMAN_SOURCE_NAMES) {
@@ -96,13 +95,21 @@ class FeatureDisplayManager(
             "${layerName}_stroke", "${layerName}_label"
         )
         for (name in layerNames) {
-            try { map?.style?.getLayer(name)?.let { map?.style?.removeLayer(it) } }
-            catch (e: Exception) { NarsLogger.w("FeatureDisplayManager", "Failed to remove layer $name: ${e.message}") }
+            try {
+                map?.style?.getLayer(name)?.let { map?.style?.removeLayer(it) }
+            } catch (e: IllegalArgumentException) {
+                NarsLogger.w("FeatureDisplayManager", "Failed to remove layer $name: ${e.message}")
+            } catch (e: IllegalStateException) {
+                NarsLogger.w("FeatureDisplayManager", "Failed to remove layer $name: ${e.message}")
+            }
         }
         val mapSourceNames = listOf("nars_${featureId}_edges", "nars_$featureId")
         for (name in mapSourceNames) {
-            try { map?.style?.removeSource(name) }
-            catch (e: Exception) {
+            try {
+                map?.style?.removeSource(name)
+            } catch (e: IllegalArgumentException) {
+                NarsLogger.w("FeatureDisplayManager", "Failed to remove source $name: ${e.message}")
+            } catch (e: IllegalStateException) {
                 NarsLogger.w("FeatureDisplayManager", "Failed to remove source $name: ${e.message}")
             }
         }

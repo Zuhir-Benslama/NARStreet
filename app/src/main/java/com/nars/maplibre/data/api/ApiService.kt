@@ -1,5 +1,3 @@
-@file:Suppress("TooGenericExceptionCaught")
-
 package com.nars.maplibre.data.api
 
 import com.nars.maplibre.AppPreferences
@@ -11,6 +9,7 @@ import com.nars.maplibre.data.model.NarsFeature
 import com.nars.maplibre.data.model.User
 import com.nars.maplibre.utils.NarsLogger
 import io.ktor.client.HttpClient
+import io.ktor.client.plugins.HttpRequestTimeoutException
 import io.ktor.client.call.body
 import io.ktor.client.request.delete
 import io.ktor.client.request.get
@@ -22,16 +21,10 @@ import io.ktor.http.ContentType
 import io.ktor.http.HttpHeaders
 import io.ktor.http.contentType
 import io.ktor.http.isSuccess
+import kotlinx.coroutines.CancellationException
 import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.json.JsonObject
-import kotlinx.serialization.json.buildJsonObject
-import kotlinx.serialization.json.contentOrNull
-import kotlinx.serialization.json.jsonObject
-import kotlinx.serialization.json.jsonPrimitive
-import kotlinx.serialization.json.longOrNull
-import kotlinx.serialization.json.put
 
-@Suppress("TooManyFunctions")
 class ApiService(
     private val httpClient: HttpClient,
     private val preferences: AppPreferences
@@ -105,7 +98,12 @@ class ApiService(
 
             NarsLogger.logAuthEvent(TAG, "Login successful", username)
             Result.success(LoginResponse(user, token, user.communeName))
-        } catch (e: Exception) {
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: kotlinx.serialization.SerializationException) {
+            NarsLogger.e(TAG, "Login failed", e)
+            Result.failure(e)
+        } catch (e: java.io.IOException) {
             NarsLogger.e(TAG, "Login failed", e)
             Result.failure(e)
         }
@@ -118,7 +116,9 @@ class ApiService(
                 contentType(ContentType.Application.Json)
             }
             Result.success(Unit)
-        } catch (e: Exception) {
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: java.io.IOException) {
             NarsLogger.e(TAG, "Logout failed", e)
             Result.failure(e)
         }
@@ -142,7 +142,12 @@ class ApiService(
                 )
             }
             Result.success(items.mapNotNull { it.toNarsFeature() })
-        } catch (e: Exception) {
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: kotlinx.serialization.SerializationException) {
+            NarsLogger.e(TAG, "loadFeatures failed", e)
+            Result.failure(e)
+        } catch (e: java.io.IOException) {
             NarsLogger.e(TAG, "loadFeatures failed", e)
             Result.failure(e)
         }
@@ -158,7 +163,12 @@ class ApiService(
             val id = apiJson.decodeFromString<SaveFeatureResponse>(response.bodyAsText()).id
                 ?: feature.id
             Result.success(id)
-        } catch (e: Exception) {
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: kotlinx.serialization.SerializationException) {
+            NarsLogger.e(TAG, "saveFeature failed", e)
+            Result.failure(e)
+        } catch (e: java.io.IOException) {
             NarsLogger.e(TAG, "saveFeature failed", e)
             Result.failure(e)
         }
@@ -172,7 +182,9 @@ class ApiService(
                 setBody(requestBody)
             }
             Result.success(Unit)
-        } catch (e: Exception) {
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: java.io.IOException) {
             NarsLogger.e(TAG, "updateFeature failed", e)
             Result.failure(e)
         }
@@ -184,64 +196,12 @@ class ApiService(
                 authHeaders().forEach { (k, v) -> headers.append(k, v) }
             }
             Result.success(Unit)
-        } catch (e: Exception) {
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: java.io.IOException) {
             NarsLogger.e(TAG, "deleteFeature failed", e)
             Result.failure(e)
         }
     }
 
-    suspend fun submitInspection(featureId: String, type: String, data: String, status: String): Result<Unit> {
-        return try {
-            val requestBody = buildJsonObject {
-                put("feature_id", featureId)
-                put("type", type)
-                put("status", status)
-                put("data", apiJson.parseToJsonElement(data))
-            }.toString()
-            httpClient.post("$baseUrl/api/field/inspect") {
-                authHeaders().forEach { (k, v) -> headers.append(k, v) }
-                contentType(ContentType.Application.Json)
-                setBody(requestBody)
-            }
-            Result.success(Unit)
-        } catch (e: Exception) {
-            NarsLogger.e(TAG, "submitInspection failed", e)
-            Result.failure(e)
-        }
-    }
-
-    suspend fun createEntranceFromInspection(
-        roadId: String,
-        label: String = "Entrance (field worker)"
-    ): Result<String> {
-        return try {
-            val requestBody = buildJsonObject {
-                put("road_id", roadId)
-                put("label", label)
-            }.toString()
-            val response = httpClient.post("$baseUrl/api/field/entrance/create") {
-                authHeaders().forEach { (k, v) -> headers.append(k, v) }
-                contentType(ContentType.Application.Json)
-                setBody(requestBody)
-            }
-            val id = apiJson.decodeFromString<CreateEntranceResponse>(response.bodyAsText()).id
-                ?: return Result.failure(Exception("No ID in response"))
-            Result.success(id)
-        } catch (e: Exception) {
-            NarsLogger.e(TAG, "createEntranceFromInspection failed", e)
-            Result.failure(e)
-        }
-    }
-
-    suspend fun loadFieldFeatures(type: String): Result<String> {
-        return try {
-            val response = httpClient.get("$baseUrl/api/field/features?type=$type") {
-                authHeaders().forEach { (k, v) -> headers.append(k, v) }
-            }
-            Result.success(response.bodyAsText())
-        } catch (e: Exception) {
-            NarsLogger.e(TAG, "loadFieldFeatures failed", e)
-            Result.failure(e)
-        }
-    }
 }
