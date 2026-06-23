@@ -41,6 +41,7 @@ import com.nars.maplibre.data.model.FeatureProperties
 import com.nars.maplibre.data.model.NarsFeature
 import com.nars.maplibre.data.model.PhaseDefinition
 import com.nars.maplibre.ui.theme.GlassBackground
+import com.nars.maplibre.utils.formatDecimal
 import com.nars.maplibre.utils.validateFeatureProperties
 
 @Composable

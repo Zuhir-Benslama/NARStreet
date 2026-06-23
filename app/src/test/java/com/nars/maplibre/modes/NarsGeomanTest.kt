@@ -249,77 +249,77 @@ class NarsGeomanTest {
         assertFalse(narsGeoman.isEditing.value)
     }
 
-    // --- addFeature ---
+    // --- displayManager.addFeature ---
 
     @Test
-    fun `addFeature delegates to displayManager`() {
+    fun `displayManager addFeature delegates correctly`() {
         val feature = createRoad("Road")
-        narsGeoman.addFeature(feature)
+        narsGeoman.displayManager.addFeature(feature)
         verify { displayManager.addFeature(feature) }
     }
 
-    // --- addFeatures ---
+    // --- displayManager.addFeatures ---
 
     @Test
-    fun `addFeatures delegates to displayManager`() {
+    fun `displayManager addFeatures delegates correctly`() {
         val features = listOf(createRoad("R1"))
-        narsGeoman.addFeatures(features)
+        narsGeoman.displayManager.addFeatures(features)
         verify { displayManager.addFeatures(features) }
     }
 
-    // --- updateDisplayedFeatures ---
+    // --- displayManager.updateDisplayedFeatures ---
 
     @Test
-    fun `updateDisplayedFeatures delegates to displayManager`() {
+    fun `displayManager updateDisplayedFeatures delegates correctly`() {
         narsGeoman.setCurrentPhase(pointPhase)
         val features = listOf(createRoad("A"))
-        narsGeoman.updateDisplayedFeatures(features)
+        narsGeoman.displayManager.updateDisplayedFeatures(features)
         verify { displayManager.updateDisplayedFeatures(features) }
     }
 
-    // --- updateFeatureId ---
+    // --- displayManager.updateFeatureId ---
 
     @Test
-    fun `updateFeatureId delegates to displayManager`() {
-        narsGeoman.updateFeatureId("old", "new")
+    fun `displayManager updateFeatureId delegates correctly`() {
+        narsGeoman.displayManager.updateFeatureId("old", "new")
         verify { displayManager.updateFeatureId("old", "new") }
     }
 
-    // --- updateFeatureOnMap ---
+    // --- displayManager.updateFeatureOnMap ---
 
     @Test
-    fun `updateFeatureOnMap delegates to displayManager`() {
+    fun `displayManager updateFeatureOnMap delegates correctly`() {
         val feature = createRoad("R")
-        narsGeoman.updateFeatureOnMap(feature)
+        narsGeoman.displayManager.updateFeatureOnMap(feature)
         verify { displayManager.updateFeatureOnMap(feature) }
     }
 
-    // --- removeFeature ---
+    // --- displayManager.removeFeature ---
 
     @Test
-    fun `removeFeature delegates to displayManager`() {
-        narsGeoman.removeFeature("road-1")
+    fun `displayManager removeFeature delegates correctly`() {
+        narsGeoman.displayManager.removeFeature("road-1")
         verify { displayManager.removeFeature("road-1") }
     }
 
-    // --- clearAllFeatures ---
+    // --- displayManager.clearAllFeatures ---
 
     @Test
-    fun `clearAllFeatures delegates to displayManager`() {
-        narsGeoman.clearAllFeatures()
+    fun `displayManager clearAllFeatures delegates correctly`() {
+        narsGeoman.displayManager.clearAllFeatures()
         verify { displayManager.clearAllFeatures() }
     }
 
-    // --- snapPoint ---
+    // --- snappingEngine.snapPoint ---
 
     @Test
-    fun `snapPoint delegates to snapping engine`() {
+    fun `snappingEngine snapPoint delegates correctly`() {
         val point = LatLng(36.0, 3.0)
         val features = listOf(createRoad())
         val snapped = LatLng(36.001, 3.001)
         every { snappingEngine.snapPoint(point, features, 20.0) } returns snapped
 
-        val result = narsGeoman.snapPoint(point, features)
+        val result = narsGeoman.snappingEngine.snapPoint(point, features)
         assertEquals(snapped, result)
     }
 

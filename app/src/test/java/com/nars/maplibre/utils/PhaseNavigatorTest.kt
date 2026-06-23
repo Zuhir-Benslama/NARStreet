@@ -33,40 +33,40 @@ class PhaseNavigatorTest {
     // ── canAdvance ────────────────────────────────────────────────────────
 
     @Test
-    fun `canAdvance returns null when roads exist and advancing from roads`() {
+    fun `canAdvance allowed when roads exist and advancing from roads`() {
         val store = FeatureStore()
         val navigator = PhaseNavigator(store)
         store.addFeature(createRoad("r1"))
         store.setCurrentPhase(Phases.ALL[0])
         val result = navigator.canAdvance(1)
-        assertNull(result)
+        assertTrue(result is PhaseNavigationResult.Allowed)
     }
 
     @Test
-    fun `canAdvance returns error when target phase invalid`() {
+    fun `canAdvance blocked when target phase invalid`() {
         val store = FeatureStore()
         val navigator = PhaseNavigator(store)
         store.setCurrentPhase(Phases.ALL[0])
         val result = navigator.canAdvance(99)
-        assertEquals("alert_invalid_phase", result)
+        assertEquals(PhaseNavigationResult.Blocked("alert_invalid_phase"), result)
     }
 
     @Test
-    fun `canAdvance returns null when target is behind current phase`() {
+    fun `canAdvance allowed when target is behind current phase`() {
         val store = FeatureStore()
         val navigator = PhaseNavigator(store)
         store.setCurrentPhase(Phases.ALL[1])
         val result = navigator.canAdvance(0)
-        assertNull(result)
+        assertTrue(result is PhaseNavigationResult.Allowed)
     }
 
     @Test
-    fun `canAdvance returns null when target is same as current phase`() {
+    fun `canAdvance allowed when target is same as current phase`() {
         val store = FeatureStore()
         val navigator = PhaseNavigator(store)
         store.setCurrentPhase(Phases.ALL[0])
         val result = navigator.canAdvance(0)
-        assertNull(result)
+        assertTrue(result is PhaseNavigationResult.Allowed)
     }
 
     @Test
@@ -75,7 +75,7 @@ class PhaseNavigatorTest {
         val navigator = PhaseNavigator(store)
         store.setCurrentPhase(Phases.ALL[0])
         val result = navigator.canAdvance(1)
-        assertEquals("alert_at_least_one_road", result)
+        assertEquals(PhaseNavigationResult.Blocked("alert_at_least_one_road"), result)
     }
 
     @Test
@@ -85,7 +85,7 @@ class PhaseNavigatorTest {
         store.addFeature(createRoad("r1"))
         store.setCurrentPhase(Phases.ALL[0])
         val result = navigator.canAdvance(1)
-        assertNull(result)
+        assertTrue(result is PhaseNavigationResult.Allowed)
     }
 
     @Test
@@ -95,7 +95,7 @@ class PhaseNavigatorTest {
         store.addFeature(createRoad("r1"))
         store.setCurrentPhase(Phases.ALL[1])
         val result = navigator.canAdvance(2)
-        assertEquals("alert_at_least_one_entrance", result)
+        assertEquals(PhaseNavigationResult.Blocked("alert_at_least_one_entrance"), result)
     }
 
     @Test
@@ -106,7 +106,7 @@ class PhaseNavigatorTest {
         store.addFeature(createEntrance("e1"))
         store.setCurrentPhase(Phases.ALL[1])
         val result = navigator.canAdvance(2)
-        assertNull(result)
+        assertTrue(result is PhaseNavigationResult.Allowed)
     }
 
     @Test
@@ -115,7 +115,7 @@ class PhaseNavigatorTest {
         val navigator = PhaseNavigator(store)
         store.setCurrentPhase(Phases.ALL[2])
         val result = navigator.canAdvance(1)
-        assertNull(result)
+        assertTrue(result is PhaseNavigationResult.Allowed)
     }
 
     // ── navigateTo ────────────────────────────────────────────────────────

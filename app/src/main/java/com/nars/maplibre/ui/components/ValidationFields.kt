@@ -203,4 +203,4 @@ fun ValidationSwitch(
     }
 }
 
-fun Double.formatDecimal(digits: Int) = "%.${digits}f".format(this)
+

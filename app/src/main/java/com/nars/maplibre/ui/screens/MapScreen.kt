@@ -100,20 +100,24 @@ fun MapScreen(
     MapScreenEffects(viewModel, handlers, currentPhase, allFeatures, uiState, snackbarHostState)
 
     MapScreenScaffold(
+        state = MapScreenViewState(
+            currentPhase = currentPhase,
+            allFeatures = allFeatures,
+            selectedFeature = selectedFeature,
+            baseLayer = baseLayer,
+            uiState = uiState,
+            drawingEnabled = drawingEnabled,
+            editModeEnabled = editModeEnabled,
+            featureCounts = featureCounts
+        ),
+        callbacks = MapScreenCallbacks(
+            onNavigateToSettings = onNavigateToSettings,
+            onLogout = onLogout,
+            viewModel = viewModel,
+            handlers = handlers,
+            sessionManager = sessionManager
+        ),
         snackbarHostState = snackbarHostState,
-        viewModel = viewModel,
-        handlers = handlers,
-        sessionManager = sessionManager,
-        currentPhase = currentPhase,
-        allFeatures = allFeatures,
-        selectedFeature = selectedFeature,
-        baseLayer = baseLayer,
-        uiState = uiState,
-        drawingEnabled = drawingEnabled,
-        editModeEnabled = editModeEnabled,
-        featureCounts = featureCounts,
-        onNavigateToSettings = onNavigateToSettings,
-        onLogout = onLogout,
         scope = scope
     )
 }
@@ -148,49 +152,46 @@ private fun MapScreenEffects(
         currentPhase?.let { phase ->
             NarsLogger.d("MapScreen", "Phase changed: ${phase.label}")
             handlers.narsGeoman?.setCurrentPhase(phase)
-            handlers.narsGeoman?.updateDisplayedFeatures(allFeatures)
+            handlers.narsGeoman?.displayManager?.updateDisplayedFeatures(allFeatures)
             viewModel.updateUiState(isLoading = false)
         }
     }
 }
 
+private data class MapScreenViewState(
+    val currentPhase: PhaseDefinition?,
+    val allFeatures: List<NarsFeature>,
+    val selectedFeature: NarsFeature?,
+    val baseLayer: BaseLayerType,
+    val uiState: UiState,
+    val drawingEnabled: Boolean,
+    val editModeEnabled: Boolean,
+    val featureCounts: Map<String, Int>
+)
+
+private class MapScreenCallbacks(
+    val onNavigateToSettings: () -> Unit,
+    val onLogout: () -> Unit,
+    val viewModel: MapViewModel,
+    val handlers: MapScreenHandlers,
+    val sessionManager: SessionManager
+)
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun MapScreenScaffold(
+    state: MapScreenViewState,
+    callbacks: MapScreenCallbacks,
     snackbarHostState: SnackbarHostState,
-    viewModel: MapViewModel,
-    handlers: MapScreenHandlers,
-    sessionManager: SessionManager,
-    currentPhase: PhaseDefinition?,
-    allFeatures: List<NarsFeature>,
-    selectedFeature: NarsFeature?,
-    baseLayer: BaseLayerType,
-    uiState: UiState,
-    drawingEnabled: Boolean,
-    editModeEnabled: Boolean,
-    featureCounts: Map<String, Int>,
-    onNavigateToSettings: () -> Unit,
-    onLogout: () -> Unit,
     scope: CoroutineScope
 ) {
     var showFeatureModal by remember { mutableStateOf(false) }
     var editingFeature by remember { mutableStateOf<NarsFeature?>(null) }
 
     MapScreenBody(
+        state = state,
+        callbacks = callbacks,
         snackbarHostState = snackbarHostState,
-        viewModel = viewModel,
-        handlers = handlers,
-        sessionManager = sessionManager,
-        currentPhase = currentPhase,
-        allFeatures = allFeatures,
-        selectedFeature = selectedFeature,
-        baseLayer = baseLayer,
-        uiState = uiState,
-        drawingEnabled = drawingEnabled,
-        editModeEnabled = editModeEnabled,
-        featureCounts = featureCounts,
-        onNavigateToSettings = onNavigateToSettings,
-        onLogout = onLogout,
         scope = scope,
         showFeatureModal = showFeatureModal,
         editingFeature = editingFeature,
@@ -199,23 +200,23 @@ private fun MapScreenScaffold(
         onSaveFeature = { feature ->
             val existing = editingFeature
             if (existing != null && existing.dbId != null) {
-                viewModel.updateFeature(feature)
-                handlers.narsGeoman?.commitEdits()
-                handlers.narsGeoman?.updateFeatureOnMap(feature)
-                handlers.updateFeature(feature)
+                callbacks.viewModel.updateFeature(feature)
+                callbacks.handlers.narsGeoman?.commitEdits()
+                callbacks.handlers.narsGeoman?.displayManager?.updateFeatureOnMap(feature)
+                callbacks.handlers.updateFeature(feature)
             } else if (existing != null) {
-                handlers.saveFeature(feature)
+                callbacks.handlers.saveFeature(feature)
             }
             showFeatureModal = false
             editingFeature = null
         },
         onSaveEdits = {
-            handlers.narsGeoman?.commitEdits()
-            viewModel.clearSelection(); editingFeature = null
+            callbacks.handlers.narsGeoman?.commitEdits()
+            callbacks.viewModel.clearSelection(); editingFeature = null
         },
         onCancelEdits = {
-            handlers.narsGeoman?.cancelEdits()
-            viewModel.clearSelection(); editingFeature = null
+            callbacks.handlers.narsGeoman?.cancelEdits()
+            callbacks.viewModel.clearSelection(); editingFeature = null
         }
     )
 }
@@ -289,20 +290,9 @@ private fun MapScreenFeatureSheet(
 
 @Composable
 private fun MapScreenBody(
+    state: MapScreenViewState,
+    callbacks: MapScreenCallbacks,
     snackbarHostState: SnackbarHostState,
-    viewModel: MapViewModel,
-    handlers: MapScreenHandlers,
-    sessionManager: SessionManager,
-    currentPhase: PhaseDefinition?,
-    allFeatures: List<NarsFeature>,
-    selectedFeature: NarsFeature?,
-    baseLayer: BaseLayerType,
-    uiState: UiState,
-    drawingEnabled: Boolean,
-    editModeEnabled: Boolean,
-    featureCounts: Map<String, Int>,
-    onNavigateToSettings: () -> Unit,
-    onLogout: () -> Unit,
     scope: CoroutineScope,
     showFeatureModal: Boolean,
     editingFeature: NarsFeature?,
@@ -323,20 +313,9 @@ private fun MapScreenBody(
     ) { paddingValues ->
         MapScreenBoxContent(
             paddingValues = paddingValues,
+            state = state,
+            callbacks = callbacks,
             snackbarHostState = snackbarHostState,
-            viewModel = viewModel,
-            handlers = handlers,
-            sessionManager = sessionManager,
-            currentPhase = currentPhase,
-            allFeatures = allFeatures,
-            selectedFeature = selectedFeature,
-            baseLayer = baseLayer,
-            uiState = uiState,
-            drawingEnabled = drawingEnabled,
-            editModeEnabled = editModeEnabled,
-            featureCounts = featureCounts,
-            onNavigateToSettings = onNavigateToSettings,
-            onLogout = onLogout,
             scope = scope,
             showFeatureModal = showFeatureModal,
             editingFeature = editingFeature,
@@ -352,20 +331,9 @@ private fun MapScreenBody(
 @Composable
 private fun MapScreenBoxContent(
     paddingValues: androidx.compose.foundation.layout.PaddingValues,
+    state: MapScreenViewState,
+    callbacks: MapScreenCallbacks,
     snackbarHostState: SnackbarHostState,
-    viewModel: MapViewModel,
-    handlers: MapScreenHandlers,
-    sessionManager: SessionManager,
-    currentPhase: PhaseDefinition?,
-    allFeatures: List<NarsFeature>,
-    selectedFeature: NarsFeature?,
-    baseLayer: BaseLayerType,
-    uiState: UiState,
-    drawingEnabled: Boolean,
-    editModeEnabled: Boolean,
-    featureCounts: Map<String, Int>,
-    onNavigateToSettings: () -> Unit,
-    onLogout: () -> Unit,
     scope: CoroutineScope,
     showFeatureModal: Boolean,
     editingFeature: NarsFeature?,
@@ -379,38 +347,42 @@ private fun MapScreenBoxContent(
         modifier = Modifier.fillMaxSize().background(GlassBackground).padding(paddingValues)
     ) {
         MapScreenMapOverlay(
-            viewModel = viewModel, handlers = handlers, drawingEnabled = drawingEnabled,
-            editModeEnabled = editModeEnabled, onEditFeature = onEditFeature
+            viewModel = callbacks.viewModel,
+            handlers = callbacks.handlers,
+            drawingEnabled = state.drawingEnabled,
+            editModeEnabled = state.editModeEnabled,
+            onEditFeature = onEditFeature
         )
         ProfileMenu(
-            user = sessionManager.getUser(), onSettingsClick = onNavigateToSettings,
-            onLogoutClick = { handlers.logout(onLogout) },
+            user = callbacks.sessionManager.getUser(),
+            onSettingsClick = callbacks.onNavigateToSettings,
+            onLogoutClick = { callbacks.handlers.logout(callbacks.onLogout) },
             modifier = Modifier.align(Alignment.TopEnd).padding(end = 12.dp, top = 12.dp)
         )
         Box(Modifier.align(Alignment.CenterEnd).padding(end = 12.dp)) {
             MapScreenSidePanel(
-                currentPhase = currentPhase, featureCounts = featureCounts,
-                baseLayer = baseLayer, viewModel = viewModel,
+                currentPhase = state.currentPhase, featureCounts = state.featureCounts,
+                baseLayer = state.baseLayer, viewModel = callbacks.viewModel,
                 snackbarHostState = snackbarHostState, scope = scope
             )
         }
         CompactInfoPanel(
-            featureCounts = featureCounts, totalFeatures = allFeatures.size,
+            featureCounts = state.featureCounts, totalFeatures = state.allFeatures.size,
             modifier = Modifier.align(Alignment.BottomStart).padding(start = 12.dp, bottom = 12.dp).width(140.dp)
         )
-        MapLoadingOverlay(isLoading = uiState.isLoading)
+        MapLoadingOverlay(isLoading = state.uiState.isLoading)
         Box(Modifier.align(Alignment.BottomCenter).fillMaxWidth()) {
             MapScreenFeatureSheet(
-                selectedFeature = selectedFeature, editModeEnabled = editModeEnabled,
+                selectedFeature = state.selectedFeature, editModeEnabled = state.editModeEnabled,
                 editingFeature = editingFeature,
-                onDismissFeature = { viewModel.clearSelection() },
-                onEditGeometry = { handlers.toggleEditing(editModeEnabled) },
+                onDismissFeature = { callbacks.viewModel.clearSelection() },
+                onEditGeometry = { callbacks.handlers.toggleEditing(state.editModeEnabled) },
                 onEditFeature = onEditFeature, onSaveEdits = onSaveEdits,
                 onCancelEdits = onCancelEdits
             )
         }
         val feature = editingFeature ?: return@Box
-        val phase = currentPhase ?: return@Box
+        val phase = state.currentPhase ?: return@Box
         if (showFeatureModal) {
             FeatureValidationModal(
                 feature = feature, phase = phase,

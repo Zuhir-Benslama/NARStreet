@@ -7,3 +7,6 @@
 # Feature flags
 # ENABLE_ANALYTICS=false
 # ENABLE_CRASHLYTICS=false
+
+# SSL certificate pinning (optional — comma-separated, format: hostname=sha256/hash)
+# SSL_CERT_HASHES=api.nars.example.com=sha256/AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=

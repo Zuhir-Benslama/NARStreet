@@ -60,11 +60,11 @@ class GeometryConverter {
                 Point.fromLngLat(LngLat(geometry.coordinates[0], geometry.coordinates[1]))
             }
             is LineStringGeometry -> {
-                val coords = geometry.coordinates.chunked(2).map { LngLat(it[0], it[1]) }
+                val coords = coordinatesToLngLats(geometry.coordinates)
                 LineString.fromLngLats(coords)
             }
             is PolygonGeometry -> {
-                val coords = geometry.coordinates.chunked(2).map { LngLat(it[0], it[1]) }
+                val coords = coordinatesToLngLats(geometry.coordinates)
                 Polygon.fromLngLats(listOf(coords))
             }
             is CircleGeometry -> {
@@ -149,11 +149,15 @@ class GeometryConverter {
         }.toString()
     }
 
+    private fun coordinatesToLngLats(coords: List<Double>): List<LngLat> {
+        return coords.chunked(2).filter { it.size == 2 }.map { LngLat(it[0], it[1]) }
+    }
+
     /**
      * Build GeoJSON LineString for polygon edges
      */
     fun buildPolygonEdgesGeoJson(coordinates: List<Double>): String {
-        val points = coordinates.chunked(2)
+        val points = coordinates.chunked(2).filter { it.size == 2 }
         val ring = if (points.firstOrNull() == points.lastOrNull()) {
             points
         } else {

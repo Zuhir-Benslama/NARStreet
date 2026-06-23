@@ -129,7 +129,7 @@ class FeatureStore {
     }
 
     fun getAllRoads(): List<NarsFeature> {
-        return _featuresByPhase.value["roads"] ?: emptyList()
+        return _featuresByPhase.value[Phases.ROADS_KEY] ?: emptyList()
     }
 }
 

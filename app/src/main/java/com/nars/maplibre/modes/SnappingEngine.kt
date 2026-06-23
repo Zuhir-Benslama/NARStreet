@@ -7,11 +7,14 @@ import com.nars.maplibre.data.model.PointGeometry
 import com.nars.maplibre.data.model.PolygonGeometry
 import com.nars.maplibre.utils.NarsLogger
 import org.maplibre.android.geometry.LatLng
+import kotlin.math.cos
+import kotlin.math.roundToInt
 
 class SnappingEngine {
     companion object {
         private const val TAG = "SnappingEngine"
         private const val DEFAULT_SNAP_THRESHOLD_METERS = 20.0
+        private const val EARTH_RADIUS_METERS = 6378137.0
     }
 
     fun snapPoint(
@@ -67,22 +70,7 @@ class SnappingEngine {
         currentClosest: LatLng,
         currentMinDist: Double
     ): Pair<LatLng, Double> {
-        var closest = currentClosest
-        var minDist = currentMinDist
-        val coords = geometry.coordinates.chunked(2)
-        for (i in 0 until coords.size - 1) {
-            val p1 = LatLng(coords[i][1], coords[i][0])
-            val p2 = LatLng(coords[i + 1][1], coords[i + 1][0])
-            val snapped = nearestPointOnSegment(point, p1, p2)
-            val d = point.distanceTo(snapped)
-            if (d < minDist) { minDist = d; closest = snapped }
-        }
-        for (coord in coords) {
-            val vp = LatLng(coord[1], coord[0])
-            val d = point.distanceTo(vp)
-            if (d < minDist) { minDist = d; closest = vp }
-        }
-        return closest to minDist
+        return snapToCoordPath(point, geometry.coordinates, currentClosest, currentMinDist)
     }
 
     private fun snapToPolygon(
@@ -91,18 +79,27 @@ class SnappingEngine {
         currentClosest: LatLng,
         currentMinDist: Double
     ): Pair<LatLng, Double> {
+        return snapToCoordPath(point, geometry.coordinates, currentClosest, currentMinDist)
+    }
+
+    private fun snapToCoordPath(
+        point: LatLng,
+        coords: List<Double>,
+        currentClosest: LatLng,
+        currentMinDist: Double
+    ): Pair<LatLng, Double> {
         var closest = currentClosest
         var minDist = currentMinDist
-        val coords = geometry.coordinates.chunked(2)
-        for (i in 0 until coords.size - 1) {
-            val p1 = LatLng(coords[i][1], coords[i][0])
-            val p2 = LatLng(coords[i + 1][1], coords[i + 1][0])
+        val pairs = coords.chunked(2).filter { it.size == 2 }
+        for (i in 0 until pairs.size - 1) {
+            val p1 = LatLng(pairs[i][1], pairs[i][0])
+            val p2 = LatLng(pairs[i + 1][1], pairs[i + 1][0])
             val snapped = nearestPointOnSegment(point, p1, p2)
             val d = point.distanceTo(snapped)
             if (d < minDist) { minDist = d; closest = snapped }
         }
-        for (coord in coords) {
-            val vp = LatLng(coord[1], coord[0])
+        for (pair in pairs) {
+            val vp = LatLng(pair[1], pair[0])
             val d = point.distanceTo(vp)
             if (d < minDist) { minDist = d; closest = vp }
         }
@@ -121,15 +118,52 @@ class SnappingEngine {
     }
 
     fun nearestPointOnSegment(point: LatLng, p1: LatLng, p2: LatLng): LatLng {
-        val dx = p2.longitude - p1.longitude
-        val dy = p2.latitude - p1.latitude
-        if (dx == 0.0 && dy == 0.0) return p1
-        val t = ((point.longitude - p1.longitude) * dx + (point.latitude - p1.latitude) * dy) /
-                (dx * dx + dy * dy)
-        val clampedT = t.coerceIn(0.0, 1.0)
-        return LatLng(
-            p1.latitude + clampedT * dy,
-            p1.longitude + clampedT * dx
+        val segLength = p1.distanceTo(p2)
+        if (segLength < 1.0) return p1
+
+        val d1 = p1.distanceTo(point)
+        val d2 = p2.distanceTo(point)
+
+        val bearingAB = bearingDeg(p1, p2)
+        val bearingAC = bearingDeg(p1, point)
+
+        val angularDistAC = d1 / EARTH_RADIUS_METERS
+        val crossTrack = Math.asin(
+            (Math.sin(angularDistAC) * Math.sin(Math.toRadians(bearingAC - bearingAB)))
+                .coerceIn(-1.0, 1.0)
         )
+        val alongTrack = Math.acos(
+            (Math.cos(angularDistAC) / Math.cos(crossTrack)).coerceIn(-1.0, 1.0)
+        )
+        val fraction = (alongTrack / (segLength / EARTH_RADIUS_METERS)).coerceIn(0.0, 1.0)
+
+        return interpolateBearing(p1, bearingAB, fraction * segLength)
+    }
+
+    private fun bearingDeg(from: LatLng, to: LatLng): Double {
+        val dLng = Math.toRadians(to.longitude - from.longitude)
+        val lat1 = Math.toRadians(from.latitude)
+        val lat2 = Math.toRadians(to.latitude)
+        val y = Math.sin(dLng) * Math.cos(lat2)
+        val x = Math.cos(lat1) * Math.sin(lat2) - Math.sin(lat1) * Math.cos(lat2) * Math.cos(dLng)
+        return (Math.toDegrees(Math.atan2(y, x)) + 360.0) % 360.0
+    }
+
+    private fun interpolateBearing(from: LatLng, bearingDeg: Double, distanceMeters: Double): LatLng {
+        val angularDist = distanceMeters / EARTH_RADIUS_METERS
+        val lat1 = Math.toRadians(from.latitude)
+        val lng1 = Math.toRadians(from.longitude)
+        val brng = Math.toRadians(bearingDeg)
+
+        val lat2 = Math.asin(
+            (Math.sin(lat1) * Math.cos(angularDist) +
+                    Math.cos(lat1) * Math.sin(angularDist) * Math.cos(brng))
+                .coerceIn(-1.0, 1.0)
+        )
+        val lng2 = lng1 + Math.atan2(
+            Math.sin(brng) * Math.sin(angularDist) * Math.cos(lat1),
+            Math.cos(angularDist) - Math.sin(lat1) * Math.sin(lat2)
+        )
+        return LatLng(Math.toDegrees(lat2), Math.toDegrees(lng2))
     }
 }

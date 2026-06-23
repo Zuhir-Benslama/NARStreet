@@ -1,16 +1,32 @@
 # TODO — Code Quality Issues
 
 ## Completed
-- [x] Refactor `Geoman.kt` (577 → 484 lines) — extracted `BaseAction`, `GeomanConstants`, `ModeFactory`
-- [x] Align dependency versions — removed stale `maplibre-geoman-android/gradle/libs.versions.toml` and unused version entries
-- [x] Add missing detekt rules: `CyclomaticComplexMethod`, `LongParameterList`, `NestedBlockDepth`
-- [x] Raised `TooManyFunctions` threshold to 15
-- [x] Removed `@Suppress("TooManyFunctions")` from: `ApiService`, `FeatureStore`, `FeatureRenderer`, `GeomanEventHandler`, `SecurePreferences`
-- [x] Extracted `UndoManager` from `FeatureStore` (18 → 15 functions)
-- [x] Combined UI state helpers in `MapViewModel` (19 → 15 functions)
-- [x] Removed dead field API methods from `ApiService` (14 → 11 functions)
+
+### Critical
+- [x] Fix unsafe cast `androidContext() as Application` in `AppModule.kt:63` — use `androidContext().applicationContext as Application`
+
+### High
+- [x] Fix `chunked(2)[1]` crash on odd-length coordinate arrays in `GeometryConverter.kt` and `SnappingEngine.kt` — filter incomplete chunks
+- [x] Unify Earth radius constants to `6,378,137` (WGS-84) in both `GeometryUtils` and `GeometryConverter`
+- [x] Fix `nearestPointOnSegment()` to use spherical geometry (haversine-based interpolation) in `SnappingEngine.kt`
+
+### Medium
+- [x] Replace hardcoded `"roads"`, `"houseEntrances"` strings with `Phases.*` constants in `PhaseNavigator.kt` and `FeatureStore.kt`
+- [x] Deduplicate `snapToLineString()` and `snapToPolygon()` into shared `snapToCoordPath()` in `SnappingEngine.kt`
+- [x] Remove dead `CoroutineScope` in `NarsGeoman.kt` companion factory
+- [x] Align timeout constants — `Config.API_DEFAULT_TIMEOUT_MS` now consumed by `AppModule.kt`'s Ktor client
+- [x] Reduce `MapScreenBody` / `MapScreenBoxContent` parameter counts (23→9) — introduced `MapScreenViewState` + `MapScreenCallbacks`
+- [x] Add SSL pinning infrastructure via `BuildConfig.SSL_CERT_HASHES` (configurable in `local.properties`)
+- [x] Fix `chunked(2)[1]` crash in `MapScreenHandlers.kt` — add `.filter { it.size == 2 }` in `handleMapLongClick` and `isPointNearFeature`
+- [x] Remove `@Suppress("TooManyFunctions")` from `NarsGeoman.kt` — made `displayManager` and `snappingEngine` public, removed 8 delegation wrappers
+- [x] Migrate `window.statusBarColor` (deprecated) to edge-to-edge via `WindowCompat.setDecorFitsSystemWindows(window, false)`
+- [x] Introduce `PhaseNavigationResult` sealed class for typed phase navigation errors instead of raw strings
+- [x] Sanitize `feature.id` for MapLibre layer/source IDs (replace non-alphanumeric chars with `_`)
+- [x] Move `Double.formatDecimal()` extension from `ValidationFields.kt:206` to `utils/Formatters.kt`
+
+### Low
+- [x] Make tile URLs, glyphs URL, attribution in `Config.kt:31-44` configurable via `BuildConfig` — added `local.properties.example` documentation
 
 ## Remaining
-- [ ] `NarsGeoman` (18 functions) — facade class, still needs `@Suppress("TooManyFunctions")`
-- [ ] Fix naming convention mismatches in `BaseLayer.kt`, `NarsNavHost.kt`, `Theme.kt`, `PhaseBar.kt`
-- [ ] Review `compileSdk 37` (Android 16) compatibility
+- [ ] Remove unused imports (compile warnings)
+- [ ] Add proper edge-to-edge status bar handling in Activity (currently handled in Theme)

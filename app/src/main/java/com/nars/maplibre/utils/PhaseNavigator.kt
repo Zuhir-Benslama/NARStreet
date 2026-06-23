@@ -4,6 +4,11 @@ import com.nars.maplibre.data.model.PhaseDefinition
 import com.nars.maplibre.data.model.Phases
 import com.nars.maplibre.data.store.FeatureStore
 
+sealed class PhaseNavigationResult {
+    data object Allowed : PhaseNavigationResult()
+    data class Blocked(val message: String) : PhaseNavigationResult()
+}
+
 /**
  * Phase navigation validation for NARStreet Field Mode
  * Only 3 phases: Roads, HouseEntrances, NamingPanels
@@ -12,20 +17,21 @@ class PhaseNavigator(private val featureStore: FeatureStore) {
 
     /**
      * Check if user can advance to next phase
-     * Returns null if allowed, error message key if blocked
      */
-    fun canAdvance(targetPhaseIndex: Int): String? {
-        val currentPhase = featureStore.currentPhase.value ?: return "alert_no_phase"
-        val targetPhase = Phases.getByIndex(targetPhaseIndex) ?: return "alert_invalid_phase"
+    fun canAdvance(targetPhaseIndex: Int): PhaseNavigationResult {
+        fun blocked(msg: String) = PhaseNavigationResult.Blocked(msg)
+        val allowed = PhaseNavigationResult.Allowed
+        val currentPhase = featureStore.currentPhase.value ?: return blocked("alert_no_phase")
+        Phases.getByIndex(targetPhaseIndex) ?: return blocked("alert_invalid_phase")
 
-        if (targetPhaseIndex <= currentPhase.index) return null
+        if (targetPhaseIndex <= currentPhase.index) return allowed
 
-        val roadsEmpty = featureStore.getFeaturesByPhase("roads").isEmpty()
-        val entrancesEmpty = featureStore.getFeaturesByPhase("houseEntrances").isEmpty()
+        val roadsEmpty = featureStore.getFeaturesByPhase(Phases.ROADS_KEY).isEmpty()
+        val entrancesEmpty = featureStore.getFeaturesByPhase(Phases.HOUSE_ENTRANCES_KEY).isEmpty()
         return when (currentPhase.key) {
-            "roads" -> if (roadsEmpty) "alert_at_least_one_road" else null
-            "houseEntrances" -> if (entrancesEmpty) "alert_at_least_one_entrance" else null
-            else -> null
+            Phases.ROADS_KEY -> if (roadsEmpty) blocked("alert_at_least_one_road") else allowed
+            Phases.HOUSE_ENTRANCES_KEY -> if (entrancesEmpty) blocked("alert_at_least_one_entrance") else allowed
+            else -> allowed
         }
     }
 
@@ -33,7 +39,7 @@ class PhaseNavigator(private val featureStore: FeatureStore) {
      * Check road coverage - at least one road must exist
      */
     fun checkRoadCoverage(): CoverageResult {
-        val roads = featureStore.getFeaturesByPhase("roads")
+        val roads = featureStore.getFeaturesByPhase(Phases.ROADS_KEY)
 
         if (roads.isEmpty()) {
             return CoverageResult(false, "No roads defined")
@@ -47,9 +53,9 @@ class PhaseNavigator(private val featureStore: FeatureStore) {
      * @return PhaseDefinition if navigation allowed, null if blocked
      */
     fun navigateTo(targetIndex: Int): PhaseDefinition? {
-        val error = canAdvance(targetIndex)
-        if (error != null) {
-            return null // Navigation blocked
+        val result = canAdvance(targetIndex)
+        if (result is PhaseNavigationResult.Blocked) {
+            return null
         }
         return Phases.getByIndex(targetIndex)
     }
@@ -82,7 +88,7 @@ class PhaseNavigator(private val featureStore: FeatureStore) {
      */
     fun canGoForward(): Boolean {
         val nextIndex = getNextPhaseIndex() ?: return false
-        return canAdvance(nextIndex) == null
+        return canAdvance(nextIndex) is PhaseNavigationResult.Allowed
     }
 
     /**

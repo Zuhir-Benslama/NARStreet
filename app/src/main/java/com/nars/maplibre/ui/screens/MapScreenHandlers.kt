@@ -64,7 +64,7 @@ class MapScreenHandlers(
 
     fun handleFeatureCreated(feature: NarsFeature) {
         NarsLogger.d(TAG, "Feature created: ${feature.id}, phase=${feature.properties.phase}")
-        narsGeoman?.addFeature(feature)
+        narsGeoman?.displayManager?.addFeature(feature)
     }
 
     fun handleMapClick(
@@ -74,7 +74,7 @@ class MapScreenHandlers(
     ) {
         if (drawingEnabled || editModeEnabled) {
             val snapped = if (drawingEnabled) {
-                narsGeoman?.snapPoint(latLng, viewModel.allFeatures.value) ?: latLng
+                narsGeoman?.snappingEngine?.snapPoint(latLng, viewModel.allFeatures.value) ?: latLng
             } else latLng
             narsGeoman?.onMapClick(snapped)
             return
@@ -102,7 +102,7 @@ class MapScreenHandlers(
                         latLng.distanceTo(fp) < LONG_CLICK_DISTANCE_THRESHOLD
                     }
                     is com.nars.maplibre.data.model.LineStringGeometry -> {
-                        geometry.coordinates.chunked(2).any { coord ->
+                        geometry.coordinates.chunked(2).filter { it.size == 2 }.any { coord ->
                             val lp = org.maplibre.android.geometry.LatLng(coord[1], coord[0])
                             latLng.distanceTo(lp) < LONG_CLICK_DISTANCE_THRESHOLD
                         }
@@ -149,8 +149,8 @@ class MapScreenHandlers(
                     feature.copy(dbId = savedId, id = savedId)
                 } else feature.copy(dbId = savedId)
                 viewModel.addFeature(updatedFeature)
-                narsGeoman?.updateFeatureId(feature.id, updatedFeature.id)
-                narsGeoman?.updateFeatureOnMap(updatedFeature)
+                narsGeoman?.displayManager?.updateFeatureId(feature.id, updatedFeature.id)
+                narsGeoman?.displayManager?.updateFeatureOnMap(updatedFeature)
                 snackbar(context.getString(R.string.map_feature_saved))
             }
             result.onFailure { snackbar("${context.getString(R.string.map_save_failed)}: ${it.message}") }
@@ -167,7 +167,7 @@ class MapScreenHandlers(
 
     fun deleteFeature(featureId: String) {
         viewModel.deleteFeature(featureId)
-        narsGeoman?.removeFeature(featureId)
+        narsGeoman?.displayManager?.removeFeature(featureId)
         scope.launch {
             val result = apiService.deleteFeature(featureId)
             result.onSuccess { snackbar(context.getString(R.string.map_feature_deleted)) }
@@ -189,7 +189,7 @@ class MapScreenHandlers(
             val result = apiService.loadFeatures()
             result.onSuccess { features ->
                 viewModel.featureStore.addFeatures(features)
-                narsGeoman?.updateDisplayedFeatures(features)
+                narsGeoman?.displayManager?.updateDisplayedFeatures(features)
                 snackbar(if (features.isEmpty()) context.getString(R.string.map_no_features)
                     else context.getString(R.string.map_features_loaded, features.size))
             }
@@ -210,13 +210,13 @@ class MapScreenHandlers(
                 latLng.distanceTo(cp) < geometry.coordinates[2].coerceAtLeast(MIN_CIRCLE_RADIUS)
             }
             is com.nars.maplibre.data.model.LineStringGeometry -> {
-                geometry.coordinates.chunked(2).any { coord ->
+                geometry.coordinates.chunked(2).filter { it.size == 2 }.any { coord ->
                     val lp = org.maplibre.android.geometry.LatLng(coord[1], coord[0])
                     latLng.distanceTo(lp) < threshold
                 }
             }
             is com.nars.maplibre.data.model.PolygonGeometry -> {
-                geometry.coordinates.chunked(2).any { coord ->
+                geometry.coordinates.chunked(2).filter { it.size == 2 }.any { coord ->
                     val pp = org.maplibre.android.geometry.LatLng(coord[1], coord[0])
                     latLng.distanceTo(pp) < threshold
                 }

@@ -22,13 +22,13 @@ import org.maplibre.android.geometry.LatLng
 import org.maplibre.android.maps.MapLibreMap
 import org.maplibre.android.maps.MapView
 
-@Suppress("DEPRECATION", "TooManyFunctions")
+@Suppress("DEPRECATION")
 class NarsGeoman internal constructor(
     val geoman: Geoman,
-    private val displayManager: FeatureDisplayManager,
+    val displayManager: FeatureDisplayManager,
+    val snappingEngine: SnappingEngine,
     private val eventHandler: GeomanEventHandler,
     private val geometryConverter: GeometryConverter,
-    private val snappingEngine: SnappingEngine,
     private val onFeatureCreated: (NarsFeature) -> Unit,
     private val onFeatureUpdated: (NarsFeature) -> Unit,
     private val onFeatureDeleted: (String) -> Unit,
@@ -53,7 +53,6 @@ class NarsGeoman internal constructor(
             onFeatureUpdated: (NarsFeature) -> Unit,
             onFeatureDeleted: (String) -> Unit
         ): NarsGeoman {
-            val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
             val options = GmOptionsData(
                 settings = SettingsOptions(
                     useControlsUi = true,
@@ -68,7 +67,10 @@ class NarsGeoman internal constructor(
             }
             val geometryConverter = GeometryConverter()
             val displayManager = FeatureDisplayManager(geoman, featureRenderer, geometryConverter, map)
-            val eventHandler = GeomanEventHandler(scope, geoman, onFeatureCreated, onFeatureUpdated, onFeatureDeleted)
+            val eventHandler = GeomanEventHandler(
+                CoroutineScope(SupervisorJob() + Dispatchers.Main),
+                geoman, onFeatureCreated, onFeatureUpdated, onFeatureDeleted
+            )
             eventHandler.setupEventListeners()
             NarsLogger.d(
                 "NarsGeoman",
@@ -169,24 +171,6 @@ class NarsGeoman internal constructor(
             }
         }
         stopEditing()
-    }
-
-    fun addFeature(feature: NarsFeature) = displayManager.addFeature(feature)
-
-    fun addFeatures(features: List<NarsFeature>) = displayManager.addFeatures(features)
-
-    fun updateDisplayedFeatures(allFeatures: List<NarsFeature>) = displayManager.updateDisplayedFeatures(allFeatures)
-
-    fun updateFeatureId(oldId: String, newId: String) = displayManager.updateFeatureId(oldId, newId)
-
-    fun updateFeatureOnMap(feature: NarsFeature) = displayManager.updateFeatureOnMap(feature)
-
-    fun removeFeature(featureId: String) = displayManager.removeFeature(featureId)
-
-    fun clearAllFeatures() = displayManager.clearAllFeatures()
-
-    fun snapPoint(point: LatLng, features: List<NarsFeature>, snapThresholdMeters: Double = 20.0): LatLng {
-        return snappingEngine.snapPoint(point, features, snapThresholdMeters)
     }
 
     fun onMapClick(latLng: LatLng) {

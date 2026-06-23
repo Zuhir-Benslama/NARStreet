@@ -66,7 +66,8 @@ class FeatureDisplayManager(
     }
 
     fun updateFeatureOnMap(feature: NarsFeature) {
-        val sourceName = "nars_${feature.id}"
+        val safeId = feature.id.replace(Regex("[^a-zA-Z0-9_]"), "_")
+        val sourceName = "nars_$safeId"
         val source = map?.style?.getSource(sourceName)
         if (source is org.maplibre.android.style.sources.GeoJsonSource) {
             val geoJsonFeature = geometryConverter.convertToGeoJson(feature)
@@ -89,21 +90,22 @@ class FeatureDisplayManager(
             }
         }
 
-        val layerName = "nars_layer_$featureId"
+        val safeId = featureId.replace(Regex("[^a-zA-Z0-9_]"), "_")
+        val layerName = "nars_layer_$safeId"
         val layerNames = listOf(
             layerName, "${layerName}_outline",
             "${layerName}_stroke", "${layerName}_label"
         )
         for (name in layerNames) {
             try {
-                map?.style?.getLayer(name)?.let { map?.style?.removeLayer(it) }
+                map?.style?.getLayer(name)?.let { map.style?.removeLayer(it) }
             } catch (e: IllegalArgumentException) {
                 NarsLogger.w("FeatureDisplayManager", "Failed to remove layer $name: ${e.message}")
             } catch (e: IllegalStateException) {
                 NarsLogger.w("FeatureDisplayManager", "Failed to remove layer $name: ${e.message}")
             }
         }
-        val mapSourceNames = listOf("nars_${featureId}_edges", "nars_$featureId")
+        val mapSourceNames = listOf("nars_${safeId}_edges", "nars_$safeId")
         for (name in mapSourceNames) {
             try {
                 map?.style?.removeSource(name)

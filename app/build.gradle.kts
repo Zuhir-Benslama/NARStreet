@@ -42,6 +42,9 @@ android {
         // Build config fields from local.properties
         val apiUrl = localProperties.getProperty("NARS_API_BASE_URL", "")
         buildConfigField("String", "API_BASE_URL", "\"$apiUrl\"")
+
+        val sslCertHashes = localProperties.getProperty("SSL_CERT_HASHES", "")
+        buildConfigField("String", "SSL_CERT_HASHES", "\"$sslCertHashes\"")
     }
 
     buildTypes {

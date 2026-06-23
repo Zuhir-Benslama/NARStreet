@@ -11,6 +11,7 @@ import com.nars.maplibre.data.model.Phases
 import com.nars.maplibre.data.store.FeatureStore
 import com.nars.maplibre.data.store.UndoAction
 import com.nars.maplibre.utils.NarsLogger
+import com.nars.maplibre.utils.PhaseNavigationResult
 import com.nars.maplibre.utils.PhaseNavigator
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -64,10 +65,10 @@ class MapViewModel(
     fun setCurrentPhase(phase: PhaseDefinition): PhaseDefinition? {
         val currentIndex = featureStore.currentPhase.value?.index ?: 0
         if (phase.index > currentIndex) {
-            val error = phaseNavigator.canAdvance(phase.index)
-            if (error != null) {
-                updateUiState(errorMessage = error)
-                NarsLogger.d("MapViewModel", "Phase validation failed: $error")
+            val result = phaseNavigator.canAdvance(phase.index)
+            if (result is PhaseNavigationResult.Blocked) {
+                updateUiState(errorMessage = result.message)
+                NarsLogger.d("MapViewModel", "Phase validation failed: ${result.message}")
                 return null
             }
         }
@@ -83,8 +84,8 @@ class MapViewModel(
         val nextPhase = phaseNavigator.goNext()
         if (nextPhase == null) {
             val currentIndex = featureStore.currentPhase.value?.index ?: 0
-            val error = phaseNavigator.canAdvance(currentIndex + 1)
-            if (error != null) updateUiState(errorMessage = error)
+            val result = phaseNavigator.canAdvance(currentIndex + 1)
+            if (result is PhaseNavigationResult.Blocked) updateUiState(errorMessage = result.message)
         }
         return nextPhase
     }

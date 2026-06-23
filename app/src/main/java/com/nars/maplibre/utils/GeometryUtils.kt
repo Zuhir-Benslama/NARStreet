@@ -8,7 +8,7 @@ import org.maplibre.android.geometry.LatLng
 
 object GeometryUtils {
 
-    private const val EARTH_RADIUS_METERS = 6371000.0
+    private const val EARTH_RADIUS_METERS = 6378137.0
 
     fun haversineDistance(lat1: Double, lng1: Double, lat2: Double, lng2: Double): Double {
         val dLat = Math.toRadians(lat2 - lat1)

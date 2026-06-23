@@ -7,6 +7,7 @@ import com.nars.maplibre.SettingsViewModel
 import com.nars.maplibre.data.api.ApiService
 import com.nars.maplibre.data.api.SessionManager
 import com.nars.maplibre.data.store.FeatureStore
+import com.nars.maplibre.utils.Config
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.okhttp.OkHttp
 import io.ktor.client.plugins.HttpTimeout
@@ -18,6 +19,7 @@ import io.ktor.http.ContentType
 import io.ktor.http.contentType
 import io.ktor.serialization.kotlinx.json.json
 import kotlinx.serialization.json.Json
+import okhttp3.CertificatePinner
 import org.koin.android.ext.koin.androidContext
 import org.koin.core.module.dsl.viewModel
 import org.koin.dsl.module
@@ -28,6 +30,17 @@ val appModule = module {
             engine {
                 config {
                     retryOnConnectionFailure(true)
+                    val hashes = BuildConfig.SSL_CERT_HASHES
+                    if (hashes.isNotBlank()) {
+                        val pinnerBuilder = CertificatePinner.Builder()
+                        hashes.split(",").forEach { entry ->
+                            val parts = entry.trim().split("=", limit = 2)
+                            if (parts.size == 2) {
+                                pinnerBuilder.add(parts[0].trim(), parts[1].trim())
+                            }
+                        }
+                        certificatePinner(pinnerBuilder.build())
+                    }
                 }
             }
             install(ContentNegotiation) {
@@ -40,9 +53,9 @@ val appModule = module {
                 level = LogLevel.NONE
             }
             install(HttpTimeout) {
-                requestTimeoutMillis = 15000
-                connectTimeoutMillis = 10000
-                socketTimeoutMillis = 15000
+                requestTimeoutMillis = Config.API_DEFAULT_TIMEOUT_MS.toLong()
+                connectTimeoutMillis = Config.API_CONNECT_TIMEOUT_MS.toLong()
+                socketTimeoutMillis = Config.API_DEFAULT_TIMEOUT_MS.toLong()
             }
             defaultRequest {
                 val baseUrl = BuildConfig.API_BASE_URL.trimEnd('/')
@@ -60,6 +73,6 @@ val appModule = module {
 
     single { SessionManager(get(), get()) }
 
-    viewModel { MapViewModel(androidContext() as android.app.Application, get(), get(), get()) }
+    viewModel { MapViewModel(androidContext().applicationContext as android.app.Application, get(), get(), get()) }
     viewModel { SettingsViewModel(get()) }
 }
