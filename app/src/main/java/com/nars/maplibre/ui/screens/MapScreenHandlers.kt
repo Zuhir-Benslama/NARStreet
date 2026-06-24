@@ -6,10 +6,18 @@ import com.nars.maplibre.MapViewModel
 import com.nars.maplibre.R
 import com.nars.maplibre.data.api.ApiService
 import com.nars.maplibre.data.api.SessionManager
+import com.nars.maplibre.data.model.CircleGeometry
+import com.nars.maplibre.data.model.LineStringGeometry
 import com.nars.maplibre.data.model.NarsFeature
+import com.nars.maplibre.data.model.PointGeometry
+import com.nars.maplibre.data.model.PolygonGeometry
 import com.nars.maplibre.modes.NarsGeoman
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
+import org.maplibre.android.camera.CameraUpdateFactory
+import org.maplibre.android.geometry.LatLng
+import org.maplibre.android.maps.MapLibreMap
+import org.maplibre.android.maps.MapView
 
 class MapScreenHandlers(
     private val viewModel: MapViewModel,
@@ -30,7 +38,7 @@ class MapScreenHandlers(
 
     var narsGeoman: NarsGeoman? = null
 
-    val initializeNarsGeoman: (org.maplibre.android.maps.MapView, org.maplibre.android.maps.MapLibreMap) -> Unit =
+    val initializeNarsGeoman: (MapView, MapLibreMap) -> Unit =
         { mv, map ->
             val geoman = NarsGeoman(
                 mapView = mv, map = map,
@@ -54,8 +62,8 @@ class MapScreenHandlers(
                     val lat = user.communeLatitude ?: return@let
                     val lng = user.communeLongitude ?: return@let
                     map.animateCamera(
-                        org.maplibre.android.camera.CameraUpdateFactory.newLatLngZoom(
-                            org.maplibre.android.geometry.LatLng(lat, lng), MAP_ZOOM
+                        CameraUpdateFactory.newLatLngZoom(
+                            LatLng(lat, lng), MAP_ZOOM
                         ), ANIM_DURATION_MS
                     )
                 }
@@ -67,8 +75,15 @@ class MapScreenHandlers(
         narsGeoman?.displayManager?.addFeature(feature)
     }
 
+    private fun currentPhaseFeatures(): List<NarsFeature> {
+        val currentPhaseKey = viewModel.currentPhase.value?.key
+        return if (currentPhaseKey != null) {
+            viewModel.allFeatures.value.filter { it.properties.phase == currentPhaseKey }
+        } else viewModel.allFeatures.value
+    }
+
     fun handleMapClick(
-        latLng: org.maplibre.android.geometry.LatLng,
+        latLng: LatLng,
         drawingEnabled: Boolean,
         editModeEnabled: Boolean
     ) {
@@ -80,30 +95,24 @@ class MapScreenHandlers(
             return
         }
 
-        val currentPhaseKey = viewModel.currentPhase.value?.key
-        val clickedFeature = viewModel.allFeatures.value
-            .filter { it.properties.phase == currentPhaseKey }
+        val clickedFeature = currentPhaseFeatures()
             .firstOrNull { feature -> isPointNearFeature(latLng, feature) }
 
         if (clickedFeature != null) viewModel.selectFeature(clickedFeature)
         else viewModel.clearSelection()
     }
 
-    fun handleMapLongClick(latLng: org.maplibre.android.geometry.LatLng): NarsFeature? {
-        val currentPhaseKey = viewModel.currentPhase.value?.key
-        val clickedFeature = viewModel.allFeatures.value
-            .filter { it.properties.phase == currentPhaseKey }
+    fun handleMapLongClick(latLng: LatLng): NarsFeature? {
+        val clickedFeature = currentPhaseFeatures()
             .firstOrNull { feature ->
                 when (val geometry = feature.geometry) {
-                    is com.nars.maplibre.data.model.PointGeometry -> {
-                        val fp = org.maplibre.android.geometry.LatLng(
-                            geometry.coordinates[1], geometry.coordinates[0]
-                        )
+                    is PointGeometry -> {
+                        val fp = LatLng(geometry.coordinates[1], geometry.coordinates[0])
                         latLng.distanceTo(fp) < LONG_CLICK_DISTANCE_THRESHOLD
                     }
-                    is com.nars.maplibre.data.model.LineStringGeometry -> {
+                    is LineStringGeometry -> {
                         geometry.coordinates.chunked(2).filter { it.size == 2 }.any { coord ->
-                            val lp = org.maplibre.android.geometry.LatLng(coord[1], coord[0])
+                            val lp = LatLng(coord[1], coord[0])
                             latLng.distanceTo(lp) < LONG_CLICK_DISTANCE_THRESHOLD
                         }
                     }
@@ -201,26 +210,26 @@ class MapScreenHandlers(
         }
     }
 
-    private fun isPointNearFeature(latLng: org.maplibre.android.geometry.LatLng, feature: NarsFeature): Boolean {
+    private fun isPointNearFeature(latLng: LatLng, feature: NarsFeature): Boolean {
         val threshold = NEAR_FEATURE_DISTANCE_THRESHOLD
         return when (val geometry = feature.geometry) {
-            is com.nars.maplibre.data.model.PointGeometry -> {
-                val fp = org.maplibre.android.geometry.LatLng(geometry.coordinates[1], geometry.coordinates[0])
+            is PointGeometry -> {
+                val fp = LatLng(geometry.coordinates[1], geometry.coordinates[0])
                 latLng.distanceTo(fp) < threshold
             }
-            is com.nars.maplibre.data.model.CircleGeometry -> {
-                val cp = org.maplibre.android.geometry.LatLng(geometry.coordinates[1], geometry.coordinates[0])
+            is CircleGeometry -> {
+                val cp = LatLng(geometry.coordinates[1], geometry.coordinates[0])
                 latLng.distanceTo(cp) < geometry.coordinates[2].coerceAtLeast(MIN_CIRCLE_RADIUS)
             }
-            is com.nars.maplibre.data.model.LineStringGeometry -> {
+            is LineStringGeometry -> {
                 geometry.coordinates.chunked(2).filter { it.size == 2 }.any { coord ->
-                    val lp = org.maplibre.android.geometry.LatLng(coord[1], coord[0])
+                    val lp = LatLng(coord[1], coord[0])
                     latLng.distanceTo(lp) < threshold
                 }
             }
-            is com.nars.maplibre.data.model.PolygonGeometry -> {
+            is PolygonGeometry -> {
                 geometry.coordinates.chunked(2).filter { it.size == 2 }.any { coord ->
-                    val pp = org.maplibre.android.geometry.LatLng(coord[1], coord[0])
+                    val pp = LatLng(coord[1], coord[0])
                     latLng.distanceTo(pp) < threshold
                 }
             }

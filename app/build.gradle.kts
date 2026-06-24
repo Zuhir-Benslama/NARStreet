@@ -45,6 +45,18 @@ android {
 
         val sslCertHashes = localProperties.getProperty("SSL_CERT_HASHES", "")
         buildConfigField("String", "SSL_CERT_HASHES", "\"$sslCertHashes\"")
+
+        val tileSatellite = localProperties.getProperty("TILE_SATELLITE", "")
+        buildConfigField("String", "TILE_SATELLITE", "\"$tileSatellite\"")
+
+        val tileStreet = localProperties.getProperty("TILE_STREET", "")
+        buildConfigField("String", "TILE_STREET", "\"$tileStreet\"")
+
+        val tileLight = localProperties.getProperty("TILE_LIGHT", "")
+        buildConfigField("String", "TILE_LIGHT", "\"$tileLight\"")
+
+        val tileDark = localProperties.getProperty("TILE_DARK", "")
+        buildConfigField("String", "TILE_DARK", "\"$tileDark\"")
     }
 
     buildTypes {

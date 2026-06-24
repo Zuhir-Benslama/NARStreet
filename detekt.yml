@@ -44,6 +44,8 @@ style:
   ThrowsCount:
     active: true
     max: 3
+  UnusedImport:
+    active: true
 
 complexity:
   LongMethod:
@@ -84,4 +86,24 @@ potential-bugs:
 
 performance:
   SpreadOperator:
+    active: true
+
+empty-blocks:
+  EmptyCatchBlock:
+    active: true
+  EmptyFunctionBlock:
+    active: true
+
+comments:
+  DocumentationOverPrivateFunction:
+    active: false
+  UndocumentedPublicClass:
+    active: false
+
+coroutines:
+  GlobalCoroutineUsage:
+    active: true
+  RedundantSuspendModifier:
+    active: true
+  SleepInsteadOfDelay:
     active: true

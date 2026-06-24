@@ -22,6 +22,10 @@ class FeatureDisplayManager(
     private val displayedFeatureIds = mutableSetOf<String>()
     var currentPhase: PhaseDefinition? = null
 
+    companion object {
+        private val SAFE_ID_REGEX = Regex("[^a-zA-Z0-9_]")
+    }
+
     fun addFeature(feature: NarsFeature) {
         displayedFeatureIds.add(feature.id)
         featureRenderer.addFeature(feature)
@@ -66,7 +70,7 @@ class FeatureDisplayManager(
     }
 
     fun updateFeatureOnMap(feature: NarsFeature) {
-        val safeId = feature.id.replace(Regex("[^a-zA-Z0-9_]"), "_")
+        val safeId = feature.id.replace(SAFE_ID_REGEX, "_")
         val sourceName = "nars_$safeId"
         val source = map?.style?.getSource(sourceName)
         if (source is org.maplibre.android.style.sources.GeoJsonSource) {

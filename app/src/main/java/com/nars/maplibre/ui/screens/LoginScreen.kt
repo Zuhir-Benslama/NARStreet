@@ -198,7 +198,7 @@ private fun LoginCredentialsForm(
                 tint = Color.White.copy(alpha = 0.6f))
         },
         modifier = Modifier.fillMaxWidth(),
-        colors = loginFieldColors(),
+        colors = LoginFieldColors(),
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text, imeAction = ImeAction.Next),
         singleLine = true
     )
@@ -215,7 +215,7 @@ private fun LoginCredentialsForm(
         },
         visualTransformation = PasswordVisualTransformation(),
         modifier = Modifier.fillMaxWidth(),
-        colors = loginFieldColors(),
+        colors = LoginFieldColors(),
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, imeAction = ImeAction.Done),
         keyboardActions = KeyboardActions(onDone = { onLogin() }),
         singleLine = true
@@ -248,7 +248,7 @@ private fun LoginSignInButton(isLoading: Boolean, onClick: () -> Unit) {
 }
 
 @Composable
-private fun loginFieldColors() = OutlinedTextFieldDefaults.colors(
+private fun LoginFieldColors() = OutlinedTextFieldDefaults.colors(
     focusedBorderColor = Color.White.copy(alpha = 0.55f),
     unfocusedBorderColor = Color.White.copy(alpha = 0.3f),
     focusedLabelColor = Color.White.copy(alpha = FOCUS_LABEL_ALPHA),

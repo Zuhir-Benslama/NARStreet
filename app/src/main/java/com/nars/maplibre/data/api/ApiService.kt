@@ -73,12 +73,18 @@ class ApiService(
                 }
             }
 
+            if (!response.status.isSuccess()) {
+                val body = response.bodyAsText()
+                val errorResponse = try {
+                    apiJson.decodeFromString<LoginApiResponse>(body)
+                } catch (_: Exception) { null }
+                return Result.failure(
+                    Exception(errorResponse?.message ?: "Login failed: HTTP ${response.status.value}")
+                )
+            }
+
             val body = response.bodyAsText()
             val apiResponse = apiJson.decodeFromString<LoginApiResponse>(body)
-
-            if (!response.status.isSuccess()) {
-                return Result.failure(Exception(apiResponse.message ?: "Login failed: HTTP ${response.status.value}"))
-            }
 
             if (!apiResponse.success) {
                 return Result.failure(Exception(apiResponse.message ?: "Login failed"))

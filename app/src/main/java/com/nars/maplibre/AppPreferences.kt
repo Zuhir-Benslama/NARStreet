@@ -7,7 +7,6 @@ import com.nars.maplibre.data.model.BaseLayerType
 import com.nars.maplibre.data.model.User
 import com.nars.maplibre.security.SecurePreferences
 import com.nars.maplibre.ui.theme.ThemeMode
-import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 
 class AppPreferences(context: Context) {

@@ -6,12 +6,16 @@ import com.geoman.maplibre.geoman.types.events.GmMapEvent
 import com.nars.maplibre.data.model.CircleGeometry
 import com.nars.maplibre.data.model.Geometry
 import com.nars.maplibre.data.model.LineStringGeometry
+import com.nars.maplibre.data.model.FeatureProperties
 import com.nars.maplibre.data.model.NarsFeature
+import com.nars.maplibre.data.model.NarsFeatureType
 import com.nars.maplibre.data.model.PhaseDefinition
 import com.nars.maplibre.data.model.Phases
 import com.nars.maplibre.data.model.PointGeometry
 import com.nars.maplibre.data.model.PolygonGeometry
 import com.nars.maplibre.utils.NarsLogger
+import com.geoman.maplibre.geoman.Geoman
+import com.geoman.maplibre.geoman.utils.GeometryUtils
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import com.geoman.maplibre.geoman.core.features.FeatureData
@@ -23,7 +27,7 @@ import com.geoman.maplibre.geoman.types.geojson.Polygon
 
 class GeomanEventHandler(
     private val scope: CoroutineScope,
-    private val geoman: com.geoman.maplibre.geoman.Geoman,
+    private val geoman: Geoman,
     private val onFeatureCreated: (NarsFeature) -> Unit,
     private val onFeatureUpdated: (NarsFeature) -> Unit,
     private val onFeatureDeleted: (String) -> Unit
@@ -104,13 +108,13 @@ class GeomanEventHandler(
             type = getFeatureTypeFromPhase(phase),
             geometry = geometry,
             properties = when (phase.key) {
-                com.nars.maplibre.data.model.Phases.ROADS_KEY ->
-                    com.nars.maplibre.data.model.FeatureProperties.RoadProperties()
-                com.nars.maplibre.data.model.Phases.HOUSE_ENTRANCES_KEY ->
-                    com.nars.maplibre.data.model.FeatureProperties.HouseEntranceProperties()
-                com.nars.maplibre.data.model.Phases.NAMING_PANELS_KEY ->
-                    com.nars.maplibre.data.model.FeatureProperties.NamingPanelProperties()
-                else -> com.nars.maplibre.data.model.FeatureProperties.RoadProperties()
+                Phases.ROADS_KEY ->
+                    FeatureProperties.RoadProperties()
+                Phases.HOUSE_ENTRANCES_KEY ->
+                    FeatureProperties.HouseEntranceProperties()
+                Phases.NAMING_PANELS_KEY ->
+                    FeatureProperties.NamingPanelProperties()
+                else -> FeatureProperties.RoadProperties()
             }
         )
     }
@@ -195,7 +199,7 @@ class GeomanEventHandler(
                 val avgLat = sumLat / ring.size
                 val centerPoint = LngLat(avgLon, avgLat)
                 val centerLngLat = ring.first()
-                val calcRadius = com.geoman.maplibre.geoman.utils.GeometryUtils.calculateDistance(
+                val calcRadius = GeometryUtils.calculateDistance(
                     centerPoint, centerLngLat
                 )
                 return CircleGeometry(coordinates = listOf(avgLon, avgLat, calcRadius))
@@ -209,12 +213,12 @@ class GeomanEventHandler(
         return extractGeometryFromGeoJson(featureData.geometry)
     }
 
-    internal fun getFeatureTypeFromPhase(phase: PhaseDefinition): com.nars.maplibre.data.model.NarsFeatureType {
+    internal fun getFeatureTypeFromPhase(phase: PhaseDefinition): NarsFeatureType {
         return when (phase.key) {
-            Phases.ROADS_KEY -> com.nars.maplibre.data.model.NarsFeatureType.ROAD
-            Phases.HOUSE_ENTRANCES_KEY -> com.nars.maplibre.data.model.NarsFeatureType.HOUSE_ENTRANCE
-            Phases.NAMING_PANELS_KEY -> com.nars.maplibre.data.model.NarsFeatureType.NAMING_PANEL
-            else -> com.nars.maplibre.data.model.NarsFeatureType.ROAD
+            Phases.ROADS_KEY -> NarsFeatureType.ROAD
+            Phases.HOUSE_ENTRANCES_KEY -> NarsFeatureType.HOUSE_ENTRANCE
+            Phases.NAMING_PANELS_KEY -> NarsFeatureType.NAMING_PANEL
+            else -> NarsFeatureType.ROAD
         }
     }
 }

@@ -10,3 +10,9 @@
 
 # SSL certificate pinning (optional — comma-separated, format: hostname=sha256/hash)
 # SSL_CERT_HASHES=api.nars.example.com=sha256/AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
+
+# Tile server URLs (optional — defaults to standard providers)
+# TILE_SATELLITE=https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}
+# TILE_STREET=https://tile.openstreetmap.org/{z}/{x}/{y}.png
+# TILE_LIGHT=https://basemaps.cartocdn.com/light_all/{z}/{x}/{y}{ratio}.png
+# TILE_DARK=https://basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{ratio}.png

@@ -2,12 +2,17 @@ package com.nars.maplibre.modes
 
 import android.graphics.Color
 import androidx.core.graphics.toColorInt
-import com.nars.maplibre.data.api.escapeJson
 import com.nars.maplibre.data.model.LineStringGeometry
 import com.nars.maplibre.data.model.NarsFeature
-import com.nars.maplibre.data.model.PointGeometry
 import com.nars.maplibre.data.model.PolygonGeometry
 import com.nars.maplibre.utils.NarsLogger
+import kotlinx.serialization.json.add
+import kotlinx.serialization.json.addJsonObject
+import kotlinx.serialization.json.buildJsonArray
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
+import kotlinx.serialization.json.putJsonArray
+import kotlinx.serialization.json.putJsonObject
 import org.maplibre.android.maps.MapLibreMap
 import org.maplibre.android.style.expressions.Expression
 import org.maplibre.android.style.layers.CircleLayer
@@ -70,11 +75,28 @@ class LabelAndMarkerManager(
             }
     }
 
+    private fun pointFeatureGeoJson(lon: Double, lat: Double, props: Map<String, String> = emptyMap()): String {
+        return buildJsonObject {
+            put("type", "FeatureCollection")
+            putJsonArray("features") {
+                addJsonObject {
+                    put("type", "Feature")
+                    putJsonObject("geometry") {
+                        put("type", "Point")
+                        putJsonArray("coordinates") { add(lon); add(lat) }
+                    }
+                    putJsonObject("properties") {
+                        props.forEach { (k, v) -> put(k, v) }
+                    }
+                }
+            }
+        }.toString()
+    }
+
     private fun addEndpointMarker(id: String, lon: Double, lat: Double, isStart: Boolean) {
         val layerName = "nars_$id"
         val sourceName = "${layerName}_src"
-        val geoJson = """{"type": "FeatureCollection", "features": """ +
-            """[{"type": "Feature", "geometry": {"type": "Point", "coordinates": [$lon, $lat]}, "properties": {}}]}"""
+        val geoJson = pointFeatureGeoJson(lon, lat)
 
         try {
             map.style?.addSource(GeoJsonSource(sourceName, geoJson))
@@ -100,10 +122,7 @@ class LabelAndMarkerManager(
     private fun addLabelAt(layerName: String, labelText: String?, lon: Double, lat: Double) {
         if (labelText.isNullOrBlank()) return
         val sourceName = "${layerName}_src"
-        val escapedText = escapeJson(labelText)
-        val geoJson = """{"type": "FeatureCollection", "features": """ +
-            """[{"type": "Feature", "geometry": {"type": "Point", "coordinates": """ +
-            """[$lon, $lat]}, "properties": {"text": "$escapedText"}}]}"""
+        val geoJson = pointFeatureGeoJson(lon, lat, mapOf("text" to labelText))
 
         try { map.style?.addSource(GeoJsonSource(sourceName, geoJson)) } catch (e: IllegalArgumentException) {
             NarsLogger.w(TAG, "Failed to add label source", e)
@@ -138,8 +157,14 @@ class LabelAndMarkerManager(
 
             try {
                 map.style?.getSource(vertexSourceName)?.let { map.style?.removeSource(vertexSourceName) }
-                val geoJson = """{"type": "Feature", "geometry": {"type": "Point", "coordinates": """ +
-                    """[${coord[0]}, ${coord[1]}]}, "properties": {"isVertex": true}}"""
+                val geoJson = buildJsonObject {
+                    put("type", "Feature")
+                    putJsonObject("geometry") {
+                        put("type", "Point")
+                        putJsonArray("coordinates") { add(coord[0]); add(coord[1]) }
+                    }
+                    putJsonObject("properties") { put("isVertex", true) }
+                }.toString()
                 map.style?.addSource(GeoJsonSource(vertexSourceName, geoJson))
 
                 val circleLayer = CircleLayer(vertexLayerName, vertexSourceName).apply {

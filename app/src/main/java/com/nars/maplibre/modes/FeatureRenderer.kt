@@ -11,6 +11,7 @@ import com.nars.maplibre.data.model.Phases
 import com.nars.maplibre.data.model.PointGeometry
 import com.nars.maplibre.data.model.PolygonGeometry
 import com.nars.maplibre.utils.NarsLogger
+import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import kotlinx.serialization.json.putJsonArray
@@ -161,8 +162,8 @@ class FeatureRenderer(
     private fun parseColor(colorStr: String): Int = try {
         (if (colorStr.startsWith("#")) colorStr else "#$colorStr").toColorInt()
     } catch (e: IllegalArgumentException) {
-            NarsLogger.w(TAG, "Failed to parse color: $colorStr", e)
-            Color.GRAY
+        NarsLogger.w(TAG, "Failed to parse color: $colorStr", e)
+        Color.GRAY
     }
 
     private fun buildGeoJsonString(feature: com.geoman.maplibre.geoman.types.geojson.Feature): String {
@@ -171,7 +172,7 @@ class FeatureRenderer(
         return buildJsonObject {
             put("type", "Feature")
             put("id", feature.id ?: "")
-            put("geometry", kotlinx.serialization.json.Json.parseToJsonElement(
+            put("geometry", Json.parseToJsonElement(
                 geometryConverterProvider().geometryToJson(geometry)
             ))
             putJsonObject("properties") {

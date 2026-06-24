@@ -46,7 +46,3 @@ data class ContextMenuState(
     val positionX: Float = 0f,
     val positionY: Float = 0f
 )
-
-fun dismissContextMenu(state: ContextMenuState): ContextMenuState {
-    return state.copy(isVisible = false, feature = null)
-}

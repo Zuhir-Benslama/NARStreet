@@ -30,11 +30,18 @@ object Config {
 
     const val MIN_ROAD_LENGTH_METERS = 10
 
-    const val TILE_SATELLITE = "https://server.arcgisonline.com/ArcGIS/rest/services/" +
-        "World_Imagery/MapServer/tile/{z}/{y}/{x}"
-    const val TILE_STREET = "https://tile.openstreetmap.org/{z}/{x}/{y}.png"
-    const val TILE_LIGHT = "https://basemaps.cartocdn.com/light_all/{z}/{x}/{y}{ratio}.png"
-    const val TILE_DARK = "https://basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{ratio}.png"
+    val TILE_SATELLITE: String = BuildConfig.TILE_SATELLITE.ifBlank {
+        "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
+    }
+    val TILE_STREET: String = BuildConfig.TILE_STREET.ifBlank {
+        "https://tile.openstreetmap.org/{z}/{x}/{y}.png"
+    }
+    val TILE_LIGHT: String = BuildConfig.TILE_LIGHT.ifBlank {
+        "https://basemaps.cartocdn.com/light_all/{z}/{x}/{y}{ratio}.png"
+    }
+    val TILE_DARK: String = BuildConfig.TILE_DARK.ifBlank {
+        "https://basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{ratio}.png"
+    }
 
     const val GLYPHS = "https://fonts.openmaptiles.org/{fontstack}/{range}.pbf"
     const val STYLE_VERSION = 8

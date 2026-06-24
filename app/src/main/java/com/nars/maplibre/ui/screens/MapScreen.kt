@@ -240,8 +240,11 @@ private fun SelectedFeatureCardActions(
                 onClick = onSaveEdits,
                 colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
                 modifier = Modifier.weight(1f)
-            ) { Icon(Icons.Default.Edit, contentDescription = null, modifier = Modifier.size(18.dp))
-                Spacer(Modifier.width(4.dp)); Text(stringResource(R.string.map_save_geometry)) }
+            ) {
+                Icon(Icons.Default.Edit, contentDescription = null, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.width(4.dp))
+                Text(stringResource(R.string.map_save_geometry))
+            }
             Button(
                 onClick = onCancelEdits,
                 colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
@@ -257,8 +260,11 @@ private fun SelectedFeatureCardActions(
                 onClick = onEditGeometry,
                 colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary),
                 modifier = Modifier.weight(1f)
-            ) { Icon(Icons.Default.Edit, contentDescription = null, modifier = Modifier.size(18.dp))
-                Spacer(Modifier.width(4.dp)); Text(stringResource(R.string.map_edit_geometry)) }
+            ) {
+                Icon(Icons.Default.Edit, contentDescription = null, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.width(4.dp))
+                Text(stringResource(R.string.map_edit_geometry))
+            }
         }
     }
 }

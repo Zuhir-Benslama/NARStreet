@@ -9,11 +9,13 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import org.koin.android.ext.koin.androidContext
+import org.koin.core.component.KoinComponent
+import org.koin.core.component.get
 import org.koin.core.context.startKoin
 import org.maplibre.android.MapLibre
 import org.maplibre.android.WellKnownTileServer
 
-class NarsApplication : Application() {
+class NarsApplication : Application(), KoinComponent {
 
     private val applicationScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
@@ -27,7 +29,7 @@ class NarsApplication : Application() {
 
         applicationScope.launch {
             try {
-                val prefs: AppPreferences = org.koin.java.KoinJavaComponent.get(AppPreferences::class.java)
+                val prefs: AppPreferences = get()
                 prefs.authToken?.let { jwtToken ->
                     NarsLogger.d("NarsApplication", "User session found on startup")
                 }
