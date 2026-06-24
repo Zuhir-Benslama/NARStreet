@@ -77,7 +77,10 @@
     <string name="map_cancel">Cancel</string>
     <string name="map_close">Close</string>
     <string name="map_no_features">No features found</string>
-    <string name="map_features_loaded">Loaded %d features</string>
+    <plurals name="map_features_loaded">
+        <item quantity="one">Loaded %d feature</item>
+        <item quantity="other">Loaded %d features</item>
+    </plurals>
     <string name="map_feature_saved">Feature saved successfully</string>
     <string name="map_feature_updated">Feature updated successfully</string>
     <string name="map_feature_deleted">Feature deleted from backend</string>
@@ -128,7 +131,7 @@
     <string name="validation_naming_panel_position_incorrect">Naming panel position is incorrect</string>
 
     <!-- Dynamic validation -->
-    <string name="validation_road_min_length">Road must be at least %d meters long</string>
+    <string name="validation_road_min_length">Road must be at least 10 meters long</string>
 
     <!-- Undo/Redo messages -->
     <string name="undo_restored_format">Restored: %s</string>

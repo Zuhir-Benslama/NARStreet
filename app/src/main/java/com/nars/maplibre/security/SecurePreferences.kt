@@ -2,6 +2,7 @@ package com.nars.maplibre.security
 
 import android.content.Context
 import android.content.SharedPreferences
+import androidx.core.content.edit
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
 import kotlinx.serialization.encodeToString
@@ -11,12 +12,14 @@ import com.nars.maplibre.utils.NarsLogger
 
 class SecurePreferences(context: Context) {
 
+    @Suppress("DEPRECATION")
     private val masterKey: MasterKey by lazy {
         MasterKey.Builder(context, MasterKey.DEFAULT_MASTER_KEY_ALIAS)
             .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
             .build()
     }
 
+    @Suppress("DEPRECATION")
     private val encryptedPrefs: SharedPreferences by lazy {
         EncryptedSharedPreferences.create(
             context,
@@ -33,9 +36,9 @@ class SecurePreferences(context: Context) {
     }
 
     fun saveAuthToken(token: String) {
-        encryptedPrefs.edit()
-            .putString(KEY_AUTH_TOKEN, token)
-            .apply()
+        encryptedPrefs.edit {
+            putString(KEY_AUTH_TOKEN, token)
+        }
     }
 
     fun getAuthToken(): String? {
@@ -43,15 +46,15 @@ class SecurePreferences(context: Context) {
     }
 
     fun clearAuthToken() {
-        encryptedPrefs.edit()
-            .remove(KEY_AUTH_TOKEN)
-            .apply()
+        encryptedPrefs.edit {
+            remove(KEY_AUTH_TOKEN)
+        }
     }
 
     fun saveCookie(cookie: String) {
-        encryptedPrefs.edit()
-            .putString(KEY_COOKIE, cookie)
-            .apply()
+        encryptedPrefs.edit {
+            putString(KEY_COOKIE, cookie)
+        }
     }
 
     fun getCookie(): String? {
@@ -59,16 +62,16 @@ class SecurePreferences(context: Context) {
     }
 
     fun clearCookie() {
-        encryptedPrefs.edit()
-            .remove(KEY_COOKIE)
-            .apply()
+        encryptedPrefs.edit {
+            remove(KEY_COOKIE)
+        }
     }
 
     fun saveUser(user: User) {
         val userJson = json.encodeToString(user)
-        encryptedPrefs.edit()
-            .putString(KEY_USER, userJson)
-            .apply()
+        encryptedPrefs.edit {
+            putString(KEY_USER, userJson)
+        }
     }
 
     fun getUser(): User? {
@@ -82,15 +85,15 @@ class SecurePreferences(context: Context) {
     }
 
     fun clearUser() {
-        encryptedPrefs.edit()
-            .remove(KEY_USER)
-            .apply()
+        encryptedPrefs.edit {
+            remove(KEY_USER)
+        }
     }
 
     fun saveMunicipalityName(name: String) {
-        encryptedPrefs.edit()
-            .putString(KEY_MUNICIPALITY, name)
-            .apply()
+        encryptedPrefs.edit {
+            putString(KEY_MUNICIPALITY, name)
+        }
     }
 
     fun getMunicipalityName(): String? {
@@ -98,18 +101,18 @@ class SecurePreferences(context: Context) {
     }
 
     fun clearMunicipalityName() {
-        encryptedPrefs.edit()
-            .remove(KEY_MUNICIPALITY)
-            .apply()
+        encryptedPrefs.edit {
+            remove(KEY_MUNICIPALITY)
+        }
     }
 
     fun clearAll() {
-        encryptedPrefs.edit()
-            .remove(KEY_AUTH_TOKEN)
-            .remove(KEY_COOKIE)
-            .remove(KEY_USER)
-            .remove(KEY_MUNICIPALITY)
-            .apply()
+        encryptedPrefs.edit {
+            remove(KEY_AUTH_TOKEN)
+            remove(KEY_COOKIE)
+            remove(KEY_USER)
+            remove(KEY_MUNICIPALITY)
+        }
     }
 
     companion object {

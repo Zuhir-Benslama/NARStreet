@@ -1,6 +1,7 @@
 package com.nars.maplibre.modes
 
 import android.graphics.Color
+import androidx.core.graphics.toColorInt
 import com.geoman.maplibre.geoman.types.geojson.Feature
 import com.nars.maplibre.data.api.escapeJson
 import com.nars.maplibre.data.model.CircleGeometry
@@ -158,7 +159,7 @@ class FeatureRenderer(
     )
 
     private fun parseColor(colorStr: String): Int = try {
-        Color.parseColor(if (colorStr.startsWith("#")) colorStr else "#$colorStr")
+        (if (colorStr.startsWith("#")) colorStr else "#$colorStr").toColorInt()
     } catch (e: IllegalArgumentException) {
             NarsLogger.w(TAG, "Failed to parse color: $colorStr", e)
             Color.GRAY

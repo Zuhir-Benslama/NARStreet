@@ -1,6 +1,7 @@
 package com.nars.maplibre.modes
 
 import android.graphics.Color
+import androidx.core.graphics.toColorInt
 import com.nars.maplibre.data.api.escapeJson
 import com.nars.maplibre.data.model.LineStringGeometry
 import com.nars.maplibre.data.model.NarsFeature
@@ -82,7 +83,7 @@ class LabelAndMarkerManager(
             return
         }
 
-        val color = if (isStart) Color.parseColor("#2ecc71") else Color.parseColor("#e74c3c")
+        val color = if (isStart) "#2ecc71".toColorInt() else "#e74c3c".toColorInt()
         val circleLayer = CircleLayer("${layerName}_circle", sourceName).apply {
             setProperties(
                 org.maplibre.android.style.layers.PropertyFactory.circleColor(color),

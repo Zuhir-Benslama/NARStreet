@@ -13,7 +13,7 @@ detekt {
     buildUponDefaultConfig = true
     allRules = false
     autoCorrect = false
-    toolVersion = "2.0.0-alpha.3"
+    toolVersion = "2.0.0-alpha.5"
 }
 
 // Load local.properties if it exists
@@ -50,6 +50,7 @@ android {
     buildTypes {
         release {
             isMinifyEnabled = true
+            isShrinkResources = true
             isDebuggable = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),

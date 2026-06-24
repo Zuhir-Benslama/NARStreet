@@ -190,8 +190,11 @@ class MapScreenHandlers(
             result.onSuccess { features ->
                 viewModel.featureStore.addFeatures(features)
                 narsGeoman?.displayManager?.updateDisplayedFeatures(features)
-                snackbar(if (features.isEmpty()) context.getString(R.string.map_no_features)
-                    else context.getString(R.string.map_features_loaded, features.size))
+                val msg = if (features.isEmpty()) context.getString(R.string.map_no_features)
+                    else context.resources.getQuantityString(
+                        R.plurals.map_features_loaded, features.size, features.size
+                    )
+                snackbar(msg)
             }
             result.onFailure { snackbar("${context.getString(R.string.map_save_failed)}: ${it.message}") }
             viewModel.updateUiState(isLoading = false)

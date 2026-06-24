@@ -1,5 +1,6 @@
 package com.nars.maplibre.data.model
 
+import androidx.core.graphics.toColorInt
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
@@ -119,7 +120,7 @@ data class PhaseDefinition(
     val hint: String
 ) {
     val parsedColor: androidx.compose.ui.graphics.Color by lazy {
-        androidx.compose.ui.graphics.Color(android.graphics.Color.parseColor(color))
+        androidx.compose.ui.graphics.Color(color.toColorInt())
     }
 }
 

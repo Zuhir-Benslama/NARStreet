@@ -23,6 +23,7 @@ import io.mockk.mockk
 import io.mockk.slot
 import io.mockk.verify
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -205,7 +206,7 @@ class GeomanEventHandlerTest {
         every { featureData.geometry } returns mockk(relaxed = true)
 
         val result = handler.extractCircleGeometry(featureData)
-        assertTrue(result is CircleGeometry)
+        assertNotNull(result)
     }
 
     @Test
@@ -215,7 +216,7 @@ class GeomanEventHandlerTest {
         every { featureData.geometry } returns mockk(relaxed = true)
 
         val result = handler.extractCircleGeometry(featureData)
-        assertTrue(result is CircleGeometry)
+        assertNotNull(result)
     }
 
     // --- handleFeatureCreated ---
