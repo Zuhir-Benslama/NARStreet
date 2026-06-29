@@ -15,19 +15,18 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class PhaseNavigatorTest {
-
     private fun createRoad(id: String): NarsFeature = NarsFeature(
         id = id,
         type = NarsFeatureType.ROAD,
         geometry = LineStringGeometry(coordinates = listOf(3.0, 36.0, 3.01, 36.0)),
-        properties = FeatureProperties.RoadProperties(name = "Road $id")
+        properties = FeatureProperties.RoadProperties(name = "Road $id"),
     )
 
     private fun createEntrance(id: String): NarsFeature = NarsFeature(
         id = id,
         type = NarsFeatureType.HOUSE_ENTRANCE,
         geometry = PointGeometry(coordinates = listOf(3.0, 36.0)),
-        properties = FeatureProperties.HouseEntranceProperties()
+        properties = FeatureProperties.HouseEntranceProperties(),
     )
 
     // ── canAdvance ────────────────────────────────────────────────────────
@@ -308,6 +307,4 @@ class PhaseNavigatorTest {
     }
 
     // ── Edge cases ─────────────────────────────────────────────────────────
-
-
 }

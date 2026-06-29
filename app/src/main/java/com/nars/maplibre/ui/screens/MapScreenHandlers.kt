@@ -1,6 +1,5 @@
 package com.nars.maplibre.ui.screens
 
-import com.nars.maplibre.utils.NarsLogger
 import android.content.Context
 import com.nars.maplibre.MapViewModel
 import com.nars.maplibre.R
@@ -12,6 +11,7 @@ import com.nars.maplibre.data.model.NarsFeature
 import com.nars.maplibre.data.model.PointGeometry
 import com.nars.maplibre.data.model.PolygonGeometry
 import com.nars.maplibre.modes.NarsGeoman
+import com.nars.maplibre.utils.NarsLogger
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import org.maplibre.android.camera.CameraUpdateFactory
@@ -25,7 +25,7 @@ class MapScreenHandlers(
     private val sessionManager: SessionManager,
     private val context: Context,
     private val scope: CoroutineScope,
-    private val snackbar: (String) -> Unit
+    private val snackbar: (String) -> Unit,
 ) {
     companion object {
         private const val TAG = "MapScreenHandlers"
@@ -40,19 +40,21 @@ class MapScreenHandlers(
 
     val initializeNarsGeoman: (MapView, MapLibreMap) -> Unit =
         { mv, map ->
-            val geoman = NarsGeoman(
-                mapView = mv, map = map,
-                context = context,
-                onFeatureCreated = { feature -> handleFeatureCreated(feature) },
-                onFeatureUpdated = { feature ->
-                    viewModel.updateFeature(feature)
-                    snackbar(context.getString(R.string.map_feature_updated))
-                },
-                onFeatureDeleted = { featureId ->
-                    viewModel.deleteFeature(featureId)
-                    snackbar(context.getString(R.string.map_feature_deleted))
-                }
-            )
+            val geoman =
+                NarsGeoman(
+                    mapView = mv,
+                    map = map,
+                    context = context,
+                    onFeatureCreated = { feature -> handleFeatureCreated(feature) },
+                    onFeatureUpdated = { feature ->
+                        viewModel.updateFeature(feature)
+                        snackbar(context.getString(R.string.map_feature_updated))
+                    },
+                    onFeatureDeleted = { featureId ->
+                        viewModel.deleteFeature(featureId)
+                        snackbar(context.getString(R.string.map_feature_deleted))
+                    },
+                )
             narsGeoman = geoman
 
             viewModel.currentPhase.value?.let { geoman.setCurrentPhase(it) }
@@ -63,8 +65,10 @@ class MapScreenHandlers(
                     val lng = user.communeLongitude ?: return@let
                     map.animateCamera(
                         CameraUpdateFactory.newLatLngZoom(
-                            LatLng(lat, lng), MAP_ZOOM
-                        ), ANIM_DURATION_MS
+                            LatLng(lat, lng),
+                            MAP_ZOOM,
+                        ),
+                        ANIM_DURATION_MS,
                     )
                 }
             }
@@ -79,46 +83,56 @@ class MapScreenHandlers(
         val currentPhaseKey = viewModel.currentPhase.value?.key
         return if (currentPhaseKey != null) {
             viewModel.allFeatures.value.filter { it.properties.phase == currentPhaseKey }
-        } else viewModel.allFeatures.value
+        } else {
+            viewModel.allFeatures.value
+        }
     }
 
-    fun handleMapClick(
-        latLng: LatLng,
-        drawingEnabled: Boolean,
-        editModeEnabled: Boolean
-    ) {
+    fun handleMapClick(latLng: LatLng, drawingEnabled: Boolean, editModeEnabled: Boolean) {
         if (drawingEnabled || editModeEnabled) {
-            val snapped = if (drawingEnabled) {
-                narsGeoman?.snappingEngine?.snapPoint(latLng, viewModel.allFeatures.value) ?: latLng
-            } else latLng
+            val snapped =
+                if (drawingEnabled) {
+                    narsGeoman?.snappingEngine?.snapPoint(latLng, viewModel.allFeatures.value) ?: latLng
+                } else {
+                    latLng
+                }
             narsGeoman?.onMapClick(snapped)
             return
         }
 
-        val clickedFeature = currentPhaseFeatures()
-            .firstOrNull { feature -> isPointNearFeature(latLng, feature) }
+        val clickedFeature =
+            currentPhaseFeatures()
+                .firstOrNull { feature -> isPointNearFeature(latLng, feature) }
 
-        if (clickedFeature != null) viewModel.selectFeature(clickedFeature)
-        else viewModel.clearSelection()
+        if (clickedFeature != null) {
+            viewModel.selectFeature(clickedFeature)
+        } else {
+            viewModel.clearSelection()
+        }
     }
 
     fun handleMapLongClick(latLng: LatLng): NarsFeature? {
-        val clickedFeature = currentPhaseFeatures()
-            .firstOrNull { feature ->
-                when (val geometry = feature.geometry) {
-                    is PointGeometry -> {
-                        val fp = LatLng(geometry.coordinates[1], geometry.coordinates[0])
-                        latLng.distanceTo(fp) < LONG_CLICK_DISTANCE_THRESHOLD
-                    }
-                    is LineStringGeometry -> {
-                        geometry.coordinates.chunked(2).filter { it.size == 2 }.any { coord ->
-                            val lp = LatLng(coord[1], coord[0])
-                            latLng.distanceTo(lp) < LONG_CLICK_DISTANCE_THRESHOLD
+        val clickedFeature =
+            currentPhaseFeatures()
+                .firstOrNull { feature ->
+                    when (val geometry = feature.geometry) {
+                        is PointGeometry -> {
+                            val fp = LatLng(geometry.coordinates[1], geometry.coordinates[0])
+                            latLng.distanceTo(fp) < LONG_CLICK_DISTANCE_THRESHOLD
+                        }
+
+                        is LineStringGeometry -> {
+                            geometry.coordinates.chunked(2).filter { it.size == 2 }.any { coord ->
+                                val lp = LatLng(coord[1], coord[0])
+                                latLng.distanceTo(lp) < LONG_CLICK_DISTANCE_THRESHOLD
+                            }
+                        }
+
+                        else -> {
+                            false
                         }
                     }
-                    else -> false
                 }
-            }
 
         if (clickedFeature != null) viewModel.selectFeature(clickedFeature)
         return clickedFeature
@@ -154,9 +168,12 @@ class MapScreenHandlers(
         scope.launch {
             val result = apiService.saveFeature(feature)
             result.onSuccess { savedId ->
-                val updatedFeature = if (savedId != feature.id) {
-                    feature.copy(dbId = savedId, id = savedId)
-                } else feature.copy(dbId = savedId)
+                val updatedFeature =
+                    if (savedId != feature.id) {
+                        feature.copy(dbId = savedId, id = savedId)
+                    } else {
+                        feature.copy(dbId = savedId)
+                    }
                 viewModel.addFeature(updatedFeature)
                 narsGeoman?.displayManager?.updateFeatureId(feature.id, updatedFeature.id)
                 narsGeoman?.displayManager?.updateFeatureOnMap(updatedFeature)
@@ -199,10 +216,16 @@ class MapScreenHandlers(
             result.onSuccess { features ->
                 viewModel.featureStore.addFeatures(features)
                 narsGeoman?.displayManager?.updateDisplayedFeatures(features)
-                val msg = if (features.isEmpty()) context.getString(R.string.map_no_features)
-                    else context.resources.getQuantityString(
-                        R.plurals.map_features_loaded, features.size, features.size
-                    )
+                val msg =
+                    if (features.isEmpty()) {
+                        context.getString(R.string.map_no_features)
+                    } else {
+                        context.resources.getQuantityString(
+                            R.plurals.map_features_loaded,
+                            features.size,
+                            features.size,
+                        )
+                    }
                 snackbar(msg)
             }
             result.onFailure { snackbar("${context.getString(R.string.map_save_failed)}: ${it.message}") }
@@ -217,16 +240,19 @@ class MapScreenHandlers(
                 val fp = LatLng(geometry.coordinates[1], geometry.coordinates[0])
                 latLng.distanceTo(fp) < threshold
             }
+
             is CircleGeometry -> {
                 val cp = LatLng(geometry.coordinates[1], geometry.coordinates[0])
                 latLng.distanceTo(cp) < geometry.coordinates[2].coerceAtLeast(MIN_CIRCLE_RADIUS)
             }
+
             is LineStringGeometry -> {
                 geometry.coordinates.chunked(2).filter { it.size == 2 }.any { coord ->
                     val lp = LatLng(coord[1], coord[0])
                     latLng.distanceTo(lp) < threshold
                 }
             }
+
             is PolygonGeometry -> {
                 geometry.coordinates.chunked(2).filter { it.size == 2 }.any { coord ->
                     val pp = LatLng(coord[1], coord[0])

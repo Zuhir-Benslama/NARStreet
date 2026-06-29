@@ -2,10 +2,11 @@ package com.nars.maplibre.utils
 
 import com.nars.maplibre.data.model.PhaseDefinition
 import com.nars.maplibre.data.model.Phases
-import com.nars.maplibre.data.store.FeatureStore
+import com.nars.maplibre.data.store.FeatureStoreInterface
 
 sealed class PhaseNavigationResult {
     data object Allowed : PhaseNavigationResult()
+
     data class Blocked(val message: String) : PhaseNavigationResult()
 }
 
@@ -13,8 +14,7 @@ sealed class PhaseNavigationResult {
  * Phase navigation validation for NARStreet Field Mode
  * Only 3 phases: Roads, HouseEntrances, NamingPanels
  */
-class PhaseNavigator(private val featureStore: FeatureStore) {
-
+class PhaseNavigator(private val featureStore: FeatureStoreInterface) {
     /**
      * Check if user can advance to next phase
      */
@@ -79,9 +79,7 @@ class PhaseNavigator(private val featureStore: FeatureStore) {
     /**
      * Check if can go to previous phase
      */
-    fun canGoBack(): Boolean {
-        return getPreviousPhaseIndex() != null
-    }
+    fun canGoBack(): Boolean = getPreviousPhaseIndex() != null
 
     /**
      * Check if can go to next phase
@@ -116,7 +114,4 @@ class PhaseNavigator(private val featureStore: FeatureStore) {
 /**
  * Coverage validation result
  */
-data class CoverageResult(
-    val covered: Boolean,
-    val message: String
-)
+data class CoverageResult(val covered: Boolean, val message: String)

@@ -26,9 +26,9 @@ import com.nars.maplibre.data.model.PhaseDefinition
 import com.nars.maplibre.data.model.Phases
 import com.nars.maplibre.ui.theme.GlassBackground
 import com.nars.maplibre.ui.theme.GlassBorder
+import com.nars.maplibre.ui.theme.TextMuted
 import com.nars.maplibre.ui.theme.TextPrimary
 import com.nars.maplibre.ui.theme.TextSecondary
-import com.nars.maplibre.ui.theme.TextMuted
 
 /**
  * Phase bar component - matches nars-vite-maplibre design
@@ -39,17 +39,17 @@ fun PhaseBar(
     currentPhase: PhaseDefinition?,
     phaseCounts: Map<String, Int>,
     onPhaseSelected: (PhaseDefinition) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 12.dp)
+            .padding(horizontal = 16.dp, vertical = 12.dp),
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceEvenly,
-            verticalAlignment = Alignment.CenterVertically
+            verticalAlignment = Alignment.CenterVertically,
         ) {
             Phases.ALL.forEachIndexed { index, phase ->
                 val state = computePhaseState(index, phase, currentPhase, phaseCounts)
@@ -60,7 +60,7 @@ fun PhaseBar(
                     isActive = state.isActive,
                     isDone = state.isDone,
                     count = state.count,
-                    onClick = { onPhaseSelected(phase) }
+                    onClick = { onPhaseSelected(phase) },
                 )
 
                 // Connector between phases (except after last)
@@ -70,7 +70,7 @@ fun PhaseBar(
                         isDone = state.isDone,
                         modifier = Modifier
                             .width(24.dp)
-                            .height(3.dp)
+                            .height(3.dp),
                     )
                     Spacer(modifier = Modifier.width(4.dp))
                 }
@@ -89,11 +89,11 @@ private fun PhaseStep(
     isActive: Boolean,
     isDone: Boolean,
     count: Int,
-    onClick: () -> Unit
+    onClick: () -> Unit,
 ) {
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = Modifier.clickable(onClick = onClick)
+        modifier = Modifier.clickable(onClick = onClick),
     ) {
         // Phase badge button
         Box(
@@ -105,10 +105,10 @@ private fun PhaseStep(
                         isDone -> phaseColor
                         isActive -> phaseColor.copy(alpha = 0.8f)
                         else -> GlassBackground.copy(alpha = 0.6f)
-                    }
+                    },
                 )
                 .clickable(onClick = onClick),
-            contentAlignment = Alignment.Center
+            contentAlignment = Alignment.Center,
         ) {
             Text(
                 text = badge,
@@ -117,7 +117,7 @@ private fun PhaseStep(
                 color = when {
                     isDone || isActive -> Color.White
                     else -> TextSecondary
-                }
+                },
             )
         }
 
@@ -129,14 +129,14 @@ private fun PhaseStep(
                 modifier = Modifier
                     .clip(RoundedCornerShape(8.dp))
                     .background(
-                        if (isActive) phaseColor.copy(alpha = 0.2f) else GlassBackground
+                        if (isActive) phaseColor.copy(alpha = 0.2f) else GlassBackground,
                     )
-                    .padding(horizontal = 6.dp, vertical = 2.dp)
+                    .padding(horizontal = 6.dp, vertical = 2.dp),
             ) {
                 Text(
                     text = count.toString(),
                     fontSize = 11.sp,
-                    color = if (isActive) phaseColor else TextSecondary
+                    color = if (isActive) phaseColor else TextSecondary,
                 )
             }
         }
@@ -147,16 +147,13 @@ private fun PhaseStep(
  * Phase connector line
  */
 @Composable
-private fun PhaseConnector(
-    isDone: Boolean,
-    modifier: Modifier = Modifier
-) {
+private fun PhaseConnector(isDone: Boolean, modifier: Modifier = Modifier) {
     Box(
         modifier = modifier
             .clip(RoundedCornerShape(2.dp))
             .background(
-                if (isDone) GlassBorder else GlassBackground.copy(alpha = 0.4f)
-            )
+                if (isDone) GlassBorder else GlassBackground.copy(alpha = 0.4f),
+            ),
     )
 }
 
@@ -168,14 +165,14 @@ fun CompactPhaseSelector(
     currentPhase: PhaseDefinition?,
     phaseCounts: Map<String, Int>,
     onPhaseSelected: (PhaseDefinition) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     Row(
         modifier = modifier
             .fillMaxWidth()
             .padding(horizontal = 12.dp, vertical = 8.dp),
         horizontalArrangement = Arrangement.SpaceEvenly,
-        verticalAlignment = Alignment.CenterVertically
+        verticalAlignment = Alignment.CenterVertically,
     ) {
         Phases.ALL.forEachIndexed { index, phase ->
             val state = computePhaseState(index, phase, currentPhase, phaseCounts)
@@ -186,7 +183,7 @@ fun CompactPhaseSelector(
                 phaseColor = state.phaseColor,
                 isActive = state.isActive,
                 isDone = state.isDone,
-                onClick = { onPhaseSelected(phase) }
+                onClick = { onPhaseSelected(phase) },
             )
         }
     }
@@ -202,11 +199,11 @@ private fun CompactPhaseItem(
     phaseColor: Color,
     isActive: Boolean,
     isDone: Boolean,
-    onClick: () -> Unit
+    onClick: () -> Unit,
 ) {
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = Modifier.clickable(onClick = onClick)
+        modifier = Modifier.clickable(onClick = onClick),
     ) {
         Box(
             modifier = Modifier
@@ -217,10 +214,10 @@ private fun CompactPhaseItem(
                         isDone -> phaseColor
                         isActive -> phaseColor.copy(alpha = 0.8f)
                         else -> GlassBackground.copy(alpha = 0.5f)
-                    }
+                    },
                 )
                 .clickable(onClick = onClick),
-            contentAlignment = Alignment.Center
+            contentAlignment = Alignment.Center,
         ) {
             Text(
                 text = badge,
@@ -229,7 +226,7 @@ private fun CompactPhaseItem(
                 color = when {
                     isDone || isActive -> Color.White
                     else -> TextSecondary
-                }
+                },
             )
         }
 
@@ -238,7 +235,7 @@ private fun CompactPhaseItem(
             Text(
                 text = count.toString(),
                 fontSize = 10.sp,
-                color = if (isActive) phaseColor else TextMuted
+                color = if (isActive) phaseColor else TextMuted,
             )
         }
     }

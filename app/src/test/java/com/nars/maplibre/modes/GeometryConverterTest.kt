@@ -13,17 +13,17 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class GeometryConverterTest {
-
     private val converter = GeometryConverter()
 
     @Test
     fun `convertToGeoJson creates feature with correct id`() {
-        val feature = NarsFeature(
-            id = "test-1",
-            type = NarsFeatureType.ROAD,
-            geometry = PointGeometry(coordinates = listOf(3.0, 36.0)),
-            properties = FeatureProperties.RoadProperties()
-        )
+        val feature =
+            NarsFeature(
+                id = "test-1",
+                type = NarsFeatureType.ROAD,
+                geometry = PointGeometry(coordinates = listOf(3.0, 36.0)),
+                properties = FeatureProperties.RoadProperties(),
+            )
 
         val geoJson = converter.convertToGeoJson(feature)
 
@@ -33,12 +33,13 @@ class GeometryConverterTest {
 
     @Test
     fun `convertToGeoJson preserves properties map`() {
-        val feature = NarsFeature(
-            id = "test-1",
-            type = NarsFeatureType.ROAD,
-            geometry = PointGeometry(coordinates = listOf(3.0, 36.0)),
-            properties = FeatureProperties.RoadProperties(name = "Test Road")
-        )
+        val feature =
+            NarsFeature(
+                id = "test-1",
+                type = NarsFeatureType.ROAD,
+                geometry = PointGeometry(coordinates = listOf(3.0, 36.0)),
+                properties = FeatureProperties.RoadProperties(name = "Test Road"),
+            )
 
         val geoJson = converter.convertToGeoJson(feature)
 
@@ -79,9 +80,10 @@ class GeometryConverterTest {
 
     @Test
     fun `getSourceNameForGeometry returns correct source for LineString`() {
-        val sourceName = converter.getSourceNameForGeometry(
-            LineStringGeometry(coordinates = listOf(0.0, 0.0, 1.0, 1.0))
-        )
+        val sourceName =
+            converter.getSourceNameForGeometry(
+                LineStringGeometry(coordinates = listOf(0.0, 0.0, 1.0, 1.0)),
+            )
         assertEquals("gm_lines", sourceName)
     }
 

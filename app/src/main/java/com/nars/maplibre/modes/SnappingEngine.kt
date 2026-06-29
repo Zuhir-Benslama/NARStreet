@@ -20,7 +20,7 @@ class SnappingEngine {
     fun snapPoint(
         point: LatLng,
         features: List<NarsFeature>,
-        snapThresholdMeters: Double = DEFAULT_SNAP_THRESHOLD_METERS
+        snapThresholdMeters: Double = DEFAULT_SNAP_THRESHOLD_METERS,
     ): LatLng {
         var closestPoint = point
         var minDistance = snapThresholdMeters
@@ -29,26 +29,36 @@ class SnappingEngine {
             when (val geom = feature.geometry) {
                 is PointGeometry -> {
                     val result = snapToPoint(point, geom, closestPoint, minDistance)
-                    closestPoint = result.first; minDistance = result.second
+                    closestPoint = result.first
+                    minDistance = result.second
                 }
+
                 is LineStringGeometry -> {
                     val result = snapToLineString(point, geom, closestPoint, minDistance)
-                    closestPoint = result.first; minDistance = result.second
+                    closestPoint = result.first
+                    minDistance = result.second
                 }
+
                 is PolygonGeometry -> {
                     val result = snapToPolygon(point, geom, closestPoint, minDistance)
-                    closestPoint = result.first; minDistance = result.second
+                    closestPoint = result.first
+                    minDistance = result.second
                 }
+
                 is CircleGeometry -> {
                     val result = snapToCircle(point, geom, closestPoint, minDistance)
-                    closestPoint = result.first; minDistance = result.second
+                    closestPoint = result.first
+                    minDistance = result.second
                 }
             }
         }
 
         if (minDistance < snapThresholdMeters) {
-            NarsLogger.d(TAG, "Snapped point: ${point.latitude},${point.longitude} -> " +
-                "${closestPoint.latitude},${closestPoint.longitude} (${minDistance.toInt()}m)")
+            NarsLogger.d(
+                TAG,
+                "Snapped point: ${point.latitude},${point.longitude} -> " +
+                    "${closestPoint.latitude},${closestPoint.longitude} (${minDistance.toInt()}m)",
+            )
         }
         return closestPoint
     }
@@ -57,7 +67,7 @@ class SnappingEngine {
         point: LatLng,
         geometry: PointGeometry,
         currentClosest: LatLng,
-        currentMinDist: Double
+        currentMinDist: Double,
     ): Pair<LatLng, Double> {
         val fp = LatLng(geometry.coordinates[1], geometry.coordinates[0])
         val d = point.distanceTo(fp)
@@ -68,25 +78,21 @@ class SnappingEngine {
         point: LatLng,
         geometry: LineStringGeometry,
         currentClosest: LatLng,
-        currentMinDist: Double
-    ): Pair<LatLng, Double> {
-        return snapToCoordPath(point, geometry.coordinates, currentClosest, currentMinDist)
-    }
+        currentMinDist: Double,
+    ): Pair<LatLng, Double> = snapToCoordPath(point, geometry.coordinates, currentClosest, currentMinDist)
 
     private fun snapToPolygon(
         point: LatLng,
         geometry: PolygonGeometry,
         currentClosest: LatLng,
-        currentMinDist: Double
-    ): Pair<LatLng, Double> {
-        return snapToCoordPath(point, geometry.coordinates, currentClosest, currentMinDist)
-    }
+        currentMinDist: Double,
+    ): Pair<LatLng, Double> = snapToCoordPath(point, geometry.coordinates, currentClosest, currentMinDist)
 
     private fun snapToCoordPath(
         point: LatLng,
         coords: List<Double>,
         currentClosest: LatLng,
-        currentMinDist: Double
+        currentMinDist: Double,
     ): Pair<LatLng, Double> {
         var closest = currentClosest
         var minDist = currentMinDist
@@ -96,12 +102,18 @@ class SnappingEngine {
             val p2 = LatLng(pairs[i + 1][1], pairs[i + 1][0])
             val snapped = nearestPointOnSegment(point, p1, p2)
             val d = point.distanceTo(snapped)
-            if (d < minDist) { minDist = d; closest = snapped }
+            if (d < minDist) {
+                minDist = d
+                closest = snapped
+            }
         }
         for (pair in pairs) {
             val vp = LatLng(pair[1], pair[0])
             val d = point.distanceTo(vp)
-            if (d < minDist) { minDist = d; closest = vp }
+            if (d < minDist) {
+                minDist = d
+                closest = vp
+            }
         }
         return closest to minDist
     }
@@ -110,7 +122,7 @@ class SnappingEngine {
         point: LatLng,
         geometry: CircleGeometry,
         currentClosest: LatLng,
-        currentMinDist: Double
+        currentMinDist: Double,
     ): Pair<LatLng, Double> {
         val cp = LatLng(geometry.coordinates[1], geometry.coordinates[0])
         val d = point.distanceTo(cp)
@@ -130,10 +142,10 @@ class SnappingEngine {
         val angularDistAC = d1 / EARTH_RADIUS_METERS
         val crossTrack = Math.asin(
             (Math.sin(angularDistAC) * Math.sin(Math.toRadians(bearingAC - bearingAB)))
-                .coerceIn(-1.0, 1.0)
+                .coerceIn(-1.0, 1.0),
         )
         val alongTrack = Math.acos(
-            (Math.cos(angularDistAC) / Math.cos(crossTrack)).coerceIn(-1.0, 1.0)
+            (Math.cos(angularDistAC) / Math.cos(crossTrack)).coerceIn(-1.0, 1.0),
         )
         val fraction = (alongTrack / (segLength / EARTH_RADIUS_METERS)).coerceIn(0.0, 1.0)
 
@@ -156,13 +168,15 @@ class SnappingEngine {
         val brng = Math.toRadians(bearingDeg)
 
         val lat2 = Math.asin(
-            (Math.sin(lat1) * Math.cos(angularDist) +
-                    Math.cos(lat1) * Math.sin(angularDist) * Math.cos(brng))
-                .coerceIn(-1.0, 1.0)
+            (
+                Math.sin(lat1) * Math.cos(angularDist) +
+                    Math.cos(lat1) * Math.sin(angularDist) * Math.cos(brng)
+                )
+                .coerceIn(-1.0, 1.0),
         )
         val lng2 = lng1 + Math.atan2(
             Math.sin(brng) * Math.sin(angularDist) * Math.cos(lat1),
-            Math.cos(angularDist) - Math.sin(lat1) * Math.sin(lat2)
+            Math.cos(angularDist) - Math.sin(lat1) * Math.sin(lat2),
         )
         return LatLng(Math.toDegrees(lat2), Math.toDegrees(lng2))
     }

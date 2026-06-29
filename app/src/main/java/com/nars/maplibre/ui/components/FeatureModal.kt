@@ -31,10 +31,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.window.Dialog
 import com.nars.maplibre.R
 import com.nars.maplibre.data.model.FeatureProperties
@@ -49,7 +49,7 @@ fun FeatureValidationModal(
     feature: NarsFeature,
     phase: PhaseDefinition,
     onSave: (NarsFeature) -> Unit,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
 ) {
     var props by remember { mutableStateOf(feature.properties) }
     var validationErrors by remember { mutableStateOf<Map<String, Int>>(emptyMap()) }
@@ -58,10 +58,10 @@ fun FeatureValidationModal(
         Card(
             modifier = Modifier.fillMaxWidth().padding(8.dp),
             shape = RoundedCornerShape(16.dp),
-            colors = CardDefaults.cardColors(containerColor = GlassBackground)
+            colors = CardDefaults.cardColors(containerColor = GlassBackground),
         ) {
             Column(
-                modifier = Modifier.fillMaxWidth().padding(16.dp).verticalScroll(rememberScrollState())
+                modifier = Modifier.fillMaxWidth().padding(16.dp).verticalScroll(rememberScrollState()),
             ) {
                 FeatureModalHeader(phase = phase, onDismiss = onDismiss)
                 Spacer(modifier = Modifier.height(16.dp))
@@ -70,13 +70,18 @@ fun FeatureValidationModal(
 
                 when (val typedProps = props) {
                     is FeatureProperties.RoadProperties -> RoadsValidationFields(
-                        props = typedProps, onPropsChanged = { props = it }
+                        props = typedProps,
+                        onPropsChanged = { props = it },
                     )
+
                     is FeatureProperties.HouseEntranceProperties -> HouseEntranceValidationFields(
-                        props = typedProps, onPropsChanged = { props = it }
+                        props = typedProps,
+                        onPropsChanged = { props = it },
                     )
+
                     is FeatureProperties.NamingPanelProperties -> NamingPanelValidationFields(
-                        props = typedProps, onPropsChanged = { props = it }
+                        props = typedProps,
+                        onPropsChanged = { props = it },
                     )
                 }
 
@@ -92,7 +97,7 @@ fun FeatureValidationModal(
                         } else {
                             validationErrors = result.errors
                         }
-                    }
+                    },
                 )
             }
         }
@@ -104,7 +109,7 @@ private fun FeatureModalHeader(phase: PhaseDefinition, onDismiss: () -> Unit) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
+        verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
             text = when (phase.key) {
@@ -113,16 +118,21 @@ private fun FeatureModalHeader(phase: PhaseDefinition, onDismiss: () -> Unit) {
                 "namingPanels" -> stringResource(R.string.feature_panel_check)
                 else -> stringResource(R.string.feature_details)
             },
-            fontSize = 18.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface
+            fontSize = 18.sp,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onSurface,
         )
         Box(
             modifier = Modifier.size(32.dp).clip(RoundedCornerShape(8.dp))
                 .background(MaterialTheme.colorScheme.surfaceVariant)
                 .clickable { onDismiss() },
-            contentAlignment = Alignment.Center
+            contentAlignment = Alignment.Center,
         ) {
-            Icon(Icons.Default.Close, contentDescription = stringResource(R.string.map_close),
-                tint = MaterialTheme.colorScheme.onSurface)
+            Icon(
+                Icons.Default.Close,
+                contentDescription = stringResource(R.string.map_close),
+                tint = MaterialTheme.colorScheme.onSurface,
+            )
         }
     }
 }
@@ -130,19 +140,27 @@ private fun FeatureModalHeader(phase: PhaseDefinition, onDismiss: () -> Unit) {
 @Composable
 private fun FeatureModalCoordinateInfo(feature: NarsFeature) {
     val roadName = feature.properties.name ?: stringResource(R.string.feature_unnamed_road)
-    Text(text = roadName, fontSize = 22.sp, fontWeight = FontWeight.Bold,
-        color = MaterialTheme.colorScheme.onSurface)
+    Text(
+        text = roadName,
+        fontSize = 22.sp,
+        fontWeight = FontWeight.Bold,
+        color = MaterialTheme.colorScheme.onSurface,
+    )
 
     val coords = when (val geom = feature.geometry) {
         is com.nars.maplibre.data.model.LineStringGeometry -> {
             val c = geom.coordinates.chunked(2)
             if (c.isNotEmpty()) "Lat: ${c[0][1].formatDecimal(6)}, Lng: ${c[0][0].formatDecimal(6)}" else null
         }
+
         is com.nars.maplibre.data.model.PointGeometry -> {
             if (geom.coordinates.size >= 2) {
                 "Lat: ${geom.coordinates[1].formatDecimal(6)}, Lng: ${geom.coordinates[0].formatDecimal(6)}"
-            } else null
+            } else {
+                null
+            }
         }
+
         else -> null
     }
     coords?.let {
@@ -153,8 +171,12 @@ private fun FeatureModalCoordinateInfo(feature: NarsFeature) {
 @Composable
 private fun FeatureModalValidationErrors(errors: Map<String, Int>) {
     errors.entries.forEach { (field, msgResId) ->
-        Text(text = "$field: ${stringResource(msgResId)}", fontSize = 12.sp,
-            color = MaterialTheme.colorScheme.error, modifier = Modifier.fillMaxWidth())
+        Text(
+            text = "$field: ${stringResource(msgResId)}",
+            fontSize = 12.sp,
+            color = MaterialTheme.colorScheme.error,
+            modifier = Modifier.fillMaxWidth(),
+        )
     }
 }
 
@@ -163,7 +185,7 @@ private fun FeatureModalSaveButton(onSave: () -> Unit) {
     Button(
         onClick = onSave,
         modifier = Modifier.fillMaxWidth(),
-        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
     ) {
         Text(stringResource(R.string.feature_save))
     }

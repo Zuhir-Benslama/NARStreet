@@ -14,7 +14,6 @@ import org.junit.Test
 import org.maplibre.android.geometry.LatLng
 
 class SnappingEngineTest {
-
     private lateinit var engine: SnappingEngine
 
     @Before
@@ -22,14 +21,12 @@ class SnappingEngineTest {
         engine = SnappingEngine()
     }
 
-    private fun createPoint(lat: Double, lng: Double, id: String = "p1"): NarsFeature {
-        return NarsFeature(
-            id = id,
-            type = NarsFeatureType.ROAD,
-            geometry = PointGeometry(coordinates = listOf(lng, lat)),
-            properties = FeatureProperties.RoadProperties()
-        )
-    }
+    private fun createPoint(lat: Double, lng: Double, id: String = "p1"): NarsFeature = NarsFeature(
+        id = id,
+        type = NarsFeatureType.ROAD,
+        geometry = PointGeometry(coordinates = listOf(lng, lat)),
+        properties = FeatureProperties.RoadProperties(),
+    )
 
     @Test
     fun `snapPoint with no features returns original point`() {
@@ -56,11 +53,13 @@ class SnappingEngineTest {
 
     @Test
     fun `snapPoint snaps to line string vertex`() {
-        val line = NarsFeature(
-            id = "l1", type = NarsFeatureType.ROAD,
-            geometry = LineStringGeometry(coordinates = listOf(3.0, 36.0, 3.1, 36.1, 3.2, 36.2)),
-            properties = FeatureProperties.RoadProperties()
-        )
+        val line =
+            NarsFeature(
+                id = "l1",
+                type = NarsFeatureType.ROAD,
+                geometry = LineStringGeometry(coordinates = listOf(3.0, 36.0, 3.1, 36.1, 3.2, 36.2)),
+                properties = FeatureProperties.RoadProperties(),
+            )
         val point = LatLng(36.05, 3.05)
         val result = engine.snapPoint(point, listOf(line), 20000.0)
         assertNotNull(result)
@@ -68,11 +67,13 @@ class SnappingEngineTest {
 
     @Test
     fun `snapPoint snaps to polygon vertex`() {
-        val poly = NarsFeature(
-            id = "pg1", type = NarsFeatureType.ROAD,
-            geometry = PolygonGeometry(coordinates = listOf(3.0, 36.0, 3.1, 36.1, 3.0, 36.2, 3.0, 36.0)),
-            properties = FeatureProperties.RoadProperties()
-        )
+        val poly =
+            NarsFeature(
+                id = "pg1",
+                type = NarsFeatureType.ROAD,
+                geometry = PolygonGeometry(coordinates = listOf(3.0, 36.0, 3.1, 36.1, 3.0, 36.2, 3.0, 36.0)),
+                properties = FeatureProperties.RoadProperties(),
+            )
         val point = LatLng(36.05, 3.05)
         val result = engine.snapPoint(point, listOf(poly), 20000.0)
         assertNotNull(result)
@@ -80,11 +81,13 @@ class SnappingEngineTest {
 
     @Test
     fun `snapPoint snaps to circle center`() {
-        val circle = NarsFeature(
-            id = "c1", type = NarsFeatureType.ROAD,
-            geometry = CircleGeometry(coordinates = listOf(3.0, 36.0, 100.0)),
-            properties = FeatureProperties.RoadProperties()
-        )
+        val circle =
+            NarsFeature(
+                id = "c1",
+                type = NarsFeatureType.ROAD,
+                geometry = CircleGeometry(coordinates = listOf(3.0, 36.0, 100.0)),
+                properties = FeatureProperties.RoadProperties(),
+            )
         val point = LatLng(36.001, 3.001)
         val result = engine.snapPoint(point, listOf(circle), 200.0)
         assertNotNull(result)

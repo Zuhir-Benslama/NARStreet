@@ -60,7 +60,7 @@ private val LightColorScheme = lightColorScheme(
     onSurfaceVariant = Color(0xFF757575),
     error = Color(0xFFF44336),
     onError = Color.White,
-    outline = Color(0xFFBDBDBD)
+    outline = Color(0xFFBDBDBD),
 )
 
 // Dark color scheme (glass-morphism)
@@ -85,25 +85,22 @@ private val DarkColorScheme = darkColorScheme(
     onSurfaceVariant = TextSecondary,
     error = DangerColor,
     onError = Color.White,
-    outline = GlassBorder
+    outline = GlassBorder,
 )
 
 /**
  * NARS Theme composable
  */
 @Composable
-fun NARSTheme(
-    themeMode: ThemeMode = ThemeMode.AUTO,
-    content: @Composable () -> Unit
-) {
+fun NARSTheme(themeMode: ThemeMode = ThemeMode.AUTO, content: @Composable () -> Unit) {
     val darkTheme = when (themeMode) {
         ThemeMode.LIGHT -> false
         ThemeMode.DARK -> true
         ThemeMode.AUTO -> isSystemInDarkTheme()
     }
-    
+
     val colorScheme = if (darkTheme) DarkColorScheme else LightColorScheme
-    
+
     val view = LocalView.current
     if (!view.isInEditMode) {
         SideEffect {
@@ -111,9 +108,9 @@ fun NARSTheme(
             WindowInsetsControllerCompat(window, view).isAppearanceLightStatusBars = !darkTheme
         }
     }
-    
+
     MaterialTheme(
         colorScheme = colorScheme,
-        content = content
+        content = content,
     )
 }

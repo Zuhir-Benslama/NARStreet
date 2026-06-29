@@ -1,7 +1,5 @@
 package com.nars.maplibre.modes
 
-import com.geoman.maplibre.geoman.types.geojson.Feature as GeoJsonFeature
-import com.geoman.maplibre.geoman.types.geojson.Geometry as GeoJsonGeometry
 import com.nars.maplibre.data.model.CircleGeometry
 import com.nars.maplibre.data.model.FeatureProperties
 import com.nars.maplibre.data.model.LineStringGeometry
@@ -23,9 +21,10 @@ import org.maplibre.android.style.layers.FillLayer
 import org.maplibre.android.style.layers.LineLayer
 import org.maplibre.android.style.layers.SymbolLayer
 import org.maplibre.android.style.sources.GeoJsonSource
+import com.geoman.maplibre.geoman.types.geojson.Feature as GeoJsonFeature
+import com.geoman.maplibre.geoman.types.geojson.Geometry as GeoJsonGeometry
 
 class FeatureRendererTest {
-
     private lateinit var renderer: FeatureRenderer
     private lateinit var geoJsonSource: GeoJsonSource
     private lateinit var lineLayer: LineLayer
@@ -59,15 +58,13 @@ class FeatureRendererTest {
     }
 
     private fun createRoad(
-        geometry: com.nars.maplibre.data.model.Geometry = PointGeometry(coordinates = listOf(3.0, 36.0))
-    ): NarsFeature {
-        return NarsFeature(
-            id = "road-1",
-            type = NarsFeatureType.ROAD,
-            geometry = geometry,
-            properties = FeatureProperties.RoadProperties(name = "Main Road")
-        )
-    }
+        geometry: com.nars.maplibre.data.model.Geometry = PointGeometry(coordinates = listOf(3.0, 36.0)),
+    ): NarsFeature = NarsFeature(
+        id = "road-1",
+        type = NarsFeatureType.ROAD,
+        geometry = geometry,
+        properties = FeatureProperties.RoadProperties(name = "Main Road"),
+    )
 
     @Test
     fun `isFeatureAdded returns true after adding`() {
@@ -100,8 +97,8 @@ class FeatureRendererTest {
         renderer.addFeature(
             createRoad().copy(
                 id = "road-2",
-                geometry = PointGeometry(coordinates = listOf(3.1, 36.1))
-            )
+                geometry = PointGeometry(coordinates = listOf(3.1, 36.1)),
+            ),
         )
         renderer.clearTracking()
         assertEquals(0, renderer.getTrackedCount())

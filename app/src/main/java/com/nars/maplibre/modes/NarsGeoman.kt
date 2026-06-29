@@ -1,7 +1,6 @@
 package com.nars.maplibre.modes
 
 import android.content.Context
-import com.nars.maplibre.utils.NarsLogger
 import com.geoman.maplibre.geoman.Geoman
 import com.geoman.maplibre.geoman.core.options.GmOptionsData
 import com.geoman.maplibre.geoman.core.options.SettingsOptions
@@ -11,6 +10,7 @@ import com.nars.maplibre.data.model.DrawType
 import com.nars.maplibre.data.model.NarsFeature
 import com.nars.maplibre.data.model.PhaseDefinition
 import com.nars.maplibre.utils.Config
+import com.nars.maplibre.utils.NarsLogger
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -22,19 +22,15 @@ import org.maplibre.android.geometry.LatLng
 import org.maplibre.android.maps.MapLibreMap
 import org.maplibre.android.maps.MapView
 
-@Suppress("DEPRECATION")
 class NarsGeoman internal constructor(
     val geoman: Geoman,
     val displayManager: FeatureDisplayManager,
     val snappingEngine: SnappingEngine,
     private val eventHandler: GeomanEventHandler,
     private val geometryConverter: GeometryConverter,
-    private val onFeatureCreated: (NarsFeature) -> Unit,
-    private val onFeatureUpdated: (NarsFeature) -> Unit,
-    private val onFeatureDeleted: (String) -> Unit,
-    private val map: MapLibreMap? = null
+    private val callbacks: FeatureCallbacks,
+    private val scope: CoroutineScope,
 ) {
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
     private var destroyed = false
     private var currentPhase: PhaseDefinition? = null
 
@@ -45,36 +41,48 @@ class NarsGeoman internal constructor(
     val isEditing: StateFlow<Boolean> = _isEditing.asStateFlow()
 
     companion object {
+        /**
+         * Factory for creating a fully-configured [NarsGeoman] instance.
+         * Initializes the Geoman engine, feature renderer, display manager, and event handlers.
+         */
         operator fun invoke(
             mapView: MapView,
             map: MapLibreMap,
             context: Context,
             onFeatureCreated: (NarsFeature) -> Unit,
             onFeatureUpdated: (NarsFeature) -> Unit,
-            onFeatureDeleted: (String) -> Unit
+            onFeatureDeleted: (String) -> Unit,
         ): NarsGeoman {
-            val options = GmOptionsData(
-                settings = SettingsOptions(
-                    useControlsUi = true,
-                    showControlsOnMap = false,
-                    enableSnap = true,
-                    snapDistance = Config.SNAP_THRESHOLD_PX.toFloat()
+            val options =
+                GmOptionsData(
+                    settings =
+                    SettingsOptions(
+                        useControlsUi = true,
+                        showControlsOnMap = false,
+                        enableSnap = true,
+                        snapDistance = Config.SNAP_THRESHOLD_PX.toFloat(),
+                    ),
                 )
-            )
             val geoman = Geoman(mapView, map, options)
-            val featureRenderer = FeatureRenderer(map).also { renderer ->
-                renderer.labelAndMarkerManager = LabelAndMarkerManager(map)
-            }
+            val featureRenderer =
+                FeatureRenderer(map).also { renderer ->
+                    renderer.labelAndMarkerManager = LabelAndMarkerManager(map)
+                }
             val geometryConverter = GeometryConverter()
             val displayManager = FeatureDisplayManager(geoman, featureRenderer, geometryConverter, map)
-            val eventHandler = GeomanEventHandler(
-                CoroutineScope(SupervisorJob() + Dispatchers.Main),
-                geoman, onFeatureCreated, onFeatureUpdated, onFeatureDeleted
-            )
+            val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
+            val eventHandler =
+                GeomanEventHandler(
+                    scope,
+                    geoman,
+                    onFeatureCreated,
+                    onFeatureUpdated,
+                    onFeatureDeleted,
+                )
             eventHandler.setupEventListeners()
             NarsLogger.d(
                 "NarsGeoman",
-                "Initialized — delegating display to FeatureDisplayManager"
+                "Initialized — delegating display to FeatureDisplayManager",
             )
             return NarsGeoman(
                 geoman = geoman,
@@ -82,10 +90,8 @@ class NarsGeoman internal constructor(
                 eventHandler = eventHandler,
                 geometryConverter = geometryConverter,
                 snappingEngine = SnappingEngine(),
-                onFeatureCreated = onFeatureCreated,
-                onFeatureUpdated = onFeatureUpdated,
-                onFeatureDeleted = onFeatureDeleted,
-                map = map
+                callbacks = FeatureCallbacks(onFeatureCreated, onFeatureUpdated, onFeatureDeleted),
+                scope = scope,
             )
         }
     }
@@ -151,13 +157,14 @@ class NarsGeoman internal constructor(
             }
         }
 
-        val updated = if (updatedGeometry != null) {
-            originalFeature.copy(geometry = updatedGeometry)
-        } else {
-            NarsLogger.w("NarsGeoman", "Could not find updated geometry for ${originalFeature.id}")
-            originalFeature
-        }
-        onFeatureUpdated(updated)
+        val updated =
+            if (updatedGeometry != null) {
+                originalFeature.copy(geometry = updatedGeometry)
+            } else {
+                NarsLogger.w("NarsGeoman", "Could not find updated geometry for ${originalFeature.id}")
+                originalFeature
+            }
+        callbacks.onUpdated(updated)
         stopEditing()
     }
 
@@ -208,3 +215,12 @@ class NarsGeoman internal constructor(
         scope.cancel()
     }
 }
+
+/**
+ * Callbacks for feature lifecycle events from [NarsGeoman].
+ */
+data class FeatureCallbacks(
+    val onCreated: (NarsFeature) -> Unit,
+    val onUpdated: (NarsFeature) -> Unit,
+    val onDeleted: (String) -> Unit,
+)

@@ -30,22 +30,39 @@ import org.junit.Before
 import org.junit.Test
 
 class GeomanEventHandlerTest {
-
     private lateinit var geoman: Geoman
     private lateinit var onFeatureCreated: (NarsFeature) -> Unit
     private lateinit var onFeatureUpdated: (NarsFeature) -> Unit
     private lateinit var onFeatureDeleted: (String) -> Unit
     private lateinit var handler: GeomanEventHandler
 
-    private val roadPhase = PhaseDefinition(
-        0, Phases.ROADS_KEY, "roads", com.nars.maplibre.data.model.DrawType.POLYLINE, "#3498db", ""
-    )
-    private val entrancePhase = PhaseDefinition(
-        1, Phases.HOUSE_ENTRANCES_KEY, "entrances", com.nars.maplibre.data.model.DrawType.MARKER, "#27ae60", ""
-    )
-    private val panelPhase = PhaseDefinition(
-        2, Phases.NAMING_PANELS_KEY, "panels", com.nars.maplibre.data.model.DrawType.MARKER, "#9b59b6", ""
-    )
+    private val roadPhase =
+        PhaseDefinition(
+            0,
+            Phases.ROADS_KEY,
+            "roads",
+            com.nars.maplibre.data.model.DrawType.POLYLINE,
+            "#3498db",
+            "",
+        )
+    private val entrancePhase =
+        PhaseDefinition(
+            1,
+            Phases.HOUSE_ENTRANCES_KEY,
+            "entrances",
+            com.nars.maplibre.data.model.DrawType.MARKER,
+            "#27ae60",
+            "",
+        )
+    private val panelPhase =
+        PhaseDefinition(
+            2,
+            Phases.NAMING_PANELS_KEY,
+            "panels",
+            com.nars.maplibre.data.model.DrawType.MARKER,
+            "#9b59b6",
+            "",
+        )
 
     @Before
     fun setUp() {
@@ -56,13 +73,12 @@ class GeomanEventHandlerTest {
         handler = GeomanEventHandler(mockk(), geoman, onFeatureCreated, onFeatureUpdated, onFeatureDeleted)
     }
 
-    private fun createFeature(): NarsFeature {
-        return NarsFeature(
-            id = "f1", type = NarsFeatureType.ROAD,
-            geometry = PointGeometry(coordinates = listOf(1.0, 2.0)),
-            properties = FeatureProperties.RoadProperties()
-        )
-    }
+    private fun createFeature(): NarsFeature = NarsFeature(
+        id = "f1",
+        type = NarsFeatureType.ROAD,
+        geometry = PointGeometry(coordinates = listOf(1.0, 2.0)),
+        properties = FeatureProperties.RoadProperties(),
+    )
 
     // --- State management ---
 

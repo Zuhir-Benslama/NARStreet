@@ -28,9 +28,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.sp
 import com.nars.maplibre.R
 import com.nars.maplibre.data.model.User
@@ -44,11 +44,7 @@ import com.nars.maplibre.ui.theme.TextPrimary
 import com.nars.maplibre.ui.theme.TextSecondary
 
 @Composable
-fun ProfileAvatar(
-    user: User?,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier
-) {
+fun ProfileAvatar(user: User?, onClick: () -> Unit, modifier: Modifier = Modifier) {
     val initials = user?.getInitials() ?: "U"
 
     Box(
@@ -57,17 +53,17 @@ fun ProfileAvatar(
             .clip(RoundedCornerShape(20.dp))
             .background(
                 Brush.linearGradient(
-                    colors = listOf(PrimaryGradientStart, PrimaryGradientEnd)
-                )
+                    colors = listOf(PrimaryGradientStart, PrimaryGradientEnd),
+                ),
             )
             .clickable { onClick() },
-        contentAlignment = Alignment.Center
+        contentAlignment = Alignment.Center,
     ) {
         Text(
             text = initials,
             fontSize = 16.sp,
             fontWeight = FontWeight.Bold,
-            color = Color.White
+            color = Color.White,
         )
     }
 }
@@ -79,13 +75,13 @@ private fun ProfileMenuContent(
     onSettingsClick: () -> Unit,
     onLogoutClick: () -> Unit,
     modifier: Modifier = Modifier,
-    compact: Boolean = false
+    compact: Boolean = false,
 ) {
     DropdownMenu(
         expanded = true,
         onDismissRequest = onDismissRequest,
         modifier = modifier
-            .background(color = DropdownBackground, shape = RoundedCornerShape(12.dp))
+            .background(color = DropdownBackground, shape = RoundedCornerShape(12.dp)),
     ) {
         if (compact) {
             ProfileMenuCompactInfo(user = user)
@@ -103,14 +99,14 @@ fun ProfileMenu(
     onSettingsClick: () -> Unit,
     onLogoutClick: () -> Unit,
     modifier: Modifier = Modifier,
-    compact: Boolean = false
+    compact: Boolean = false,
 ) {
     var dropdownExpanded by remember { mutableStateOf(false) }
 
     Box(modifier = modifier) {
         ProfileAvatar(
             user = user,
-            onClick = { dropdownExpanded = true }
+            onClick = { dropdownExpanded = true },
         )
 
         if (dropdownExpanded) {
@@ -119,7 +115,7 @@ fun ProfileMenu(
                 onDismissRequest = { dropdownExpanded = false },
                 onSettingsClick = onSettingsClick,
                 onLogoutClick = onLogoutClick,
-                compact = compact
+                compact = compact,
             )
         }
     }
@@ -128,11 +124,13 @@ fun ProfileMenu(
 @Composable
 private fun ProfileMenuCompactInfo(user: User?) {
     Column(
-        modifier = Modifier.fillMaxWidth().padding(12.dp)
+        modifier = Modifier.fillMaxWidth().padding(12.dp),
     ) {
         Text(
             text = user?.username ?: stringResource(R.string.profile_user),
-            fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = TextPrimary
+            fontSize = 14.sp,
+            fontWeight = FontWeight.SemiBold,
+            color = TextPrimary,
         )
         val userName = user?.name ?: ""
         if (userName.isNotBlank()) {
@@ -147,16 +145,21 @@ private fun ProfileMenuSettingsItem(onDismissRequest: () -> Unit, onSettingsClic
         text = {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
             ) {
                 Icon(
-                    Icons.Default.Settings, contentDescription = null,
-                    tint = DropdownItem, modifier = Modifier.size(18.dp)
+                    Icons.Default.Settings,
+                    contentDescription = null,
+                    tint = DropdownItem,
+                    modifier = Modifier.size(18.dp),
                 )
                 Text(text = stringResource(R.string.profile_settings), fontSize = 13.sp, color = DropdownItem)
             }
         },
-        onClick = { onDismissRequest(); onSettingsClick() }
+        onClick = {
+            onDismissRequest()
+            onSettingsClick()
+        },
     )
 }
 
@@ -166,15 +169,20 @@ private fun ProfileMenuLogoutItem(onDismissRequest: () -> Unit, onLogoutClick: (
         text = {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
             ) {
                 Icon(
-                    Icons.AutoMirrored.Filled.Logout, contentDescription = stringResource(R.string.profile_logout),
-                    tint = DangerColor, modifier = Modifier.size(18.dp)
+                    Icons.AutoMirrored.Filled.Logout,
+                    contentDescription = stringResource(R.string.profile_logout),
+                    tint = DangerColor,
+                    modifier = Modifier.size(18.dp),
                 )
                 Text(text = stringResource(R.string.profile_logout), fontSize = 13.sp, color = DangerColor)
             }
         },
-        onClick = { onDismissRequest(); onLogoutClick() }
+        onClick = {
+            onDismissRequest()
+            onLogoutClick()
+        },
     )
 }

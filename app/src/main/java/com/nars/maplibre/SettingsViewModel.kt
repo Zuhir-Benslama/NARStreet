@@ -6,10 +6,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
-class SettingsViewModel(
-    private val appPreferences: AppPreferences
-) : ViewModel() {
-
+class SettingsViewModel(private val appPreferences: AppPreferences) : ViewModel() {
     private val _themeMode = MutableStateFlow(appPreferences.themeMode)
     val themeMode: StateFlow<ThemeMode> = _themeMode.asStateFlow()
 

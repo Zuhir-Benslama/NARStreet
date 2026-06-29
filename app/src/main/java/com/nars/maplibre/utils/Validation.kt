@@ -7,21 +7,24 @@ import com.nars.maplibre.data.model.FeatureProperties
 data class ValidationResult(
     val valid: Boolean,
     val errors: Map<String, Int> = emptyMap(),
-    val warnings: Map<String, Int> = emptyMap()
+    val warnings: Map<String, Int> = emptyMap(),
 ) {
     companion object {
         fun success() = ValidationResult(valid = true)
+
         fun successWithWarning(field: String, @StringRes message: Int) = ValidationResult(
             valid = true,
-            warnings = mapOf(field to message)
+            warnings = mapOf(field to message),
         )
+
         fun failure(field: String, @StringRes message: Int) = ValidationResult(
             valid = false,
-            errors = mapOf(field to message)
+            errors = mapOf(field to message),
         )
+
         fun failure(errors: Map<String, Int>) = ValidationResult(
             valid = false,
-            errors = errors
+            errors = errors,
         )
     }
 }
@@ -32,7 +35,7 @@ data class HouseEntranceValidation(
     val numberingPanelCorrect: Boolean? = null,
     val numberingPanelPositionCorrect: Boolean? = null,
     val needsNotification: Boolean = false,
-    val issues: List<Int> = emptyList()
+    val issues: List<Int> = emptyList(),
 )
 
 data class NamingPanelValidation(
@@ -41,12 +44,10 @@ data class NamingPanelValidation(
     val namingCorrect: Boolean? = null,
     val namingPanelPositionCorrect: Boolean? = null,
     val needsNotification: Boolean = false,
-    val issues: List<Int> = emptyList()
+    val issues: List<Int> = emptyList(),
 )
 
-fun validateFeatureProperties(
-    properties: FeatureProperties
-): ValidationResult {
+fun validateFeatureProperties(properties: FeatureProperties): ValidationResult {
     val errors = mutableMapOf<String, Int>()
 
     when (properties) {
@@ -64,7 +65,7 @@ fun validateFeatureProperties(
 
 private fun validateRoadFieldProperties(
     properties: FeatureProperties.RoadProperties,
-    errors: MutableMap<String, Int>
+    errors: MutableMap<String, Int>,
 ) {
     if (properties.name.isNullOrBlank()) {
         errors["label"] = R.string.validation_road_name_required
@@ -105,7 +106,7 @@ private fun validateRoadFieldProperties(
 
 private fun validateHouseEntranceFieldProperties(
     properties: FeatureProperties.HouseEntranceProperties,
-    errors: MutableMap<String, Int>
+    errors: MutableMap<String, Int>,
 ) {
     if (properties.entranceTypeKey == "main_entrance") {
         if (properties.roadDbId == null) {
@@ -120,7 +121,7 @@ private fun validateHouseEntranceFieldProperties(
 
 private fun validateNamingPanelFieldProperties(
     properties: FeatureProperties.NamingPanelProperties,
-    errors: MutableMap<String, Int>
+    errors: MutableMap<String, Int>,
 ) {
     if (properties.name.isNullOrBlank()) {
         errors["label"] = R.string.validation_street_name_required
@@ -152,7 +153,7 @@ fun validateHouseEntranceFieldWorkflow(properties: FeatureProperties.HouseEntran
         numberingPanelCorrect = numberingPanelCorrect,
         numberingPanelPositionCorrect = numberingPanelPositionCorrect,
         needsNotification = issues.isNotEmpty(),
-        issues = issues
+        issues = issues,
     )
 }
 
@@ -181,7 +182,7 @@ fun validateNamingPanelFieldWorkflow(properties: FeatureProperties.NamingPanelPr
         namingCorrect = namingCorrect,
         namingPanelPositionCorrect = namingPanelPositionCorrect,
         needsNotification = issues.isNotEmpty(),
-        issues = issues
+        issues = issues,
     )
 }
 
@@ -189,7 +190,7 @@ fun validateRoadLength(lengthMeters: Double): ValidationResult {
     if (lengthMeters < Config.MIN_ROAD_LENGTH_METERS) {
         return ValidationResult.failure(
             "length",
-            R.string.validation_road_min_length
+            R.string.validation_road_min_length,
         )
     }
     return ValidationResult.success()

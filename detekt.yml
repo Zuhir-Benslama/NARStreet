@@ -57,6 +57,7 @@ complexity:
   TooManyFunctions:
     active: true
     allowedFunctionsPerClass: 15
+    allowedFunctionsPerInterface: 15
   CyclomaticComplexMethod:
     active: true
     allowedComplexity: 15

@@ -22,9 +22,7 @@ import org.maplibre.android.style.layers.LineLayer
 import org.maplibre.android.style.layers.SymbolLayer
 import org.maplibre.android.style.sources.GeoJsonSource
 
-class FeatureRenderer(
-    private val map: MapLibreMap
-) {
+class FeatureRenderer(private val map: MapLibreMap) {
     lateinit var labelAndMarkerManager: LabelAndMarkerManager
 
     internal var geoJsonSourceFactory: (name: String, json: String) -> GeoJsonSource =
@@ -84,9 +82,12 @@ class FeatureRenderer(
     private fun addPointLayer(layerName: String, sourceName: String) {
         symbolLayerFactory(layerName, sourceName).apply {
             setProperties(
-                org.maplibre.android.style.layers.PropertyFactory.iconImage("default-marker"),
-                org.maplibre.android.style.layers.PropertyFactory.iconSize(DEFAULT_MARKER_ICON_SIZE),
-                org.maplibre.android.style.layers.PropertyFactory.iconAllowOverlap(true)
+                org.maplibre.android.style.layers.PropertyFactory
+                    .iconImage("default-marker"),
+                org.maplibre.android.style.layers.PropertyFactory
+                    .iconSize(DEFAULT_MARKER_ICON_SIZE),
+                org.maplibre.android.style.layers.PropertyFactory
+                    .iconAllowOverlap(true),
             )
             map.style?.addLayer(this)
         }
@@ -95,8 +96,10 @@ class FeatureRenderer(
     private fun addLineLayer(layerName: String, sourceName: String, style: FeatureStyle) {
         lineLayerFactory(layerName, sourceName).apply {
             setProperties(
-                org.maplibre.android.style.layers.PropertyFactory.lineColor(parseColor(style.lineColor)),
-                org.maplibre.android.style.layers.PropertyFactory.lineWidth(style.lineWidth.toFloat())
+                org.maplibre.android.style.layers.PropertyFactory
+                    .lineColor(parseColor(style.lineColor)),
+                org.maplibre.android.style.layers.PropertyFactory
+                    .lineWidth(style.lineWidth.toFloat()),
             )
             map.style?.addLayer(this)
         }
@@ -110,8 +113,10 @@ class FeatureRenderer(
 
         lineLayerFactory("${layerName}_outline", edgeSourceName).apply {
             setProperties(
-                org.maplibre.android.style.layers.PropertyFactory.lineColor(parseColor(style.lineColor)),
-                org.maplibre.android.style.layers.PropertyFactory.lineWidth(style.lineWidth.toFloat())
+                org.maplibre.android.style.layers.PropertyFactory
+                    .lineColor(parseColor(style.lineColor)),
+                org.maplibre.android.style.layers.PropertyFactory
+                    .lineWidth(style.lineWidth.toFloat()),
             )
             map.style?.addLayer(this)
         }
@@ -119,21 +124,27 @@ class FeatureRenderer(
 
     private fun addCircleLayer(layerName: String, sourceName: String, style: FeatureStyle, geom: CircleGeometry) {
         val radiusMeters = geom.coordinates[2].takeIf { it > 0 } ?: DEFAULT_CIRCLE_RADIUS_METERS
-        val circleGeoJson = geometryConverterProvider()
-            .buildCircleGeoJson(geom.coordinates[0], geom.coordinates[1], radiusMeters)
+        val circleGeoJson =
+            geometryConverterProvider()
+                .buildCircleGeoJson(geom.coordinates[0], geom.coordinates[1], radiusMeters)
 
         removeExistingSource(sourceName)
         map.style?.addSource(geoJsonSourceFactory(sourceName, circleGeoJson))
 
         fillLayerFactory(layerName, sourceName).apply {
-            setProperties(org.maplibre.android.style.layers.PropertyFactory.fillOpacity(CIRCLE_FILL_OPACITY))
+            setProperties(
+                org.maplibre.android.style.layers.PropertyFactory
+                    .fillOpacity(CIRCLE_FILL_OPACITY),
+            )
             map.style?.addLayer(this)
         }
 
         lineLayerFactory("${layerName}_stroke", sourceName).apply {
             setProperties(
-                org.maplibre.android.style.layers.PropertyFactory.lineColor(parseColor(style.lineColor)),
-                org.maplibre.android.style.layers.PropertyFactory.lineWidth(style.lineWidth.toFloat())
+                org.maplibre.android.style.layers.PropertyFactory
+                    .lineColor(parseColor(style.lineColor)),
+                org.maplibre.android.style.layers.PropertyFactory
+                    .lineWidth(style.lineWidth.toFloat()),
             )
             map.style?.addLayer(this)
         }
@@ -154,10 +165,7 @@ class FeatureRenderer(
         else -> FeatureStyle("#8e44ad", STYLE_LINE_WIDTH_THIN)
     }
 
-    data class FeatureStyle(
-        val lineColor: String,
-        val lineWidth: Int
-    )
+    data class FeatureStyle(val lineColor: String, val lineWidth: Int)
 
     private fun parseColor(colorStr: String): Int = try {
         (if (colorStr.startsWith("#")) colorStr else "#$colorStr").toColorInt()
@@ -172,9 +180,12 @@ class FeatureRenderer(
         return buildJsonObject {
             put("type", "Feature")
             put("id", feature.id ?: "")
-            put("geometry", Json.parseToJsonElement(
-                geometryConverterProvider().geometryToJson(geometry)
-            ))
+            put(
+                "geometry",
+                Json.parseToJsonElement(
+                    geometryConverterProvider().geometryToJson(geometry),
+                ),
+            )
             putJsonObject("properties") {
                 val mutableProps = props.toMutableMap()
                 if (mutableProps.containsKey("name") && !mutableProps.containsKey("label")) {
@@ -188,7 +199,10 @@ class FeatureRenderer(
     }
 
     fun isFeatureAdded(featureId: String): Boolean = addedFeatureIds.contains(featureId)
+
     fun removeFromTracking(featureId: String) = addedFeatureIds.remove(featureId)
+
     fun clearTracking() = addedFeatureIds.clear()
+
     fun getTrackedCount(): Int = addedFeatureIds.size
 }

@@ -1,6 +1,5 @@
 package com.nars.maplibre.ui.screens
 
-import com.nars.maplibre.utils.NarsLogger
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -60,6 +59,7 @@ import com.nars.maplibre.ui.components.ProfileMenu
 import com.nars.maplibre.ui.components.TileControl
 import com.nars.maplibre.ui.components.VerticalPhaseNav
 import com.nars.maplibre.ui.theme.GlassBackground
+import com.nars.maplibre.utils.NarsLogger
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import org.koin.androidx.compose.koinViewModel
@@ -67,10 +67,7 @@ import org.koin.java.KoinJavaComponent.get
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MapScreen(
-    onNavigateToSettings: () -> Unit,
-    onLogout: () -> Unit
-) {
+fun MapScreen(onNavigateToSettings: () -> Unit, onLogout: () -> Unit) {
     val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
 
@@ -108,17 +105,17 @@ fun MapScreen(
             uiState = uiState,
             drawingEnabled = drawingEnabled,
             editModeEnabled = editModeEnabled,
-            featureCounts = featureCounts
+            featureCounts = featureCounts,
         ),
         callbacks = MapScreenCallbacks(
             onNavigateToSettings = onNavigateToSettings,
             onLogout = onLogout,
             viewModel = viewModel,
             handlers = handlers,
-            sessionManager = sessionManager
+            sessionManager = sessionManager,
         ),
         snackbarHostState = snackbarHostState,
-        scope = scope
+        scope = scope,
     )
 }
 
@@ -129,7 +126,7 @@ private fun MapScreenEffects(
     currentPhase: PhaseDefinition?,
     allFeatures: List<NarsFeature>,
     uiState: UiState,
-    snackbarHostState: SnackbarHostState
+    snackbarHostState: SnackbarHostState,
 ) {
     LaunchedEffect(uiState.errorMessage) {
         uiState.errorMessage?.let {
@@ -166,7 +163,7 @@ private data class MapScreenViewState(
     val uiState: UiState,
     val drawingEnabled: Boolean,
     val editModeEnabled: Boolean,
-    val featureCounts: Map<String, Int>
+    val featureCounts: Map<String, Int>,
 )
 
 private class MapScreenCallbacks(
@@ -174,7 +171,7 @@ private class MapScreenCallbacks(
     val onLogout: () -> Unit,
     val viewModel: MapViewModel,
     val handlers: MapScreenHandlers,
-    val sessionManager: SessionManager
+    val sessionManager: SessionManager,
 )
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -183,7 +180,7 @@ private fun MapScreenScaffold(
     state: MapScreenViewState,
     callbacks: MapScreenCallbacks,
     snackbarHostState: SnackbarHostState,
-    scope: CoroutineScope
+    scope: CoroutineScope,
 ) {
     var showFeatureModal by remember { mutableStateOf(false) }
     var editingFeature by remember { mutableStateOf<NarsFeature?>(null) }
@@ -195,8 +192,14 @@ private fun MapScreenScaffold(
         scope = scope,
         showFeatureModal = showFeatureModal,
         editingFeature = editingFeature,
-        onEditFeature = { feature -> editingFeature = feature; showFeatureModal = true },
-        onDismissModal = { showFeatureModal = false; editingFeature = null },
+        onEditFeature = { feature ->
+            editingFeature = feature
+            showFeatureModal = true
+        },
+        onDismissModal = {
+            showFeatureModal = false
+            editingFeature = null
+        },
         onSaveFeature = { feature ->
             val existing = editingFeature
             if (existing != null && existing.dbId != null) {
@@ -212,15 +215,16 @@ private fun MapScreenScaffold(
         },
         onSaveEdits = {
             callbacks.handlers.narsGeoman?.commitEdits()
-            callbacks.viewModel.clearSelection(); editingFeature = null
+            callbacks.viewModel.clearSelection()
+            editingFeature = null
         },
         onCancelEdits = {
             callbacks.handlers.narsGeoman?.cancelEdits()
-            callbacks.viewModel.clearSelection(); editingFeature = null
-        }
+            callbacks.viewModel.clearSelection()
+            editingFeature = null
+        },
     )
 }
-
 
 @Composable
 private fun SelectedFeatureCardActions(
@@ -229,17 +233,17 @@ private fun SelectedFeatureCardActions(
     onShowProperties: () -> Unit,
     onEditGeometry: () -> Unit,
     onSaveEdits: () -> Unit,
-    onCancelEdits: () -> Unit
+    onCancelEdits: () -> Unit,
 ) {
     Row(
         modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         if (editModeEnabled && isCurrentlyEditing) {
             Button(
                 onClick = onSaveEdits,
                 colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.weight(1f),
             ) {
                 Icon(Icons.Default.Edit, contentDescription = null, modifier = Modifier.size(18.dp))
                 Spacer(Modifier.width(4.dp))
@@ -248,18 +252,18 @@ private fun SelectedFeatureCardActions(
             Button(
                 onClick = onCancelEdits,
                 colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.weight(1f),
             ) { Text(stringResource(R.string.map_cancel)) }
         } else {
             Button(
                 onClick = onShowProperties,
                 colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.weight(1f),
             ) { Text(stringResource(R.string.map_properties)) }
             Button(
                 onClick = onEditGeometry,
                 colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary),
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.weight(1f),
             ) {
                 Icon(Icons.Default.Edit, contentDescription = null, modifier = Modifier.size(18.dp))
                 Spacer(Modifier.width(4.dp))
@@ -278,7 +282,7 @@ private fun MapScreenFeatureSheet(
     onEditGeometry: () -> Unit,
     onEditFeature: (NarsFeature) -> Unit,
     onSaveEdits: () -> Unit,
-    onCancelEdits: () -> Unit
+    onCancelEdits: () -> Unit,
 ) {
     selectedFeature?.let { feature ->
         SelectedFeatureCard(
@@ -289,7 +293,7 @@ private fun MapScreenFeatureSheet(
             onEditGeometry = onEditGeometry,
             onShowProperties = { onEditFeature(feature) },
             onSaveEdits = onSaveEdits,
-            onCancelEdits = onCancelEdits
+            onCancelEdits = onCancelEdits,
         )
     }
 }
@@ -306,16 +310,18 @@ private fun MapScreenBody(
     onDismissModal: () -> Unit,
     onSaveFeature: (NarsFeature) -> Unit,
     onSaveEdits: () -> Unit,
-    onCancelEdits: () -> Unit
+    onCancelEdits: () -> Unit,
 ) {
     Scaffold(
         snackbarHost = {
             SnackbarHost(hostState = snackbarHostState) { data ->
-                Snackbar(snackbarData = data,
+                Snackbar(
+                    snackbarData = data,
                     containerColor = MaterialTheme.colorScheme.inverseSurface,
-                    contentColor = MaterialTheme.colorScheme.inverseOnSurface)
+                    contentColor = MaterialTheme.colorScheme.inverseOnSurface,
+                )
             }
-        }
+        },
     ) { paddingValues ->
         MapScreenBoxContent(
             paddingValues = paddingValues,
@@ -329,12 +335,13 @@ private fun MapScreenBody(
             onDismissModal = onDismissModal,
             onSaveFeature = onSaveFeature,
             onSaveEdits = onSaveEdits,
-            onCancelEdits = onCancelEdits
+            onCancelEdits = onCancelEdits,
         )
     }
 }
 
 @Composable
+@Suppress("LongMethod")
 private fun MapScreenBoxContent(
     paddingValues: androidx.compose.foundation.layout.PaddingValues,
     state: MapScreenViewState,
@@ -347,52 +354,60 @@ private fun MapScreenBoxContent(
     onDismissModal: () -> Unit,
     onSaveFeature: (NarsFeature) -> Unit,
     onSaveEdits: () -> Unit,
-    onCancelEdits: () -> Unit
+    onCancelEdits: () -> Unit,
 ) {
     Box(
-        modifier = Modifier.fillMaxSize().background(GlassBackground).padding(paddingValues)
+        modifier = Modifier.fillMaxSize().background(GlassBackground).padding(paddingValues),
     ) {
         MapScreenMapOverlay(
             viewModel = callbacks.viewModel,
             handlers = callbacks.handlers,
             drawingEnabled = state.drawingEnabled,
             editModeEnabled = state.editModeEnabled,
-            onEditFeature = onEditFeature
+            onEditFeature = onEditFeature,
         )
         ProfileMenu(
             user = callbacks.sessionManager.getUser(),
             onSettingsClick = callbacks.onNavigateToSettings,
             onLogoutClick = { callbacks.handlers.logout(callbacks.onLogout) },
-            modifier = Modifier.align(Alignment.TopEnd).padding(end = 12.dp, top = 12.dp)
+            modifier = Modifier.align(Alignment.TopEnd).padding(end = 12.dp, top = 12.dp),
         )
         Box(Modifier.align(Alignment.CenterEnd).padding(end = 12.dp)) {
             MapScreenSidePanel(
-                currentPhase = state.currentPhase, featureCounts = state.featureCounts,
-                baseLayer = state.baseLayer, viewModel = callbacks.viewModel,
-                snackbarHostState = snackbarHostState, scope = scope
+                currentPhase = state.currentPhase,
+                featureCounts = state.featureCounts,
+                baseLayer = state.baseLayer,
+                viewModel = callbacks.viewModel,
+                snackbarHostState = snackbarHostState,
+                scope = scope,
             )
         }
         CompactInfoPanel(
-            featureCounts = state.featureCounts, totalFeatures = state.allFeatures.size,
-            modifier = Modifier.align(Alignment.BottomStart).padding(start = 12.dp, bottom = 12.dp).width(140.dp)
+            featureCounts = state.featureCounts,
+            totalFeatures = state.allFeatures.size,
+            modifier = Modifier.align(Alignment.BottomStart).padding(start = 12.dp, bottom = 12.dp).width(140.dp),
         )
         MapLoadingOverlay(isLoading = state.uiState.isLoading)
         Box(Modifier.align(Alignment.BottomCenter).fillMaxWidth()) {
             MapScreenFeatureSheet(
-                selectedFeature = state.selectedFeature, editModeEnabled = state.editModeEnabled,
+                selectedFeature = state.selectedFeature,
+                editModeEnabled = state.editModeEnabled,
                 editingFeature = editingFeature,
                 onDismissFeature = { callbacks.viewModel.clearSelection() },
                 onEditGeometry = { callbacks.handlers.toggleEditing(state.editModeEnabled) },
-                onEditFeature = onEditFeature, onSaveEdits = onSaveEdits,
-                onCancelEdits = onCancelEdits
+                onEditFeature = onEditFeature,
+                onSaveEdits = onSaveEdits,
+                onCancelEdits = onCancelEdits,
             )
         }
         val feature = editingFeature ?: return@Box
         val phase = state.currentPhase ?: return@Box
         if (showFeatureModal) {
             FeatureValidationModal(
-                feature = feature, phase = phase,
-                onSave = onSaveFeature, onDismiss = onDismissModal
+                feature = feature,
+                phase = phase,
+                onSave = onSaveFeature,
+                onDismiss = onDismissModal,
             )
         }
     }
@@ -404,7 +419,7 @@ private fun MapScreenMapOverlay(
     handlers: MapScreenHandlers,
     drawingEnabled: Boolean,
     editModeEnabled: Boolean,
-    onEditFeature: (NarsFeature) -> Unit
+    onEditFeature: (NarsFeature) -> Unit,
 ) {
     NarsMap(
         viewModel = viewModel,
@@ -412,10 +427,12 @@ private fun MapScreenMapOverlay(
         onMapClick = { latLng -> handlers.handleMapClick(latLng, drawingEnabled, editModeEnabled) },
         onMapLongClick = { latLng ->
             val clicked = handlers.handleMapLongClick(latLng)
-            if (clicked != null) { onEditFeature(clicked) }
+            if (clicked != null) {
+                onEditFeature(clicked)
+            }
         },
         shouldHandleClick = { !drawingEnabled && !editModeEnabled },
-        modifier = Modifier.fillMaxSize()
+        modifier = Modifier.fillMaxSize(),
     )
 }
 
@@ -426,7 +443,7 @@ private fun MapScreenSidePanel(
     baseLayer: BaseLayerType,
     viewModel: MapViewModel,
     snackbarHostState: SnackbarHostState,
-    scope: CoroutineScope
+    scope: CoroutineScope,
 ) {
     val phaseChangedText = stringResource(R.string.map_phase_changed)
     val cannotAdvanceText = stringResource(R.string.map_cannot_advance)
@@ -434,7 +451,7 @@ private fun MapScreenSidePanel(
         modifier = Modifier
             .width(40.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+        verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         VerticalPhaseNav(
             currentPhaseIndex = currentPhase?.let { Phases.getIndexByKey(it.key) } ?: 0,
@@ -444,7 +461,7 @@ private fun MapScreenSidePanel(
                     scope.launch { snackbarHostState.showSnackbar("$phaseChangedText: ${phase.label}") }
                 } ?: scope.launch { snackbarHostState.showSnackbar(cannotAdvanceText) }
             },
-            modifier = Modifier.width(40.dp)
+            modifier = Modifier.width(40.dp),
         )
         TileControl(currentLayer = baseLayer, onLayerSelected = { viewModel.setBaseLayer(it) })
     }
@@ -455,7 +472,7 @@ private fun MapLoadingOverlay(isLoading: Boolean) {
     if (isLoading) {
         Box(
             modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.3f)),
-            contentAlignment = Alignment.Center
+            contentAlignment = Alignment.Center,
         ) { CircularProgressIndicator(color = MaterialTheme.colorScheme.primary) }
     }
 }
@@ -469,24 +486,27 @@ private fun SelectedFeatureCard(
     onEditGeometry: () -> Unit,
     onShowProperties: () -> Unit,
     onSaveEdits: () -> Unit,
-    onCancelEdits: () -> Unit
+    onCancelEdits: () -> Unit,
 ) {
     Card(
         modifier = Modifier.fillMaxWidth().padding(16.dp),
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(containerColor = GlassBackground.copy(alpha = 0.9f)),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
     ) {
         Column(modifier = Modifier.fillMaxWidth().padding(12.dp)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment = Alignment.CenterVertically,
             ) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text(text = feature.properties.name ?: feature.type.value, fontSize = 14.sp)
-                    Text(text = feature.properties.phase, fontSize = 12.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(
+                        text = feature.properties.phase,
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
                 }
                 IconButton(onClick = onDismiss) {
                     Icon(Icons.Default.Close, contentDescription = stringResource(R.string.map_close))
@@ -498,7 +518,7 @@ private fun SelectedFeatureCard(
                 onShowProperties = onShowProperties,
                 onEditGeometry = onEditGeometry,
                 onSaveEdits = onSaveEdits,
-                onCancelEdits = onCancelEdits
+                onCancelEdits = onCancelEdits,
             )
         }
     }

@@ -1,5 +1,6 @@
 package com.nars.maplibre.modes
 
+import com.geoman.maplibre.geoman.core.GeomanCoreConstants
 import com.geoman.maplibre.geoman.core.features.FeatureData
 import com.geoman.maplibre.geoman.types.geojson.Feature
 import com.geoman.maplibre.geoman.types.geojson.Geometry
@@ -12,7 +13,6 @@ import com.nars.maplibre.data.model.LineStringGeometry
 import com.nars.maplibre.data.model.NarsFeature
 import com.nars.maplibre.data.model.PointGeometry
 import com.nars.maplibre.data.model.PolygonGeometry
-import com.geoman.maplibre.geoman.core.GeomanCoreConstants
 import com.nars.maplibre.utils.NarsLogger
 import kotlinx.serialization.json.add
 import kotlinx.serialization.json.buildJsonArray
@@ -41,35 +41,37 @@ class GeometryConverter {
         return Feature(
             id = narsFeature.id,
             geometry = geometry,
-            properties = mapOf(
+            properties =
+            mapOf(
                 "id" to narsFeature.id,
                 "type" to narsFeature.type.value,
                 "phase" to narsFeature.properties.phase,
                 "name" to (narsFeature.properties.name ?: ""),
-                "color" to narsFeature.properties.color
-            )
+                "color" to narsFeature.properties.color,
+            ),
         )
     }
 
     /**
      * Convert NARS geometry to GeoJSON geometry
      */
-    fun convertGeometryToGeoJson(geometry: com.nars.maplibre.data.model.Geometry): Geometry {
-        return when (geometry) {
-            is PointGeometry -> {
-                Point.fromLngLat(LngLat(geometry.coordinates[0], geometry.coordinates[1]))
-            }
-            is LineStringGeometry -> {
-                val coords = coordinatesToLngLats(geometry.coordinates)
-                LineString.fromLngLats(coords)
-            }
-            is PolygonGeometry -> {
-                val coords = coordinatesToLngLats(geometry.coordinates)
-                Polygon.fromLngLats(listOf(coords))
-            }
-            is CircleGeometry -> {
-                Point.fromLngLat(LngLat(geometry.coordinates[0], geometry.coordinates[1]))
-            }
+    fun convertGeometryToGeoJson(geometry: com.nars.maplibre.data.model.Geometry): Geometry = when (geometry) {
+        is PointGeometry -> {
+            Point.fromLngLat(LngLat(geometry.coordinates[0], geometry.coordinates[1]))
+        }
+
+        is LineStringGeometry -> {
+            val coords = coordinatesToLngLats(geometry.coordinates)
+            LineString.fromLngLats(coords)
+        }
+
+        is PolygonGeometry -> {
+            val coords = coordinatesToLngLats(geometry.coordinates)
+            Polygon.fromLngLats(listOf(coords))
+        }
+
+        is CircleGeometry -> {
+            Point.fromLngLat(LngLat(geometry.coordinates[0], geometry.coordinates[1]))
         }
     }
 
@@ -78,102 +80,121 @@ class GeometryConverter {
      */
     fun convertToGeomanFeatureData(narsFeature: NarsFeature): FeatureData {
         val geoJsonFeature = convertToGeoJson(narsFeature)
-        val sourceName = when (narsFeature.geometry) {
-            is PointGeometry -> GeomanCoreConstants.SOURCE_MARKERS
-            is LineStringGeometry -> GeomanCoreConstants.SOURCE_LINES
-            is PolygonGeometry -> GeomanCoreConstants.SOURCE_POLYGONS
-            is CircleGeometry -> GeomanCoreConstants.SOURCE_CIRCLES
-        }
+        val sourceName =
+            when (narsFeature.geometry) {
+                is PointGeometry -> GeomanCoreConstants.SOURCE_MARKERS
+                is LineStringGeometry -> GeomanCoreConstants.SOURCE_LINES
+                is PolygonGeometry -> GeomanCoreConstants.SOURCE_POLYGONS
+                is CircleGeometry -> GeomanCoreConstants.SOURCE_CIRCLES
+            }
         return FeatureData(
             id = narsFeature.id,
             sourceName = sourceName,
             feature = geoJsonFeature,
-            properties = mutableMapOf()
+            properties = mutableMapOf(),
         )
     }
 
     /**
      * Get the correct Geoman source name for a geometry type
      */
-    fun getSourceNameForGeometry(geometry: com.nars.maplibre.data.model.Geometry): String {
-        return when (geometry) {
-            is PointGeometry -> GeomanCoreConstants.SOURCE_MARKERS
-            is LineStringGeometry -> GeomanCoreConstants.SOURCE_LINES
-            is PolygonGeometry -> GeomanCoreConstants.SOURCE_POLYGONS
-            is CircleGeometry -> GeomanCoreConstants.SOURCE_CIRCLES
-        }
+    fun getSourceNameForGeometry(geometry: com.nars.maplibre.data.model.Geometry): String = when (geometry) {
+        is PointGeometry -> GeomanCoreConstants.SOURCE_MARKERS
+        is LineStringGeometry -> GeomanCoreConstants.SOURCE_LINES
+        is PolygonGeometry -> GeomanCoreConstants.SOURCE_POLYGONS
+        is CircleGeometry -> GeomanCoreConstants.SOURCE_CIRCLES
     }
 
     /**
      * Convert GeoJSON geometry to JSON string
      */
-    fun geometryToJson(geometry: com.geoman.maplibre.geoman.types.geojson.Geometry): String {
-        return buildJsonObject {
-            when (geometry) {
-                is Point -> {
-                    put("type", "Point")
-                    putJsonArray("coordinates") {
-                        add(geometry.coordinates[0])
-                        add(geometry.coordinates[1])
-                    }
-                }
-                is LineString -> {
-                    put("type", "LineString")
-                    putJsonArray("coordinates") {
-                        for (coord in geometry.coordinates) {
-                            add(buildJsonArray {
-                                coord.forEach { add(it) }
-                            })
-                        }
-                    }
-                }
-                is Polygon -> {
-                    put("type", "Polygon")
-                    putJsonArray("coordinates") {
-                        for (ring in geometry.coordinates) {
-                            add(buildJsonArray {
-                                for (coord in ring) {
-                                    add(buildJsonArray {
-                                        coord.forEach { add(it) }
-                                    })
-                                }
-                            })
-                        }
-                    }
-                }
-                else -> {
-                    put("type", "Point")
-                    putJsonArray("coordinates") { add(0.0); add(0.0) }
+    fun geometryToJson(geometry: com.geoman.maplibre.geoman.types.geojson.Geometry): String = buildJsonObject {
+        when (geometry) {
+            is Point -> {
+                put("type", "Point")
+                putJsonArray("coordinates") {
+                    add(geometry.coordinates[0])
+                    add(geometry.coordinates[1])
                 }
             }
-        }.toString()
-    }
 
-    private fun coordinatesToLngLats(coords: List<Double>): List<LngLat> {
-        return coords.chunked(2).filter { it.size == 2 }.map { LngLat(it[0], it[1]) }
-    }
+            is LineString -> {
+                put("type", "LineString")
+                putJsonArray("coordinates") {
+                    for (coord in geometry.coordinates) {
+                        add(
+                            buildJsonArray {
+                                coord.forEach { add(it) }
+                            },
+                        )
+                    }
+                }
+            }
+
+            is Polygon -> {
+                put("type", "Polygon")
+                putJsonArray("coordinates") {
+                    for (ring in geometry.coordinates) {
+                        add(
+                            buildJsonArray {
+                                for (coord in ring) {
+                                    add(
+                                        buildJsonArray {
+                                            coord.forEach { add(it) }
+                                        },
+                                    )
+                                }
+                            },
+                        )
+                    }
+                }
+            }
+
+            else -> {
+                put("type", "Point")
+                putJsonArray("coordinates") {
+                    add(0.0)
+                    add(0.0)
+                }
+            }
+        }
+    }.toString()
+
+    private fun coordinatesToLngLats(coords: List<Double>): List<LngLat> = coords
+        .chunked(2)
+        .filter {
+            it.size == 2
+        }.map { LngLat(it[0], it[1]) }
 
     /**
      * Build GeoJSON LineString for polygon edges
      */
     fun buildPolygonEdgesGeoJson(coordinates: List<Double>): String {
         val points = coordinates.chunked(2).filter { it.size == 2 }
-        val ring = if (points.firstOrNull() == points.lastOrNull()) {
-            points
-        } else {
-            points + points.firstOrNull()
-        }
+        val ring =
+            if (points.firstOrNull() == points.lastOrNull()) {
+                points
+            } else {
+                points + points.firstOrNull()
+            }
 
         return buildJsonObject {
             put("type", "Feature")
             putJsonObject("geometry") {
                 put("type", "LineString")
                 putJsonArray("coordinates") {
-                    add(buildJsonArray {
-                        for (coord in ring.filterNotNull()) {
-                            add(buildJsonArray { add(coord[0]); add(coord[1]) })
-                        }
-                    })
+                    add(
+                        buildJsonArray {
+                            for (coord in ring.filterNotNull()) {
+                                add(
+                                    buildJsonArray {
+                                        add(coord[0])
+                                        add(coord[1])
+                                    },
+                                )
+                            }
+                        },
+                    )
                 }
             }
             putJsonObject("properties") { }
@@ -188,25 +209,35 @@ class GeometryConverter {
         val earthRadius = EARTH_RADIUS_METERS
         val radiusDegrees = Math.toDegrees(radiusMeters / earthRadius)
 
-        val ring = (0..segments).map { i ->
-            val angle = Math.toRadians(i * DEGREES_IN_CIRCLE / segments)
-            val lng = centerLng + radiusDegrees * Math.cos(angle) / Math.cos(Math.toRadians(centerLat))
-            val lat = centerLat + radiusDegrees * Math.sin(angle)
-            lng to lat
-        }
+        val ring =
+            (0..segments).map { i ->
+                val angle = Math.toRadians(i * DEGREES_IN_CIRCLE / segments)
+                val lng = centerLng + radiusDegrees * Math.cos(angle) / Math.cos(Math.toRadians(centerLat))
+                val lat = centerLat + radiusDegrees * Math.sin(angle)
+                lng to lat
+            }
 
         return buildJsonObject {
             put("type", "Feature")
             putJsonObject("geometry") {
                 put("type", "Polygon")
                 putJsonArray("coordinates") {
-                    add(buildJsonArray {
-                        add(buildJsonArray {
-                            for ((lng, lat) in ring) {
-                                add(buildJsonArray { add(lng); add(lat) })
-                            }
-                        })
-                    })
+                    add(
+                        buildJsonArray {
+                            add(
+                                buildJsonArray {
+                                    for ((lng, lat) in ring) {
+                                        add(
+                                            buildJsonArray {
+                                                add(lng)
+                                                add(lat)
+                                            },
+                                        )
+                                    }
+                                },
+                            )
+                        },
+                    )
                 }
             }
             putJsonObject("properties") { }

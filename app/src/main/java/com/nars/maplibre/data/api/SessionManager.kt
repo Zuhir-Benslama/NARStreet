@@ -5,10 +5,7 @@ import com.nars.maplibre.data.model.LoginResponse
 import com.nars.maplibre.utils.NarsLogger
 import kotlinx.coroutines.CancellationException
 
-class SessionManager(
-    private val apiService: ApiService,
-    private val appPreferences: AppPreferences
-) {
+class SessionManager(private val apiService: ApiService, private val appPreferences: AppPreferences) {
     companion object {
         private const val TAG = "SessionManager"
     }
@@ -23,10 +20,11 @@ class SessionManager(
                 apiService.setAuthToken(jwtToken)
             }
             appPreferences.sessionCookie = apiService.getCookie()
-            appPreferences.user = response.user.copy(
-                username = username,
-                name = response.user.name.ifBlank { username }
-            )
+            appPreferences.user =
+                response.user.copy(
+                    username = username,
+                    name = response.user.name.ifBlank { username },
+                )
             appPreferences.municipalityName = response.municipalityName
             NarsLogger.logAuthEvent(TAG, "Session created", username)
         }
@@ -50,5 +48,6 @@ class SessionManager(
     }
 
     fun getUser() = appPreferences.user
+
     fun getMunicipalityName() = appPreferences.municipalityName
 }

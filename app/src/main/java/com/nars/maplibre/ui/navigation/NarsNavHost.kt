@@ -14,7 +14,7 @@ fun NarsNavHost() {
 
     NavHost(
         navController = navController,
-        startDestination = Routes.LOGIN
+        startDestination = Routes.LOGIN,
     ) {
         composable(Routes.LOGIN) {
             LoginScreen(
@@ -22,7 +22,7 @@ fun NarsNavHost() {
                     navController.navigate(Routes.MAP) {
                         popUpTo(Routes.LOGIN) { inclusive = true }
                     }
-                }
+                },
             )
         }
 
@@ -35,7 +35,7 @@ fun NarsNavHost() {
                     navController.navigate(Routes.LOGIN) {
                         popUpTo(0) { inclusive = true }
                     }
-                }
+                },
             )
         }
 
@@ -49,7 +49,7 @@ fun NarsNavHost() {
                     navController.navigate(Routes.LOGIN) {
                         popUpTo(0) { inclusive = true }
                     }
-                }
+                },
             )
         }
     }

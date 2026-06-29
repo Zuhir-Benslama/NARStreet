@@ -7,37 +7,37 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
-class FeatureStore {
-    val undoManager = UndoManager(this)
+class FeatureStore : FeatureStoreInterface {
+    override val undoManager = UndoManager(this)
 
     private val _featuresByPhase = MutableStateFlow<Map<String, List<NarsFeature>>>(emptyMap())
-    val featuresByPhase: StateFlow<Map<String, List<NarsFeature>>> = _featuresByPhase.asStateFlow()
+    override val featuresByPhase: StateFlow<Map<String, List<NarsFeature>>> = _featuresByPhase.asStateFlow()
 
     private val _allFeatures = MutableStateFlow<List<NarsFeature>>(emptyList())
-    val allFeatures: StateFlow<List<NarsFeature>> = _allFeatures.asStateFlow()
+    override val allFeatures: StateFlow<List<NarsFeature>> = _allFeatures.asStateFlow()
 
     private val _selectedFeature = MutableStateFlow<NarsFeature?>(null)
-    val selectedFeature: StateFlow<NarsFeature?> = _selectedFeature.asStateFlow()
+    override val selectedFeature: StateFlow<NarsFeature?> = _selectedFeature.asStateFlow()
 
     private val _currentPhase = MutableStateFlow<PhaseDefinition?>(null)
-    val currentPhase: StateFlow<PhaseDefinition?> = _currentPhase.asStateFlow()
+    override val currentPhase: StateFlow<PhaseDefinition?> = _currentPhase.asStateFlow()
 
     private val _referenceRoadDbId = MutableStateFlow<String?>(null)
-    val referenceRoadDbId: StateFlow<String?> = _referenceRoadDbId.asStateFlow()
+    override val referenceRoadDbId: StateFlow<String?> = _referenceRoadDbId.asStateFlow()
 
     init {
         _currentPhase.value = Phases.ALL.first()
     }
 
-    fun setCurrentPhase(phase: PhaseDefinition) {
+    override fun setCurrentPhase(phase: PhaseDefinition) {
         _currentPhase.value = phase
     }
 
-    fun setCurrentPhaseByKey(key: String) {
+    override fun setCurrentPhaseByKey(key: String) {
         Phases.getByKey(key)?.let { setCurrentPhase(it) }
     }
 
-    fun addFeature(feature: NarsFeature, recordUndo: Boolean = false) {
+    override fun addFeature(feature: NarsFeature, recordUndo: Boolean) {
         val currentMap = _featuresByPhase.value.toMutableMap()
         val phaseFeatures = currentMap.getOrDefault(feature.properties.phase, emptyList())
         currentMap[feature.properties.phase] = phaseFeatures + feature
@@ -50,7 +50,7 @@ class FeatureStore {
         }
     }
 
-    fun addFeatures(features: List<NarsFeature>) {
+    override fun addFeatures(features: List<NarsFeature>) {
         val currentMap = _featuresByPhase.value.toMutableMap()
         features.forEach { feature ->
             val phaseFeatures = currentMap.getOrDefault(feature.properties.phase, emptyList())
@@ -60,7 +60,7 @@ class FeatureStore {
         _allFeatures.value = _allFeatures.value + features
     }
 
-    fun updateFeature(featureId: String, updatedFeature: NarsFeature) {
+    override fun updateFeature(featureId: String, updatedFeature: NarsFeature) {
         val currentMap = _featuresByPhase.value.toMutableMap()
         val updatedMap = mutableMapOf<String, List<NarsFeature>>()
         currentMap.forEach { (phase, features) ->
@@ -73,7 +73,7 @@ class FeatureStore {
         }
     }
 
-    fun removeFeature(featureId: String) {
+    override fun removeFeature(featureId: String) {
         val currentMap = _featuresByPhase.value.toMutableMap()
         currentMap.forEach { (phase, features) ->
             val filtered = features.filter { it.id != featureId }
@@ -91,51 +91,43 @@ class FeatureStore {
         }
     }
 
-    fun getFeaturesByPhase(phaseKey: String): List<NarsFeature> {
-        return _featuresByPhase.value[phaseKey] ?: emptyList()
-    }
+    override fun getFeaturesByPhase(phaseKey: String): List<NarsFeature> =
+        _featuresByPhase.value[phaseKey] ?: emptyList()
 
-    fun getCurrentPhaseFeatures(): List<NarsFeature> {
-        return currentPhase.value?.let { getFeaturesByPhase(it.key) } ?: emptyList()
-    }
+    override fun getCurrentPhaseFeatures(): List<NarsFeature> =
+        currentPhase.value?.let { getFeaturesByPhase(it.key) } ?: emptyList()
 
-    fun getFeatureById(featureId: String): NarsFeature? {
-        return _allFeatures.value.find { it.id == featureId }
-    }
+    override fun getFeatureById(featureId: String): NarsFeature? = _allFeatures.value.find { it.id == featureId }
 
-    fun selectFeature(feature: NarsFeature?) {
+    override fun selectFeature(feature: NarsFeature?) {
         _selectedFeature.value = feature
     }
 
-    fun clearAll() {
+    override fun clearAll() {
         _featuresByPhase.value = emptyMap()
         _allFeatures.value = emptyList()
         _selectedFeature.value = null
     }
 
-    fun clearPhase(phaseKey: String) {
+    override fun clearPhase(phaseKey: String) {
         val currentMap = _featuresByPhase.value.toMutableMap()
         currentMap.remove(phaseKey)
         _featuresByPhase.value = currentMap
         _allFeatures.value = _allFeatures.value.filter { it.properties.phase != phaseKey }
     }
 
-    fun getFeatureCounts(): Map<String, Int> {
-        return _featuresByPhase.value.mapValues { it.value.size }
-    }
+    override fun getFeatureCounts(): Map<String, Int> = _featuresByPhase.value.mapValues { it.value.size }
 
-    fun setReferenceRoad(dbId: String?) {
+    override fun setReferenceRoad(dbId: String?) {
         _referenceRoadDbId.value = dbId
     }
 
-    fun getAllRoads(): List<NarsFeature> {
-        return _featuresByPhase.value[Phases.ROADS_KEY] ?: emptyList()
-    }
+    override fun getAllRoads(): List<NarsFeature> = _featuresByPhase.value[Phases.ROADS_KEY] ?: emptyList()
 }
 
 data class FeatureCounts(
     val roads: Int = 0,
     val mainEntrances: Int = 0,
     val secondaryEntrances: Int = 0,
-    val namingPanels: Int = 0
+    val namingPanels: Int = 0,
 )

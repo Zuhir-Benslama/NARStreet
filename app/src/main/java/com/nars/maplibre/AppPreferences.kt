@@ -10,29 +10,30 @@ import com.nars.maplibre.ui.theme.ThemeMode
 import kotlinx.serialization.json.Json
 
 class AppPreferences(context: Context) {
-
-    private val prefs: SharedPreferences = context.getSharedPreferences(
-        PREFS_NAME, Context.MODE_PRIVATE
-    )
+    private val prefs: SharedPreferences =
+        context.getSharedPreferences(
+            PREFS_NAME,
+            Context.MODE_PRIVATE,
+        )
 
     private val securePrefs: SecurePreferences = SecurePreferences(context)
     private val json = Json { ignoreUnknownKeys = true }
 
     var themeMode: ThemeMode
-        get() = runCatching {
+        get() =
+            runCatching {
                 ThemeMode.valueOf(prefs.getString(KEY_THEME, ThemeMode.AUTO.name) ?: ThemeMode.AUTO.name)
-            }
-                .getOrDefault(ThemeMode.AUTO)
+            }.getOrDefault(ThemeMode.AUTO)
         set(value) = prefs.edit { putString(KEY_THEME, value.name) }
 
     var baseLayer: BaseLayerType
-        get() = runCatching {
+        get() =
+            runCatching {
                 BaseLayerType.valueOf(
                     prefs.getString(KEY_BASE_LAYER, BaseLayerType.SATELLITE.name)
-                        ?: BaseLayerType.SATELLITE.name
+                        ?: BaseLayerType.SATELLITE.name,
                 )
-            }
-                .getOrDefault(BaseLayerType.SATELLITE)
+            }.getOrDefault(BaseLayerType.SATELLITE)
         set(value) = prefs.edit { putString(KEY_BASE_LAYER, value.name) }
 
     var currentPhase: String?

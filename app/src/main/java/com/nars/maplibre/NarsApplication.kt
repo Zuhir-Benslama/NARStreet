@@ -15,8 +15,9 @@ import org.koin.core.context.startKoin
 import org.maplibre.android.MapLibre
 import org.maplibre.android.WellKnownTileServer
 
-class NarsApplication : Application(), KoinComponent {
-
+class NarsApplication :
+    Application(),
+    KoinComponent {
     private val applicationScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     override fun onCreate() {

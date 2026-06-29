@@ -3,7 +3,6 @@ package com.nars.maplibre.modes
 import com.geoman.maplibre.geoman.Geoman
 import com.geoman.maplibre.geoman.core.GeomanCoreConstants
 import com.geoman.maplibre.geoman.core.features.FeatureData
-import com.geoman.maplibre.geoman.types.geojson.Feature as GeoJsonFeature
 import com.nars.maplibre.data.model.FeatureProperties
 import com.nars.maplibre.data.model.LineStringGeometry
 import com.nars.maplibre.data.model.NarsFeature
@@ -21,9 +20,9 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.maplibre.android.maps.MapLibreMap
+import com.geoman.maplibre.geoman.types.geojson.Feature as GeoJsonFeature
 
 class FeatureDisplayManagerTest {
-
     private lateinit var geoman: Geoman
     private lateinit var featureRenderer: FeatureRenderer
     private lateinit var geometryConverter: GeometryConverter
@@ -31,14 +30,24 @@ class FeatureDisplayManagerTest {
     private lateinit var labelAndMarkerManager: LabelAndMarkerManager
     private lateinit var displayManager: FeatureDisplayManager
 
-    private val roadPhase = PhaseDefinition(
-        0, Phases.ROADS_KEY, "roads",
-        com.nars.maplibre.data.model.DrawType.POLYLINE, "#3498db", ""
-    )
-    private val entrancePhase = PhaseDefinition(
-        1, Phases.HOUSE_ENTRANCES_KEY, "entrances",
-        com.nars.maplibre.data.model.DrawType.MARKER, "#27ae60", ""
-    )
+    private val roadPhase =
+        PhaseDefinition(
+            0,
+            Phases.ROADS_KEY,
+            "roads",
+            com.nars.maplibre.data.model.DrawType.POLYLINE,
+            "#3498db",
+            "",
+        )
+    private val entrancePhase =
+        PhaseDefinition(
+            1,
+            Phases.HOUSE_ENTRANCES_KEY,
+            "entrances",
+            com.nars.maplibre.data.model.DrawType.MARKER,
+            "#27ae60",
+            "",
+        )
 
     @Before
     fun setUp() {
@@ -52,23 +61,19 @@ class FeatureDisplayManagerTest {
         displayManager = FeatureDisplayManager(geoman, featureRenderer, geometryConverter, map)
     }
 
-    private fun createRoad(id: String = "road-1"): NarsFeature {
-        return NarsFeature(
-            id = id,
-            type = NarsFeatureType.ROAD,
-            geometry = PointGeometry(coordinates = listOf(3.0, 36.0)),
-            properties = FeatureProperties.RoadProperties()
-        )
-    }
+    private fun createRoad(id: String = "road-1"): NarsFeature = NarsFeature(
+        id = id,
+        type = NarsFeatureType.ROAD,
+        geometry = PointGeometry(coordinates = listOf(3.0, 36.0)),
+        properties = FeatureProperties.RoadProperties(),
+    )
 
-    private fun createEntrance(id: String = "ent-1"): NarsFeature {
-        return NarsFeature(
-            id = id,
-            type = NarsFeatureType.HOUSE_ENTRANCE,
-            geometry = PointGeometry(coordinates = listOf(3.1, 36.1)),
-            properties = FeatureProperties.HouseEntranceProperties()
-        )
-    }
+    private fun createEntrance(id: String = "ent-1"): NarsFeature = NarsFeature(
+        id = id,
+        type = NarsFeatureType.HOUSE_ENTRANCE,
+        geometry = PointGeometry(coordinates = listOf(3.1, 36.1)),
+        properties = FeatureProperties.HouseEntranceProperties(),
+    )
 
     @Test
     fun `addFeature delegates to renderer and geoman`() {

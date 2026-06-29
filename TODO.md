@@ -1,28 +1,19 @@
-# TODO — Code Quality Issues
+# TODO — Code Quality Improvements
 
-All identified issues have been fixed.
-
-## Fixes Applied
+## Fixed
 
 ### Code Quality
-- **API response status check before body parsing** — `ApiService.kt`
-- **Regex extracted to companion constant** — `FeatureDisplayManager.kt`
-- **Unused imports removed** — `NarsMap.kt`, `AppPreferences.kt`
-- **Java Koin API replaced with Kotlin `get()`** — `NarsApplication.kt`
-- **Fully qualified names replaced with imports** — `GeomanEventHandler.kt`, `MapScreenHandlers.kt`, `FeatureRenderer.kt`
-- **Dead code `dismissContextMenu()` removed** — `ContextMenuManager.kt`
-- **String-concatenated GeoJSON replaced with `kotlinx.serialization.json` builders** — `LabelAndMarkerManager.kt`
-- **`loginFieldColors()` renamed to `LoginFieldColors()`** — `LoginScreen.kt`
-- **Multi-statement lines formatted** — `MapScreen.kt`
-- **Indentation fixed** — `FeatureRenderer.kt`
-- **Duplicate phase-filtering extracted to helper** — `MapScreenHandlers.kt`
-- **Tile URLs configurable via `local.properties`** — `Config.kt`, `build.gradle.kts`
+- **`NarsGeoman` constructor: 8 params → 6** — grouped 3 callbacks into `FeatureCallbacks` data class; removed unused `map` param
+- **`NarsGeoman` CoroutineScope** — now injected via constructor (shared with `GeomanEventHandler`)
+- **`ApiService.login()` extracted** — cookie/token parsing and user creation moved to private methods; inner catch narrowed from `Exception` to `SerializationException`
+- **`@Suppress("DEPRECATION")` on `NarsGeoman`** — removed (class-level suppress no longer needed)
+- **`@Suppress("DEPRECATION")` on `SecurePreferences`** — updated `MasterKey.Builder` API (removed alias param); kept scoped suppress for library-level deprecation
+- **`FeatureStore` interface extracted** — `FeatureStoreInterface` created, consumers updated to use it for testability
+- **detekt config** — raised `TooManyFunctions` interface limit from 11 to 15 to match class limit
+- **Spotless + ktlint configured** — enforces Kotlin formatting across `app/src/**/*.kt`; integrated with `spotlessCheck`/`spotlessApply`
+- **Fixed detekt issues** — `LongMethod` & `MaxLineLength` violations resolved (extraction, line breaks, targeted `@Suppress`)
+- **KDoc added** — to `NarsGeoman` factory, `FeatureCallbacks`, `FeatureStoreInterface`, `ApiService.login()`
 
-### detekt Configuration
-- Added `UnusedImport`, `empty-blocks`, `comments`, `coroutines` rulesets
-
-### Test Coverage
-- **FeatureDisplayManagerTest.kt** — 11 tests covering add, filter, update, remove, clear
-- **LabelAndMarkerManagerTest.kt** — 5 tests covering label layer, endpoint markers, vertex markers
-- **SnappingEngineTest.kt** — 9 tests covering point snapping, thresholds, geometry types
-- **ApiErrorsTest.kt** — 10 tests covering retry logic, backoff, non-retryable errors
+### New Files Created
+- `data/store/FeatureStoreInterface.kt` — interface for `FeatureStore`
+- `modes/NarsGeoman.kt` — added `FeatureCallbacks` data class

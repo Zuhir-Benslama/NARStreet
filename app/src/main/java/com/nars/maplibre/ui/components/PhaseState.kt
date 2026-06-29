@@ -9,18 +9,19 @@ data class PhaseState(
     val isActive: Boolean,
     val count: Int,
     val phaseColor: Color,
-    val badge: String
+    val badge: String,
 )
 
 fun computePhaseState(
     index: Int,
     phase: PhaseDefinition,
     currentPhase: PhaseDefinition?,
-    phaseCounts: Map<String, Int>
+    phaseCounts: Map<String, Int>,
 ): PhaseState {
-    val isDone = currentPhase?.let { cp ->
-        Phases.ALL.indexOfFirst { it.key == cp.key } > index
-    } ?: false
+    val isDone =
+        currentPhase?.let { cp ->
+            Phases.ALL.indexOfFirst { it.key == cp.key } > index
+        } ?: false
     val isActive = currentPhase?.key == phase.key
     val count = phaseCounts[phase.key] ?: 0
     return PhaseState(
@@ -28,6 +29,6 @@ fun computePhaseState(
         isActive = isActive,
         count = count,
         phaseColor = phase.parsedColor,
-        badge = if (isDone) "✓" else "${index + 1}"
+        badge = if (isDone) "✓" else "${index + 1}",
     )
 }

@@ -3,7 +3,6 @@ package com.nars.maplibre.utils
 import com.nars.maplibre.BuildConfig
 
 object Config {
-
     val API_BASE_URL: String = BuildConfig.API_BASE_URL
 
     const val API_DEFAULT_TIMEOUT_MS = 15000
@@ -30,18 +29,22 @@ object Config {
 
     const val MIN_ROAD_LENGTH_METERS = 10
 
-    val TILE_SATELLITE: String = BuildConfig.TILE_SATELLITE.ifBlank {
-        "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
-    }
-    val TILE_STREET: String = BuildConfig.TILE_STREET.ifBlank {
-        "https://tile.openstreetmap.org/{z}/{x}/{y}.png"
-    }
-    val TILE_LIGHT: String = BuildConfig.TILE_LIGHT.ifBlank {
-        "https://basemaps.cartocdn.com/light_all/{z}/{x}/{y}{ratio}.png"
-    }
-    val TILE_DARK: String = BuildConfig.TILE_DARK.ifBlank {
-        "https://basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{ratio}.png"
-    }
+    val TILE_SATELLITE: String =
+        BuildConfig.TILE_SATELLITE.ifBlank {
+            "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
+        }
+    val TILE_STREET: String =
+        BuildConfig.TILE_STREET.ifBlank {
+            "https://tile.openstreetmap.org/{z}/{x}/{y}.png"
+        }
+    val TILE_LIGHT: String =
+        BuildConfig.TILE_LIGHT.ifBlank {
+            "https://basemaps.cartocdn.com/light_all/{z}/{x}/{y}{ratio}.png"
+        }
+    val TILE_DARK: String =
+        BuildConfig.TILE_DARK.ifBlank {
+            "https://basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{ratio}.png"
+        }
 
     const val GLYPHS = "https://fonts.openmaptiles.org/{fontstack}/{range}.pbf"
     const val STYLE_VERSION = 8

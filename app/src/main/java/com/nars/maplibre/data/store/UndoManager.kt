@@ -4,24 +4,24 @@ import com.nars.maplibre.data.model.NarsFeature
 import com.nars.maplibre.utils.NarsLogger
 import java.util.Collections
 
-class UndoManager(private val featureStore: FeatureStore) {
+class UndoManager(private val featureStore: FeatureStoreInterface) {
     companion object {
         private const val MAX_UNDO_SIZE = 50
     }
 
-    private val _undoStack = Collections.synchronizedList(mutableListOf<UndoAction>())
-    val canUndo: Boolean get() = _undoStack.isNotEmpty()
+    private val undoStack = Collections.synchronizedList(mutableListOf<UndoAction>())
+    val canUndo: Boolean get() = undoStack.isNotEmpty()
 
     fun addUndoAction(action: UndoAction) {
-        _undoStack.add(action)
-        if (_undoStack.size > MAX_UNDO_SIZE) {
-            _undoStack.removeAt(0)
+        undoStack.add(action)
+        if (undoStack.size > MAX_UNDO_SIZE) {
+            undoStack.removeAt(0)
         }
     }
 
     fun popUndoAction(): UndoAction? {
-        if (_undoStack.isEmpty()) return null
-        return _undoStack.removeAt(_undoStack.lastIndex)
+        if (undoStack.isEmpty()) return null
+        return undoStack.removeAt(undoStack.lastIndex)
     }
 
     fun executeUndo(): UndoAction? {
@@ -39,9 +39,11 @@ class UndoManager(private val featureStore: FeatureStore) {
                     NarsLogger.d("UndoManager", "Cross-reference restored: entrance for road")
                 }
             }
+
             is UndoAction.Create -> {
                 featureStore.removeFeature(action.feature.id)
             }
+
             is UndoAction.Update -> {
                 featureStore.updateFeature(action.newFeature.id, action.oldFeature)
             }

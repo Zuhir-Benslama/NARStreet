@@ -8,16 +8,19 @@ import com.nars.maplibre.data.model.Phases
 import com.nars.maplibre.utils.NarsLogger
 import org.maplibre.android.maps.MapLibreMap
 
-val GEOMAN_SOURCE_NAMES = listOf(
-    GeomanCoreConstants.SOURCE_MARKERS, GeomanCoreConstants.SOURCE_LINES,
-    GeomanCoreConstants.SOURCE_POLYGONS, GeomanCoreConstants.SOURCE_CIRCLES
-)
+val GEOMAN_SOURCE_NAMES =
+    listOf(
+        GeomanCoreConstants.SOURCE_MARKERS,
+        GeomanCoreConstants.SOURCE_LINES,
+        GeomanCoreConstants.SOURCE_POLYGONS,
+        GeomanCoreConstants.SOURCE_CIRCLES,
+    )
 
 class FeatureDisplayManager(
     private val geoman: Geoman,
     private val featureRenderer: FeatureRenderer,
     private val geometryConverter: GeometryConverter,
-    private val map: MapLibreMap?
+    private val map: MapLibreMap?,
 ) {
     private val displayedFeatureIds = mutableSetOf<String>()
     var currentPhase: PhaseDefinition? = null
@@ -35,17 +38,23 @@ class FeatureDisplayManager(
 
     fun addFeatures(features: List<NarsFeature>) {
         val currentPhaseKey = currentPhase?.key
-        val filtered = if (currentPhaseKey != null) {
-            features.filter { it.properties.phase == currentPhaseKey }
-        } else features
+        val filtered =
+            if (currentPhaseKey != null) {
+                features.filter { it.properties.phase == currentPhaseKey }
+            } else {
+                features
+            }
         filtered.forEach { addFeature(it) }
     }
 
     fun updateDisplayedFeatures(allFeatures: List<NarsFeature>) {
         val currentPhaseKey = currentPhase?.key
-        val filtered = if (currentPhaseKey != null) {
-            allFeatures.filter { it.properties.phase == currentPhaseKey }
-        } else allFeatures
+        val filtered =
+            if (currentPhaseKey != null) {
+                allFeatures.filter { it.properties.phase == currentPhaseKey }
+            } else {
+                allFeatures
+            }
         val newIds = filtered.map { it.id }.toSet()
 
         val toRemove = displayedFeatureIds - newIds
@@ -96,10 +105,13 @@ class FeatureDisplayManager(
 
         val safeId = featureId.replace(Regex("[^a-zA-Z0-9_]"), "_")
         val layerName = "nars_layer_$safeId"
-        val layerNames = listOf(
-            layerName, "${layerName}_outline",
-            "${layerName}_stroke", "${layerName}_label"
-        )
+        val layerNames =
+            listOf(
+                layerName,
+                "${layerName}_outline",
+                "${layerName}_stroke",
+                "${layerName}_label",
+            )
         for (name in layerNames) {
             try {
                 map?.style?.getLayer(name)?.let { map.style?.removeLayer(it) }

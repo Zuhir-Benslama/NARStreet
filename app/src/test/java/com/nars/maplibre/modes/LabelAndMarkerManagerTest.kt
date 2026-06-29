@@ -14,7 +14,6 @@ import org.maplibre.android.maps.MapLibreMap
 import org.maplibre.android.style.layers.Layer
 
 class LabelAndMarkerManagerTest {
-
     private lateinit var map: MapLibreMap
     private lateinit var manager: LabelAndMarkerManager
 
@@ -38,21 +37,25 @@ class LabelAndMarkerManagerTest {
 
     @Test
     fun `addRoadEndpointMarkers does not crash for non-road geometry`() {
-        val pointFeature = NarsFeature(
-            id = "p1", type = NarsFeatureType.ROAD,
-            geometry = PointGeometry(coordinates = listOf(3.0, 36.0)),
-            properties = FeatureProperties.RoadProperties(name = "Point")
-        )
+        val pointFeature =
+            NarsFeature(
+                id = "p1",
+                type = NarsFeatureType.ROAD,
+                geometry = PointGeometry(coordinates = listOf(3.0, 36.0)),
+                properties = FeatureProperties.RoadProperties(name = "Point"),
+            )
         manager.addRoadEndpointMarkers(listOf(pointFeature))
     }
 
     @Test
     fun `addVertexMarkers with PointGeometry does not add sources`() {
-        val point = NarsFeature(
-            id = "p1", type = NarsFeatureType.ROAD,
-            geometry = PointGeometry(coordinates = listOf(3.0, 36.0)),
-            properties = FeatureProperties.RoadProperties()
-        )
+        val point =
+            NarsFeature(
+                id = "p1",
+                type = NarsFeatureType.ROAD,
+                geometry = PointGeometry(coordinates = listOf(3.0, 36.0)),
+                properties = FeatureProperties.RoadProperties(),
+            )
         manager.addVertexMarkers(point)
         verify(exactly = 0) { map.style?.addSource(any<org.maplibre.android.style.sources.Source>()) }
     }

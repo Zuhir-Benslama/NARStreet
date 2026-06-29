@@ -22,7 +22,6 @@ import org.koin.core.context.stopKoin
 import org.koin.dsl.module
 
 class LoginScreenTest {
-
     @get:Rule
     val composeTestRule = createComposeRule()
 
@@ -33,9 +32,11 @@ class LoginScreenTest {
     fun setup() {
         targetContext = InstrumentationRegistry.getInstrumentation().targetContext
         startKoin {
-            modules(module {
-                single<SessionManager> { mockSessionManager }
-            })
+            modules(
+                module {
+                    single<SessionManager> { mockSessionManager }
+                },
+            )
         }
     }
 
@@ -50,21 +51,26 @@ class LoginScreenTest {
             LoginScreen(onLoginSuccess = {})
         }
 
-        composeTestRule.onNodeWithText(
-            targetContext.getString(com.nars.maplibre.R.string.login_title)
-        ).assertIsDisplayed()
-        composeTestRule.onNodeWithText(
-            targetContext.getString(com.nars.maplibre.R.string.login_subtitle)
-        ).assertIsDisplayed()
-        composeTestRule.onNodeWithText(
-            targetContext.getString(com.nars.maplibre.R.string.login_username)
-        ).assertIsDisplayed()
-        composeTestRule.onNodeWithText(
-            targetContext.getString(com.nars.maplibre.R.string.login_password)
-        ).assertIsDisplayed()
-        composeTestRule.onNodeWithText(
-            targetContext.getString(com.nars.maplibre.R.string.login_sign_in)
-        ).assertIsDisplayed()
+        composeTestRule
+            .onNodeWithText(
+                targetContext.getString(com.nars.maplibre.R.string.login_title),
+            ).assertIsDisplayed()
+        composeTestRule
+            .onNodeWithText(
+                targetContext.getString(com.nars.maplibre.R.string.login_subtitle),
+            ).assertIsDisplayed()
+        composeTestRule
+            .onNodeWithText(
+                targetContext.getString(com.nars.maplibre.R.string.login_username),
+            ).assertIsDisplayed()
+        composeTestRule
+            .onNodeWithText(
+                targetContext.getString(com.nars.maplibre.R.string.login_password),
+            ).assertIsDisplayed()
+        composeTestRule
+            .onNodeWithText(
+                targetContext.getString(com.nars.maplibre.R.string.login_sign_in),
+            ).assertIsDisplayed()
     }
 
     @Test
@@ -73,9 +79,10 @@ class LoginScreenTest {
             LoginScreen(onLoginSuccess = {})
         }
 
-        composeTestRule.onNodeWithText(
-            targetContext.getString(com.nars.maplibre.R.string.login_sign_in)
-        ).assertIsNotEnabled()
+        composeTestRule
+            .onNodeWithText(
+                targetContext.getString(com.nars.maplibre.R.string.login_sign_in),
+            ).assertIsNotEnabled()
     }
 
     @Test
@@ -84,16 +91,19 @@ class LoginScreenTest {
             LoginScreen(onLoginSuccess = {})
         }
 
-        composeTestRule.onNodeWithText(
-            targetContext.getString(com.nars.maplibre.R.string.login_username)
-        ).performTextInput("testuser")
-        composeTestRule.onNodeWithText(
-            targetContext.getString(com.nars.maplibre.R.string.login_password)
-        ).performTextInput("testpass")
+        composeTestRule
+            .onNodeWithText(
+                targetContext.getString(com.nars.maplibre.R.string.login_username),
+            ).performTextInput("testuser")
+        composeTestRule
+            .onNodeWithText(
+                targetContext.getString(com.nars.maplibre.R.string.login_password),
+            ).performTextInput("testpass")
 
-        composeTestRule.onNodeWithText(
-            targetContext.getString(com.nars.maplibre.R.string.login_sign_in)
-        ).assertIsEnabled()
+        composeTestRule
+            .onNodeWithText(
+                targetContext.getString(com.nars.maplibre.R.string.login_sign_in),
+            ).assertIsEnabled()
     }
 
     @Test
@@ -105,15 +115,18 @@ class LoginScreenTest {
             LoginScreen(onLoginSuccess = { loginSucceeded = true })
         }
 
-        composeTestRule.onNodeWithText(
-            targetContext.getString(com.nars.maplibre.R.string.login_username)
-        ).performTextInput("testuser")
-        composeTestRule.onNodeWithText(
-            targetContext.getString(com.nars.maplibre.R.string.login_password)
-        ).performTextInput("testpass")
-        composeTestRule.onNodeWithText(
-            targetContext.getString(com.nars.maplibre.R.string.login_sign_in)
-        ).performClick()
+        composeTestRule
+            .onNodeWithText(
+                targetContext.getString(com.nars.maplibre.R.string.login_username),
+            ).performTextInput("testuser")
+        composeTestRule
+            .onNodeWithText(
+                targetContext.getString(com.nars.maplibre.R.string.login_password),
+            ).performTextInput("testpass")
+        composeTestRule
+            .onNodeWithText(
+                targetContext.getString(com.nars.maplibre.R.string.login_sign_in),
+            ).performClick()
 
         composeTestRule.waitForIdle()
         assert(loginSucceeded) { "Login should have succeeded" }
@@ -128,15 +141,18 @@ class LoginScreenTest {
             LoginScreen(onLoginSuccess = {})
         }
 
-        composeTestRule.onNodeWithText(
-            targetContext.getString(com.nars.maplibre.R.string.login_username)
-        ).performTextInput("baduser")
-        composeTestRule.onNodeWithText(
-            targetContext.getString(com.nars.maplibre.R.string.login_password)
-        ).performTextInput("badpass")
-        composeTestRule.onNodeWithText(
-            targetContext.getString(com.nars.maplibre.R.string.login_sign_in)
-        ).performClick()
+        composeTestRule
+            .onNodeWithText(
+                targetContext.getString(com.nars.maplibre.R.string.login_username),
+            ).performTextInput("baduser")
+        composeTestRule
+            .onNodeWithText(
+                targetContext.getString(com.nars.maplibre.R.string.login_password),
+            ).performTextInput("badpass")
+        composeTestRule
+            .onNodeWithText(
+                targetContext.getString(com.nars.maplibre.R.string.login_sign_in),
+            ).performClick()
 
         composeTestRule.waitForIdle()
         composeTestRule.onNodeWithText("Invalid credentials", substring = true).assertIsDisplayed()

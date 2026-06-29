@@ -13,7 +13,6 @@ import com.nars.maplibre.ui.theme.NARSTheme
 import com.nars.maplibre.ui.theme.ThemeMode
 
 class MainActivity : ComponentActivity() {
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -22,7 +21,7 @@ class MainActivity : ComponentActivity() {
             NARSTheme(themeMode = ThemeMode.AUTO) {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
-                    color = MaterialTheme.colorScheme.background
+                    color = MaterialTheme.colorScheme.background,
                 ) {
                     NarsNavHost()
                 }

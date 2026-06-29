@@ -14,11 +14,6 @@ import com.nars.maplibre.data.model.BaseLayerType
 import com.nars.maplibre.data.model.NarsFeature
 import com.nars.maplibre.utils.Config
 import com.nars.maplibre.utils.NarsLogger
-import org.maplibre.android.camera.CameraPosition
-import org.maplibre.android.geometry.LatLng
-import org.maplibre.android.maps.MapLibreMap
-import org.maplibre.android.maps.MapView
-import org.maplibre.android.maps.Style
 import kotlinx.serialization.json.add
 import kotlinx.serialization.json.addJsonObject
 import kotlinx.serialization.json.buildJsonArray
@@ -26,6 +21,11 @@ import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import kotlinx.serialization.json.putJsonArray
 import kotlinx.serialization.json.putJsonObject
+import org.maplibre.android.camera.CameraPosition
+import org.maplibre.android.geometry.LatLng
+import org.maplibre.android.maps.MapLibreMap
+import org.maplibre.android.maps.MapView
+import org.maplibre.android.maps.Style
 
 /**
  * MapLibre Map Composable for NARS
@@ -90,7 +90,7 @@ fun NarsMap(
                 }
             }
         },
-        modifier = modifier.fillMaxSize()
+        modifier = modifier.fillMaxSize(),
     )
 }
 
@@ -101,7 +101,7 @@ private fun configureMap(
     map: MapLibreMap,
     onMapClick: ((LatLng) -> Unit)?,
     onMapLongClick: ((LatLng) -> Unit)?,
-    shouldHandleClick: (() -> Boolean)? = null
+    shouldHandleClick: (() -> Boolean)? = null,
 ) {
     // Set compass position
     map.uiSettings.compassGravity = android.view.Gravity.TOP or android.view.Gravity.END
@@ -154,12 +154,7 @@ private fun updateBaseLayer(mapView: MapView, layer: BaseLayerType) {
     }
 }
 
-private data class LayerConfig(
-    val sourceId: String,
-    val layerId: String,
-    val tiles: String,
-    val attribution: String
-)
+private data class LayerConfig(val sourceId: String, val layerId: String, val tiles: String, val attribution: String)
 
 /**
  * Get style JSON for layer type
@@ -168,20 +163,31 @@ private data class LayerConfig(
 private fun getStyleJson(layer: BaseLayerType): String {
     val cfg = when (layer) {
         BaseLayerType.SATELLITE -> LayerConfig(
-            "esri-satellite", "satellite-layer",
-            Config.TILE_SATELLITE, Config.ATTR_ESRI
+            "esri-satellite",
+            "satellite-layer",
+            Config.TILE_SATELLITE,
+            Config.ATTR_ESRI,
         )
+
         BaseLayerType.STREET -> LayerConfig(
-            "osm-tiles", "osm-layer",
-            Config.TILE_STREET, Config.ATTR_OSM
+            "osm-tiles",
+            "osm-layer",
+            Config.TILE_STREET,
+            Config.ATTR_OSM,
         )
+
         BaseLayerType.LIGHT -> LayerConfig(
-            "carto-light", "carto-light-layer",
-            Config.TILE_LIGHT, Config.ATTR_CARTO
+            "carto-light",
+            "carto-light-layer",
+            Config.TILE_LIGHT,
+            Config.ATTR_CARTO,
         )
+
         BaseLayerType.DARK -> LayerConfig(
-            "carto-dark", "carto-dark-layer",
-            Config.TILE_DARK, Config.ATTR_CARTO
+            "carto-dark",
+            "carto-dark-layer",
+            Config.TILE_DARK,
+            Config.ATTR_CARTO,
         )
     }
     return buildJsonObject {
@@ -218,7 +224,7 @@ fun animateCameraTo(mapView: MapView, latLng: LatLng, zoom: Double = 15.0, durat
             .build()
         map.animateCamera(
             org.maplibre.android.camera.CameraUpdateFactory.newCameraPosition(cameraPosition),
-            duration
+            duration,
         )
     }
 }
@@ -234,7 +240,7 @@ fun flyCameraTo(mapView: MapView, latLng: LatLng, zoom: Double = 15.0, duration:
             .build()
         map.easeCamera(
             org.maplibre.android.camera.CameraUpdateFactory.newCameraPosition(cameraPosition),
-            duration
+            duration,
         )
     }
 }

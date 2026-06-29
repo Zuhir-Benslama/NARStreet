@@ -7,17 +7,17 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class ApiErrorsTest {
-
     @Test
     fun `withRetry succeeds on first attempt`() = runTest {
         var callCount = 0
-        val result = withRetry(
-            operation = {
-                callCount++
-                "success"
-            },
-            config = RetryConfig(maxRetries = 3)
-        )
+        val result =
+            withRetry(
+                operation = {
+                    callCount++
+                    "success"
+                },
+                config = RetryConfig(maxRetries = 3),
+            )
         assertEquals("success", result)
         assertEquals(1, callCount)
     }
@@ -25,14 +25,18 @@ class ApiErrorsTest {
     @Test
     fun `withRetry retries on failure`() = runTest {
         var callCount = 0
-        val result = withRetry(
-            operation = {
-                callCount++
-                if (callCount < 3) throw IllegalStateException("transient failure")
-                else "success"
-            },
-            config = RetryConfig(maxRetries = 3, baseDelayMs = 1, maxDelayMs = 10)
-        )
+        val result =
+            withRetry(
+                operation = {
+                    callCount++
+                    if (callCount < 3) {
+                        throw IllegalStateException("transient failure")
+                    } else {
+                        "success"
+                    }
+                },
+                config = RetryConfig(maxRetries = 3, baseDelayMs = 1, maxDelayMs = 10),
+            )
         assertEquals("success", result)
         assertEquals(3, callCount)
     }
@@ -46,7 +50,7 @@ class ApiErrorsTest {
                     callCount++
                     throw IllegalStateException("persistent failure")
                 },
-                config = RetryConfig(maxRetries = 2, baseDelayMs = 1, maxDelayMs = 10)
+                config = RetryConfig(maxRetries = 2, baseDelayMs = 1, maxDelayMs = 10),
             )
         } catch (_: IllegalStateException) {
             assertEquals(3, callCount)
@@ -63,7 +67,7 @@ class ApiErrorsTest {
                     callCount++
                     throw AuthError(ctx)
                 },
-                config = RetryConfig(maxRetries = 3, baseDelayMs = 1, maxDelayMs = 10)
+                config = RetryConfig(maxRetries = 3, baseDelayMs = 1, maxDelayMs = 10),
             )
         } catch (_: AuthError) {
             assertEquals(1, callCount)
@@ -80,7 +84,7 @@ class ApiErrorsTest {
                     callCount++
                     throw ValidationError(ctx)
                 },
-                config = RetryConfig(maxRetries = 3, baseDelayMs = 1, maxDelayMs = 10)
+                config = RetryConfig(maxRetries = 3, baseDelayMs = 1, maxDelayMs = 10),
             )
         } catch (_: ValidationError) {
             assertEquals(1, callCount)
@@ -97,7 +101,7 @@ class ApiErrorsTest {
                     callCount++
                     throw NotFoundError(ctx)
                 },
-                config = RetryConfig(maxRetries = 3, baseDelayMs = 1, maxDelayMs = 10)
+                config = RetryConfig(maxRetries = 3, baseDelayMs = 1, maxDelayMs = 10),
             )
         } catch (_: NotFoundError) {
             assertEquals(1, callCount)
@@ -114,7 +118,7 @@ class ApiErrorsTest {
                     callCount++
                     throw NetworkError(ctx)
                 },
-                config = RetryConfig(maxRetries = 2, baseDelayMs = 1, maxDelayMs = 10)
+                config = RetryConfig(maxRetries = 2, baseDelayMs = 1, maxDelayMs = 10),
             )
         } catch (_: NetworkError) {
             assertTrue(callCount > 1)
@@ -131,7 +135,7 @@ class ApiErrorsTest {
                     callCount++
                     throw ServerError(ctx)
                 },
-                config = RetryConfig(maxRetries = 1, baseDelayMs = 1, maxDelayMs = 10)
+                config = RetryConfig(maxRetries = 1, baseDelayMs = 1, maxDelayMs = 10),
             )
         } catch (_: ServerError) {
             assertEquals(2, callCount)
@@ -146,7 +150,7 @@ class ApiErrorsTest {
             withRetry(
                 operation = { throw ServerError(ctx) },
                 config = RetryConfig(maxRetries = 2, baseDelayMs = 1, maxDelayMs = 10),
-                onRetry = { _, attempt -> retryCount = attempt }
+                onRetry = { _, attempt -> retryCount = attempt },
             )
         } catch (_: ServerError) {
             assertTrue(retryCount > 0)

@@ -21,16 +21,16 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.platform.LocalContext
 import com.nars.maplibre.R
 import com.nars.maplibre.data.model.Phases
 import com.nars.maplibre.ui.theme.GlassBackground
 import com.nars.maplibre.ui.theme.TextMuted
-import com.nars.maplibre.ui.theme.TextSecondary
 import com.nars.maplibre.ui.theme.TextPrimary
+import com.nars.maplibre.ui.theme.TextSecondary
 
 /**
  * Info panel showing feature counts
@@ -41,7 +41,7 @@ fun InfoPanel(
     featureCounts: Map<String, Int>,
     totalFeatures: Int,
     currentPhaseKey: String?,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     Card(
         modifier = modifier
@@ -49,26 +49,26 @@ fun InfoPanel(
             .padding(12.dp),
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(
-            containerColor = GlassBackground.copy(alpha = 0.75f)
+            containerColor = GlassBackground.copy(alpha = 0.75f),
         ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(14.dp)
+                .padding(14.dp),
         ) {
             // Header with total
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
                     text = stringResource(R.string.map_feature_summary),
                     fontSize = 13.sp,
                     fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,
-                    color = TextSecondary
+                    color = TextSecondary,
                 )
 
                 // Total badge
@@ -79,7 +79,7 @@ fun InfoPanel(
 
             // Phase counts
             Column(
-                verticalArrangement = Arrangement.spacedBy(5.dp)
+                verticalArrangement = Arrangement.spacedBy(5.dp),
             ) {
                 Phases.ALL.forEach { phase ->
                     val count = featureCounts[phase.key] ?: 0
@@ -90,7 +90,7 @@ fun InfoPanel(
                         phaseName = phase.label,
                         count = count,
                         phaseColor = phaseColor,
-                        isHighlighted = isCurrentPhase
+                        isHighlighted = isCurrentPhase,
                     )
                 }
             }
@@ -102,16 +102,12 @@ fun InfoPanel(
  * Compact info panel variant
  */
 @Composable
-fun CompactInfoPanel(
-    featureCounts: Map<String, Int>,
-    totalFeatures: Int,
-    modifier: Modifier = Modifier
-) {
+fun CompactInfoPanel(featureCounts: Map<String, Int>, totalFeatures: Int, modifier: Modifier = Modifier) {
     Box(
         modifier = modifier
             .clip(RoundedCornerShape(10.dp))
             .background(GlassBackground.copy(alpha = 0.7f))
-            .padding(12.dp)
+            .padding(12.dp),
     ) {
         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
             CompactInfoHeader(totalFeatures = totalFeatures)
@@ -131,7 +127,7 @@ private fun TotalBadge(total: Int) {
             .background(MaterialTheme.colorScheme.primary)
             .padding(horizontal = 10.dp, vertical = 3.dp),
         horizontalArrangement = Arrangement.Center,
-        verticalAlignment = Alignment.CenterVertically
+        verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
             text = total.toString(),
@@ -143,7 +139,7 @@ private fun TotalBadge(total: Int) {
         Text(
             text = stringResource(R.string.map_total),
             fontSize = 10.sp,
-            color = Color.White.copy(alpha = 0.75f)
+            color = Color.White.copy(alpha = 0.75f),
         )
     }
 }
@@ -152,19 +148,19 @@ private fun TotalBadge(total: Int) {
 private fun CompactInfoHeader(totalFeatures: Int) {
     Row(
         horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
+        verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
             text = stringResource(R.string.map_features),
             fontSize = 12.sp,
             fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,
-            color = TextSecondary
+            color = TextSecondary,
         )
         Box(
             modifier = Modifier
                 .clip(RoundedCornerShape(8.dp))
                 .background(MaterialTheme.colorScheme.primary)
-                .padding(horizontal = 6.dp, vertical = 2.dp)
+                .padding(horizontal = 6.dp, vertical = 2.dp),
         ) {
             Text(text = totalFeatures.toString(), fontSize = 11.sp, color = Color.White)
         }
@@ -175,7 +171,7 @@ private fun CompactInfoHeader(totalFeatures: Int) {
 private fun CompactPhaseCounts(featureCounts: Map<String, Int>) {
     Row(
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceEvenly
+        horizontalArrangement = Arrangement.SpaceEvenly,
     ) {
         Phases.ALL.take(4).forEach { phase ->
             val count = featureCounts[phase.key] ?: 0
@@ -184,11 +180,12 @@ private fun CompactPhaseCounts(featureCounts: Map<String, Int>) {
                     text = count.toString(),
                     fontSize = 14.sp,
                     fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
-                    color = phase.parsedColor
+                    color = phase.parsedColor,
                 )
                 Text(
                     text = Phases.getDisplayLabel(phase, LocalContext.current),
-                    fontSize = 9.sp, color = TextMuted
+                    fontSize = 9.sp,
+                    color = TextMuted,
                 )
             }
         }
@@ -199,26 +196,21 @@ private fun CompactPhaseCounts(featureCounts: Map<String, Int>) {
  * Phase count row
  */
 @Composable
-private fun PhaseCountRow(
-    phaseName: String,
-    count: Int,
-    phaseColor: Color,
-    isHighlighted: Boolean
-) {
+private fun PhaseCountRow(phaseName: String, count: Int, phaseColor: Color, isHighlighted: Boolean) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
+        verticalAlignment = Alignment.CenterVertically,
     ) {
         Row(
-            verticalAlignment = Alignment.CenterVertically
+            verticalAlignment = Alignment.CenterVertically,
         ) {
             // Color indicator
             Box(
                 modifier = Modifier
                     .size(7.dp)
                     .clip(RoundedCornerShape(2.dp))
-                    .background(phaseColor)
+                    .background(phaseColor),
             )
 
             Spacer(modifier = Modifier.width(7.dp))
@@ -226,18 +218,19 @@ private fun PhaseCountRow(
             Text(
                 text = phaseName,
                 fontSize = 12.sp,
-                color = if (isHighlighted) TextPrimary else TextSecondary.copy(alpha = 0.7f)
+                color = if (isHighlighted) TextPrimary else TextSecondary.copy(alpha = 0.7f),
             )
         }
 
         Text(
             text = count.toString(),
             fontSize = 13.sp,
-            fontWeight = if (isHighlighted)
+            fontWeight = if (isHighlighted) {
                 androidx.compose.ui.text.font.FontWeight.SemiBold
-            else
-                androidx.compose.ui.text.font.FontWeight.Normal,
-            color = if (isHighlighted) phaseColor else TextSecondary.copy(alpha = 0.7f)
+            } else {
+                androidx.compose.ui.text.font.FontWeight.Normal
+            },
+            color = if (isHighlighted) phaseColor else TextSecondary.copy(alpha = 0.7f),
         )
     }
 }

@@ -1,6 +1,5 @@
 package com.nars.maplibre.ui.components
 
-import com.nars.maplibre.utils.NarsLogger
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -29,6 +28,7 @@ import com.nars.maplibre.data.model.Phases
 import com.nars.maplibre.ui.theme.GlassBackground
 import com.nars.maplibre.ui.theme.PrimaryColor
 import com.nars.maplibre.ui.theme.SuccessColor
+import com.nars.maplibre.utils.NarsLogger
 
 /**
  * Vertical Phase Navigation Sidebar
@@ -39,23 +39,22 @@ fun VerticalPhaseNav(
     currentPhaseIndex: Int,
     phaseCounts: Map<String, Int>,
     onPhaseSelected: (PhaseDefinition) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
-
     Column(
         modifier = modifier
             .clip(RoundedCornerShape(10.dp))
             .background(
-                GlassBackground.copy(alpha = 0.95f)
+                GlassBackground.copy(alpha = 0.95f),
             )
             .padding(vertical = 8.dp, horizontal = 6.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(2.dp)
+        verticalArrangement = Arrangement.spacedBy(2.dp),
     ) {
         Phases.ALL.forEachIndexed { index, phase ->
             // Check if phase has features
             val phaseHasFeatures = (phaseCounts[phase.key] ?: 0) > 0
-            
+
             // Phase is done if it has features
             val isDone = phaseHasFeatures
             // Phase is active if it's the current phase
@@ -76,7 +75,7 @@ fun VerticalPhaseNav(
                 modifier = Modifier
                     .size(40.dp)
                     .clip(CircleShape),
-                contentAlignment = Alignment.Center
+                contentAlignment = Alignment.Center,
             ) {
                 PhaseBadge(
                     phase = phase,
@@ -84,7 +83,7 @@ fun VerticalPhaseNav(
                     isActive = isActive,
                     isLocked = isLocked,
                     count = phaseCounts[phase.key] ?: 0,
-                    onClick = { onPhaseSelected(phase) }
+                    onClick = { onPhaseSelected(phase) },
                 )
             }
 
@@ -96,32 +95,26 @@ fun VerticalPhaseNav(
     }
 }
 
-private data class PhaseBadgeColors(
-    val background: Color,
-    val border: Color,
-    val badge: Color
-)
+private data class PhaseBadgeColors(val background: Color, val border: Color, val badge: Color)
 
-private fun phaseBadgeColors(isDone: Boolean, isActive: Boolean): PhaseBadgeColors {
-    return if (isDone) {
-        PhaseBadgeColors(
-            background = Color.White.copy(alpha = 0.15f),
-            border = Color.White.copy(alpha = 0.35f),
-            badge = Color.White
-        )
-    } else if (isActive) {
-        PhaseBadgeColors(
-            background = Color.White.copy(alpha = 0.28f),
-            border = Color.White.copy(alpha = 0.80f),
-            badge = Color.White
-        )
-    } else {
-        PhaseBadgeColors(
-            background = Color.White.copy(alpha = 0.05f),
-            border = Color.White.copy(alpha = 0.15f),
-            badge = Color.White.copy(alpha = 0.30f)
-        )
-    }
+private fun phaseBadgeColors(isDone: Boolean, isActive: Boolean): PhaseBadgeColors = if (isDone) {
+    PhaseBadgeColors(
+        background = Color.White.copy(alpha = 0.15f),
+        border = Color.White.copy(alpha = 0.35f),
+        badge = Color.White,
+    )
+} else if (isActive) {
+    PhaseBadgeColors(
+        background = Color.White.copy(alpha = 0.28f),
+        border = Color.White.copy(alpha = 0.80f),
+        badge = Color.White,
+    )
+} else {
+    PhaseBadgeColors(
+        background = Color.White.copy(alpha = 0.05f),
+        border = Color.White.copy(alpha = 0.15f),
+        badge = Color.White.copy(alpha = 0.30f),
+    )
 }
 
 /**
@@ -134,7 +127,7 @@ private fun PhaseBadge(
     isActive: Boolean,
     isLocked: Boolean,
     count: Int,
-    onClick: () -> Unit
+    onClick: () -> Unit,
 ) {
     val colors = phaseBadgeColors(isDone, isActive)
     val badgeContent = if (isDone) "✓" else "${Phases.ALL.indexOf(phase) + 1}"
@@ -154,10 +147,10 @@ private fun PhaseBadge(
                         } else {
                             NarsLogger.d("PhaseBadge", "Phase ${phase.label} is LOCKED - ignoring click")
                         }
-                    }
+                    },
                 )
             },
-        contentAlignment = Alignment.Center
+        contentAlignment = Alignment.Center,
     ) {
         PhaseBadgeContent(colors, badgeContent, isActive)
     }
@@ -166,34 +159,30 @@ private fun PhaseBadge(
         isDone = isDone,
         isActive = isActive,
         isLocked = isLocked,
-        count = count
+        count = count,
     )
 }
 
 @Composable
-private fun PhaseBadgeContent(
-    colors: PhaseBadgeColors,
-    badgeContent: String,
-    isActive: Boolean
-) {
+private fun PhaseBadgeContent(colors: PhaseBadgeColors, badgeContent: String, isActive: Boolean) {
     Box(
         modifier = Modifier
             .size(28.dp)
             .clip(CircleShape)
-            .background(colors.border)
+            .background(colors.border),
     )
     Box(
         modifier = Modifier
             .size(16.dp)
             .clip(CircleShape)
             .background(colors.badge),
-        contentAlignment = Alignment.Center
+        contentAlignment = Alignment.Center,
     ) {
         Text(
             text = badgeContent,
             fontSize = 9.sp,
             fontWeight = FontWeight.Bold,
-            color = GlassBackground
+            color = GlassBackground,
         )
     }
     if (isActive) {
@@ -201,18 +190,13 @@ private fun PhaseBadgeContent(
             modifier = Modifier
                 .size(28.dp)
                 .clip(CircleShape)
-                .background(PrimaryColor.copy(alpha = 0.18f))
+                .background(PrimaryColor.copy(alpha = 0.18f)),
         )
     }
 }
 
 @Composable
-private fun PhaseCountDot(
-    isDone: Boolean,
-    isActive: Boolean,
-    isLocked: Boolean,
-    count: Int
-) {
+private fun PhaseCountDot(isDone: Boolean, isActive: Boolean, isLocked: Boolean, count: Int) {
     if (count > 0 && !isLocked) {
         Box(
             modifier = Modifier
@@ -223,8 +207,8 @@ private fun PhaseCountDot(
                         isDone -> SuccessColor
                         isActive -> PrimaryColor
                         else -> Color.White.copy(alpha = 0.3f)
-                    }
-                )
+                    },
+                ),
         )
     }
 }
@@ -233,9 +217,7 @@ private fun PhaseCountDot(
  * Vertical connector between phases
  */
 @Composable
-private fun PhaseConnector(
-    isDone: Boolean
-) {
+private fun PhaseConnector(isDone: Boolean) {
     Spacer(
         modifier = Modifier
             .width(2.dp)
@@ -244,7 +226,7 @@ private fun PhaseConnector(
                 when {
                     isDone -> Color.White.copy(alpha = 0.50f)
                     else -> Color.White.copy(alpha = 0.12f)
-                }
-            )
+                },
+            ),
     )
 }

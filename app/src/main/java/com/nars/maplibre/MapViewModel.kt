@@ -8,7 +8,7 @@ import com.nars.maplibre.data.model.BaseLayerType
 import com.nars.maplibre.data.model.NarsFeature
 import com.nars.maplibre.data.model.PhaseDefinition
 import com.nars.maplibre.data.model.Phases
-import com.nars.maplibre.data.store.FeatureStore
+import com.nars.maplibre.data.store.FeatureStoreInterface
 import com.nars.maplibre.data.store.UndoAction
 import com.nars.maplibre.utils.NarsLogger
 import com.nars.maplibre.utils.PhaseNavigationResult
@@ -23,11 +23,10 @@ import kotlinx.coroutines.launch
 
 class MapViewModel(
     application: Application,
-    val featureStore: FeatureStore,
+    val featureStore: FeatureStoreInterface,
     private val appPreferences: AppPreferences,
-    private val apiService: ApiService
+    private val apiService: ApiService,
 ) : AndroidViewModel(application) {
-
     private val phaseNavigator = PhaseNavigator(featureStore)
 
     val currentPhase: StateFlow<PhaseDefinition?> = featureStore.currentPhase
@@ -91,6 +90,7 @@ class MapViewModel(
     }
 
     fun goToPreviousPhase(): PhaseDefinition? = phaseNavigator.goBack()
+
     fun canGoNextPhase(): Boolean = phaseNavigator.canGoForward()
 
     fun setReferenceRoad(dbId: String?) = featureStore.setReferenceRoad(dbId)
@@ -107,10 +107,12 @@ class MapViewModel(
                 val msg = app.getString(R.string.undo_restored_format, action.feature.properties.name)
                 updateUiState(successMessage = msg)
             }
+
             is UndoAction.Create -> {
                 val msg = app.getString(R.string.undo_removed_format, action.feature.properties.name)
                 updateUiState(successMessage = msg)
             }
+
             is UndoAction.Update -> {
                 val msg = app.getString(R.string.undo_restored_format, action.oldFeature.properties.name)
                 updateUiState(successMessage = msg)
@@ -125,27 +127,33 @@ class MapViewModel(
         val oldFeature = featureStore.getFeatureById(feature.id)
         featureStore.updateFeature(feature.id, feature)
         oldFeature?.let {
-            featureStore.undoManager.addUndoAction(UndoAction.Update(
-                oldFeature = it,
-                newFeature = feature,
-                phaseKey = feature.properties.phase
-            ))
+            featureStore.undoManager.addUndoAction(
+                UndoAction.Update(
+                    oldFeature = it,
+                    newFeature = feature,
+                    phaseKey = feature.properties.phase,
+                ),
+            )
         }
     }
 
     fun deleteFeature(featureId: String) {
         val feature = featureStore.getFeatureById(featureId)
         if (feature != null) {
-            featureStore.undoManager.addUndoAction(UndoAction.Delete(
-                feature = feature,
-                phaseKey = feature.properties.phase
-            ))
+            featureStore.undoManager.addUndoAction(
+                UndoAction.Delete(
+                    feature = feature,
+                    phaseKey = feature.properties.phase,
+                ),
+            )
         }
         featureStore.removeFeature(featureId)
     }
 
-    val selectedFeatureId: StateFlow<String?> = featureStore.selectedFeature.map { it?.id }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(), null)
+    val selectedFeatureId: StateFlow<String?> =
+        featureStore.selectedFeature
+            .map { it?.id }
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(), null)
 
     fun selectFeature(feature: NarsFeature?) = featureStore.selectFeature(feature)
 
@@ -167,11 +175,12 @@ class MapViewModel(
     fun clearSelection() = featureStore.selectFeature(null)
 
     fun updateUiState(isLoading: Boolean? = null, errorMessage: String? = null, successMessage: String? = null) {
-        _uiState.value = _uiState.value.copy(
-            isLoading = isLoading ?: _uiState.value.isLoading,
-            errorMessage = errorMessage,
-            successMessage = successMessage
-        )
+        _uiState.value =
+            _uiState.value.copy(
+                isLoading = isLoading ?: _uiState.value.isLoading,
+                errorMessage = errorMessage,
+                successMessage = successMessage,
+            )
     }
 }
 
@@ -180,5 +189,5 @@ data class UiState(
     val errorMessage: String? = null,
     val successMessage: String? = null,
     val showSettings: Boolean = false,
-    val showFeatureModal: Boolean = false
+    val showFeatureModal: Boolean = false,
 )

@@ -5,13 +5,13 @@ import com.nars.maplibre.R
 import com.nars.maplibre.data.api.ApiService
 import com.nars.maplibre.data.model.BaseLayerType
 import com.nars.maplibre.data.model.FeatureProperties
+import com.nars.maplibre.data.model.LineStringGeometry
 import com.nars.maplibre.data.model.NarsFeature
 import com.nars.maplibre.data.model.NarsFeatureType
-import com.nars.maplibre.data.model.LineStringGeometry
 import com.nars.maplibre.data.model.PhaseDefinition
 import com.nars.maplibre.data.model.Phases
 import com.nars.maplibre.data.model.PointGeometry
-import com.nars.maplibre.data.store.FeatureStore
+import com.nars.maplibre.data.store.FeatureStoreInterface
 import com.nars.maplibre.data.store.UndoAction
 import io.mockk.every
 import io.mockk.mockk
@@ -35,9 +35,8 @@ import org.junit.Test
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class MapViewModelTest {
-
     private val application = mockk<Application>(relaxed = true)
-    private val featureStore = mockk<FeatureStore>(relaxed = true)
+    private val featureStore = mockk<FeatureStoreInterface>(relaxed = true)
     private val appPreferences = mockk<AppPreferences>(relaxed = true)
     private val apiService = mockk<ApiService>(relaxed = true)
 
@@ -88,11 +87,15 @@ class MapViewModelTest {
     @Test
     fun `setCurrentPhase sets phase and resets modes`() {
         currentPhaseFlow.value = Phases.ALL[0]
-        every { featureStore.getFeaturesByPhase("roads") } returns listOf(
-            NarsFeature(id = "r1", type = NarsFeatureType.ROAD,
-                geometry = PointGeometry(coordinates = listOf(0.0, 0.0)),
-                properties = FeatureProperties.RoadProperties())
-        )
+        every { featureStore.getFeaturesByPhase("roads") } returns
+            listOf(
+                NarsFeature(
+                    id = "r1",
+                    type = NarsFeatureType.ROAD,
+                    geometry = PointGeometry(coordinates = listOf(0.0, 0.0)),
+                    properties = FeatureProperties.RoadProperties(),
+                ),
+            )
         val vm = createViewModel()
 
         val result = vm.setCurrentPhase(Phases.ALL[1])
@@ -118,11 +121,15 @@ class MapViewModelTest {
     @Test
     fun `goToNextPhase advances when navigator allows`() {
         currentPhaseFlow.value = Phases.ALL[0]
-        every { featureStore.getFeaturesByPhase("roads") } returns listOf(
-            NarsFeature(id = "r1", type = NarsFeatureType.ROAD,
-                geometry = PointGeometry(coordinates = listOf(0.0, 0.0)),
-                properties = FeatureProperties.RoadProperties())
-        )
+        every { featureStore.getFeaturesByPhase("roads") } returns
+            listOf(
+                NarsFeature(
+                    id = "r1",
+                    type = NarsFeatureType.ROAD,
+                    geometry = PointGeometry(coordinates = listOf(0.0, 0.0)),
+                    properties = FeatureProperties.RoadProperties(),
+                ),
+            )
         val vm = createViewModel()
 
         val result = vm.goToNextPhase()
@@ -157,11 +164,15 @@ class MapViewModelTest {
     @Test
     fun `canGoNextPhase delegates to navigator`() {
         currentPhaseFlow.value = Phases.ALL[0]
-        every { featureStore.getFeaturesByPhase("roads") } returns listOf(
-            NarsFeature(id = "r1", type = NarsFeatureType.ROAD,
-                geometry = PointGeometry(coordinates = listOf(0.0, 0.0)),
-                properties = FeatureProperties.RoadProperties())
-        )
+        every { featureStore.getFeaturesByPhase("roads") } returns
+            listOf(
+                NarsFeature(
+                    id = "r1",
+                    type = NarsFeatureType.ROAD,
+                    geometry = PointGeometry(coordinates = listOf(0.0, 0.0)),
+                    properties = FeatureProperties.RoadProperties(),
+                ),
+            )
         val vm = createViewModel()
 
         assertTrue(vm.canGoNextPhase())
@@ -170,9 +181,13 @@ class MapViewModelTest {
     @Test
     fun `addFeature delegates to featureStore`() {
         val vm = createViewModel()
-        val feature = NarsFeature(id = "f1", type = NarsFeatureType.ROAD,
-            geometry = PointGeometry(coordinates = listOf(0.0, 0.0)),
-            properties = FeatureProperties.RoadProperties())
+        val feature =
+            NarsFeature(
+                id = "f1",
+                type = NarsFeatureType.ROAD,
+                geometry = PointGeometry(coordinates = listOf(0.0, 0.0)),
+                properties = FeatureProperties.RoadProperties(),
+            )
 
         vm.addFeature(feature)
 
@@ -182,9 +197,13 @@ class MapViewModelTest {
     @Test
     fun `updateFeature updates and records undo`() {
         val vm = createViewModel()
-        val oldFeature = NarsFeature(id = "f1", type = NarsFeatureType.ROAD,
-            geometry = PointGeometry(coordinates = listOf(0.0, 0.0)),
-            properties = FeatureProperties.RoadProperties(name = "Old"))
+        val oldFeature =
+            NarsFeature(
+                id = "f1",
+                type = NarsFeatureType.ROAD,
+                geometry = PointGeometry(coordinates = listOf(0.0, 0.0)),
+                properties = FeatureProperties.RoadProperties(name = "Old"),
+            )
         val updatedProps = (oldFeature.properties as FeatureProperties.RoadProperties).copy(name = "New")
         val newFeature = oldFeature.copy(properties = updatedProps)
 
@@ -199,9 +218,13 @@ class MapViewModelTest {
     @Test
     fun `deleteFeature removes and records undo`() {
         val vm = createViewModel()
-        val feature = NarsFeature(id = "f1", type = NarsFeatureType.ROAD,
-            geometry = PointGeometry(coordinates = listOf(0.0, 0.0)),
-            properties = FeatureProperties.RoadProperties())
+        val feature =
+            NarsFeature(
+                id = "f1",
+                type = NarsFeatureType.ROAD,
+                geometry = PointGeometry(coordinates = listOf(0.0, 0.0)),
+                properties = FeatureProperties.RoadProperties(),
+            )
 
         every { featureStore.getFeatureById("f1") } returns feature
 
@@ -214,9 +237,13 @@ class MapViewModelTest {
     @Test
     fun `selectFeature delegates to featureStore`() {
         val vm = createViewModel()
-        val feature = NarsFeature(id = "f1", type = NarsFeatureType.ROAD,
-            geometry = PointGeometry(coordinates = listOf(0.0, 0.0)),
-            properties = FeatureProperties.RoadProperties())
+        val feature =
+            NarsFeature(
+                id = "f1",
+                type = NarsFeatureType.ROAD,
+                geometry = PointGeometry(coordinates = listOf(0.0, 0.0)),
+                properties = FeatureProperties.RoadProperties(),
+            )
 
         vm.selectFeature(feature)
 
@@ -341,9 +368,13 @@ class MapViewModelTest {
 
     @Test
     fun `undo with Delete action restores feature`() {
-        val feature = NarsFeature(id = "f1", type = NarsFeatureType.ROAD,
-            geometry = PointGeometry(coordinates = listOf(0.0, 0.0)),
-            properties = FeatureProperties.RoadProperties(name = "Restored Road"))
+        val feature =
+            NarsFeature(
+                id = "f1",
+                type = NarsFeatureType.ROAD,
+                geometry = PointGeometry(coordinates = listOf(0.0, 0.0)),
+                properties = FeatureProperties.RoadProperties(name = "Restored Road"),
+            )
         val undoAction = io.mockk.mockk<com.nars.maplibre.data.store.UndoAction.Delete>(relaxed = true)
         every { undoAction.feature } returns feature
         every { featureStore.undoManager.executeUndo() } returns undoAction
@@ -356,9 +387,13 @@ class MapViewModelTest {
 
     @Test
     fun `undo with Create action shows success`() {
-        val feature = NarsFeature(id = "f1", type = NarsFeatureType.ROAD,
-            geometry = PointGeometry(coordinates = listOf(0.0, 0.0)),
-            properties = FeatureProperties.RoadProperties(name = "Removed Road"))
+        val feature =
+            NarsFeature(
+                id = "f1",
+                type = NarsFeatureType.ROAD,
+                geometry = PointGeometry(coordinates = listOf(0.0, 0.0)),
+                properties = FeatureProperties.RoadProperties(name = "Removed Road"),
+            )
         val undoAction = io.mockk.mockk<com.nars.maplibre.data.store.UndoAction.Create>(relaxed = true)
         every { undoAction.feature } returns feature
         every { featureStore.undoManager.executeUndo() } returns undoAction
@@ -372,9 +407,13 @@ class MapViewModelTest {
 
     @Test
     fun `undo with Update action shows success`() {
-        val oldFeature = NarsFeature(id = "f1", type = NarsFeatureType.ROAD,
-            geometry = PointGeometry(coordinates = listOf(0.0, 0.0)),
-            properties = FeatureProperties.RoadProperties(name = "Old Name"))
+        val oldFeature =
+            NarsFeature(
+                id = "f1",
+                type = NarsFeatureType.ROAD,
+                geometry = PointGeometry(coordinates = listOf(0.0, 0.0)),
+                properties = FeatureProperties.RoadProperties(name = "Old Name"),
+            )
         val undoAction = io.mockk.mockk<com.nars.maplibre.data.store.UndoAction.Update>(relaxed = true)
         every { undoAction.oldFeature } returns oldFeature
         every { featureStore.undoManager.executeUndo() } returns undoAction
@@ -400,9 +439,13 @@ class MapViewModelTest {
     @Test
     fun `undo returns true on successful undo`() {
         val undoAction = io.mockk.mockk<com.nars.maplibre.data.store.UndoAction.Delete>(relaxed = true)
-        every { undoAction.feature } returns NarsFeature(id = "f1", type = NarsFeatureType.ROAD,
-            geometry = PointGeometry(coordinates = listOf(0.0, 0.0)),
-            properties = FeatureProperties.RoadProperties())
+        every { undoAction.feature } returns
+            NarsFeature(
+                id = "f1",
+                type = NarsFeatureType.ROAD,
+                geometry = PointGeometry(coordinates = listOf(0.0, 0.0)),
+                properties = FeatureProperties.RoadProperties(),
+            )
         every { featureStore.undoManager.executeUndo() } returns undoAction
 
         val vm = createViewModel()
@@ -414,13 +457,21 @@ class MapViewModelTest {
     @Test
     fun `sequential undo processes actions in LIFO order`() {
         val firstAction = io.mockk.mockk<com.nars.maplibre.data.store.UndoAction.Delete>(relaxed = true)
-        every { firstAction.feature } returns NarsFeature(id = "f1", type = NarsFeatureType.ROAD,
-            geometry = PointGeometry(coordinates = listOf(0.0, 0.0)),
-            properties = FeatureProperties.RoadProperties(name = "First"))
+        every { firstAction.feature } returns
+            NarsFeature(
+                id = "f1",
+                type = NarsFeatureType.ROAD,
+                geometry = PointGeometry(coordinates = listOf(0.0, 0.0)),
+                properties = FeatureProperties.RoadProperties(name = "First"),
+            )
         val secondAction = io.mockk.mockk<com.nars.maplibre.data.store.UndoAction.Delete>(relaxed = true)
-        every { secondAction.feature } returns NarsFeature(id = "f2", type = NarsFeatureType.ROAD,
-            geometry = PointGeometry(coordinates = listOf(0.0, 0.0)),
-            properties = FeatureProperties.RoadProperties(name = "Second"))
+        every { secondAction.feature } returns
+            NarsFeature(
+                id = "f2",
+                type = NarsFeatureType.ROAD,
+                geometry = PointGeometry(coordinates = listOf(0.0, 0.0)),
+                properties = FeatureProperties.RoadProperties(name = "Second"),
+            )
 
         var callCount = 0
         every { featureStore.undoManager.executeUndo() } answers {

@@ -37,6 +37,9 @@ coil = "3.5.0"
 # Detekt
 detekt = "2.0.0-alpha.5"
 
+# Formatting
+spotless = "8.7.0"
+
 # Material
 material = "1.14.0"
 
@@ -105,3 +108,4 @@ android-library = { id = "com.android.library", version.ref = "agp" }
 kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
 kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 detekt = { id = "dev.detekt", version.ref = "detekt" }
+spotless = { id = "com.diffplug.spotless", version.ref = "spotless" }

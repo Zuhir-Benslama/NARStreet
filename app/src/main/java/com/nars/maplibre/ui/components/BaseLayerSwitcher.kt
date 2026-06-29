@@ -30,8 +30,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.unit.dp
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.nars.maplibre.R
 import com.nars.maplibre.data.model.BaseLayerType
@@ -48,11 +48,7 @@ import com.nars.maplibre.ui.theme.TextSecondary
  * Click to cycle through layers
  */
 @Composable
-fun TileControl(
-    currentLayer: BaseLayerType,
-    onLayerSelected: (BaseLayerType) -> Unit,
-    modifier: Modifier = Modifier
-) {
+fun TileControl(currentLayer: BaseLayerType, onLayerSelected: (BaseLayerType) -> Unit, modifier: Modifier = Modifier) {
     var dropdownExpanded by remember { mutableStateOf(false) }
 
     Box(modifier = modifier) {
@@ -63,13 +59,13 @@ fun TileControl(
                 .clip(RoundedCornerShape(10.dp))
                 .background(GlassBackground.copy(alpha = 0.7f))
                 .clickable { dropdownExpanded = true },
-            contentAlignment = Alignment.Center
+            contentAlignment = Alignment.Center,
         ) {
             Icon(
                 imageVector = Icons.Default.Layers,
                 contentDescription = stringResource(R.string.map_base_layers),
                 tint = TextPrimary,
-                modifier = Modifier.size(20.dp)
+                modifier = Modifier.size(20.dp),
             )
         }
 
@@ -80,7 +76,7 @@ fun TileControl(
                 dropdownExpanded = false
             },
             dropdownExpanded = dropdownExpanded,
-            onDismissRequest = { dropdownExpanded = false }
+            onDismissRequest = { dropdownExpanded = false },
         )
     }
 }
@@ -90,7 +86,7 @@ private fun TileLayerDropdown(
     currentLayer: BaseLayerType,
     onLayerSelected: (BaseLayerType) -> Unit,
     dropdownExpanded: Boolean,
-    onDismissRequest: () -> Unit
+    onDismissRequest: () -> Unit,
 ) {
     DropdownMenu(
         expanded = dropdownExpanded,
@@ -98,8 +94,8 @@ private fun TileLayerDropdown(
         modifier = Modifier
             .background(
                 color = DropdownBackground,
-                shape = RoundedCornerShape(12.dp)
-            )
+                shape = RoundedCornerShape(12.dp),
+            ),
     ) {
         BaseLayerType.entries.forEach { layer ->
             DropdownMenuItem(
@@ -110,11 +106,11 @@ private fun TileLayerDropdown(
                             imageVector = Icons.Default.Check,
                             contentDescription = stringResource(R.string.map_selected),
                             tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(18.dp)
+                            modifier = Modifier.size(18.dp),
                         )
                     }
                 },
-                onClick = { onLayerSelected(layer) }
+                onClick = { onLayerSelected(layer) },
             )
         }
     }
@@ -124,18 +120,18 @@ private fun TileLayerDropdown(
 private fun TileLayerDropdownItemText(layer: BaseLayerType) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(10.dp)
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
     ) {
         Box(
             modifier = Modifier
                 .size(20.dp)
                 .clip(RoundedCornerShape(4.dp))
-                .background(layerColor(layer))
+                .background(layerColor(layer)),
         )
         Text(
             text = layer.displayName,
             fontSize = 13.sp,
-            color = DropdownItem
+            color = DropdownItem,
         )
     }
 }
@@ -160,20 +156,20 @@ private fun layerColor(layer: BaseLayerType): Color = when (layer) {
 fun CompactBaseLayerSelector(
     currentLayer: BaseLayerType,
     onLayerSelected: (BaseLayerType) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     Row(
         modifier = modifier
             .clip(RoundedCornerShape(20.dp))
             .background(GlassBackground.copy(alpha = 0.7f))
             .padding(4.dp),
-        horizontalArrangement = Arrangement.spacedBy(4.dp)
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
     ) {
         BaseLayerType.entries.forEach { layer ->
             CompactLayerButton(
                 layer = layer,
                 isSelected = currentLayer == layer,
-                onClick = { onLayerSelected(layer) }
+                onClick = { onLayerSelected(layer) },
             )
         }
     }
@@ -183,11 +179,7 @@ fun CompactBaseLayerSelector(
  * Compact layer button
  */
 @Composable
-private fun CompactLayerButton(
-    layer: BaseLayerType,
-    isSelected: Boolean,
-    onClick: () -> Unit
-) {
+private fun CompactLayerButton(layer: BaseLayerType, isSelected: Boolean, onClick: () -> Unit) {
     Box(
         modifier = Modifier
             .size(36.dp)
@@ -197,16 +189,16 @@ private fun CompactLayerButton(
                     MaterialTheme.colorScheme.primary
                 } else {
                     GlassBackground.copy(alpha = 0.5f)
-                }
+                },
             )
             .clickable(onClick = onClick),
-        contentAlignment = Alignment.Center
+        contentAlignment = Alignment.Center,
     ) {
         Box(
             modifier = Modifier
                 .size(24.dp)
                 .clip(RoundedCornerShape(12.dp))
-                .background(layerColor(layer))
+                .background(layerColor(layer)),
         )
     }
 }

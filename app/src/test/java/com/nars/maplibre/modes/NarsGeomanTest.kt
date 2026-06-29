@@ -24,6 +24,9 @@ import io.mockk.just
 import io.mockk.mockk
 import io.mockk.slot
 import io.mockk.verify
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -33,7 +36,6 @@ import org.junit.Test
 import org.maplibre.android.geometry.LatLng
 
 class NarsGeomanTest {
-
     private lateinit var geoman: Geoman
     private lateinit var featureRenderer: FeatureRenderer
     private lateinit var displayManager: FeatureDisplayManager
@@ -46,6 +48,7 @@ class NarsGeomanTest {
     private val onFeatureCreated: (NarsFeature) -> Unit = mockk()
     private val onFeatureUpdated: (NarsFeature) -> Unit = mockk()
     private val onFeatureDeleted: (String) -> Unit = mockk()
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
 
     private val pointPhase = PhaseDefinition(0, Phases.ROADS_KEY, "roads", DrawType.POLYLINE, "#3498db", "")
     private val markerPhase = PhaseDefinition(2, Phases.NAMING_PANELS_KEY, "panels", DrawType.MARKER, "#9b59b6", "")
@@ -61,16 +64,16 @@ class NarsGeomanTest {
         labelAndMarkerManager = mockk(relaxed = true)
         every { featureRenderer.labelAndMarkerManager } returns labelAndMarkerManager
 
-        narsGeoman = NarsGeoman(
-            geoman = geoman,
-            displayManager = displayManager,
-            eventHandler = eventHandler,
-            geometryConverter = geometryConverter,
-            snappingEngine = snappingEngine,
-            onFeatureCreated = onFeatureCreated,
-            onFeatureUpdated = onFeatureUpdated,
-            onFeatureDeleted = onFeatureDeleted
-        )
+        narsGeoman =
+            NarsGeoman(
+                geoman = geoman,
+                displayManager = displayManager,
+                eventHandler = eventHandler,
+                geometryConverter = geometryConverter,
+                snappingEngine = snappingEngine,
+                callbacks = FeatureCallbacks(onFeatureCreated, onFeatureUpdated, onFeatureDeleted),
+                scope = scope,
+            )
     }
 
     @After
@@ -80,15 +83,13 @@ class NarsGeomanTest {
 
     private fun createRoad(
         name: String? = null,
-        geometry: com.nars.maplibre.data.model.Geometry = PointGeometry(coordinates = listOf(3.0, 36.0))
-    ): NarsFeature {
-        return NarsFeature(
-            id = "road-1",
-            type = NarsFeatureType.ROAD,
-            geometry = geometry,
-            properties = FeatureProperties.RoadProperties(name = name)
-        )
-    }
+        geometry: com.nars.maplibre.data.model.Geometry = PointGeometry(coordinates = listOf(3.0, 36.0)),
+    ): NarsFeature = NarsFeature(
+        id = "road-1",
+        type = NarsFeatureType.ROAD,
+        geometry = geometry,
+        properties = FeatureProperties.RoadProperties(name = name),
+    )
 
     // --- setCurrentPhase ---
 

@@ -17,7 +17,6 @@ import org.junit.Before
 import org.junit.Test
 
 class SessionManagerTest {
-
     private val apiService: ApiService = mockk()
     private val appPreferences: AppPreferences = mockk()
     private lateinit var sessionManager: SessionManager
