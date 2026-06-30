@@ -1,6 +1,6 @@
 package com.nars.maplibre.utils
 
-import android.util.Log
+import timber.log.Timber
 
 /**
  * Centralized logging utility for NARS application
@@ -29,7 +29,11 @@ object NarsLogger {
      */
     fun v(tag: String = DEFAULT_TAG, message: String, throwable: Throwable? = null) {
         if (isEnabled) {
-            Log.v(tag, sanitizeMessage(message), throwable)
+            if (throwable != null) {
+                Timber.tag(tag).v(throwable, sanitizeMessage(message))
+            } else {
+                Timber.tag(tag).v(sanitizeMessage(message))
+            }
         }
     }
 
@@ -38,7 +42,11 @@ object NarsLogger {
      */
     fun d(tag: String = DEFAULT_TAG, message: String, throwable: Throwable? = null) {
         if (isEnabled) {
-            Log.d(tag, sanitizeMessage(message), throwable)
+            if (throwable != null) {
+                Timber.tag(tag).d(throwable, sanitizeMessage(message))
+            } else {
+                Timber.tag(tag).d(sanitizeMessage(message))
+            }
         }
     }
 
@@ -47,7 +55,11 @@ object NarsLogger {
      */
     fun i(tag: String = DEFAULT_TAG, message: String, throwable: Throwable? = null) {
         if (isEnabled) {
-            Log.i(tag, sanitizeMessage(message), throwable)
+            if (throwable != null) {
+                Timber.tag(tag).i(throwable, sanitizeMessage(message))
+            } else {
+                Timber.tag(tag).i(sanitizeMessage(message))
+            }
         }
     }
 
@@ -55,21 +67,21 @@ object NarsLogger {
      * Warning logging - for potential issues
      */
     fun w(tag: String = DEFAULT_TAG, message: String, throwable: Throwable? = null) {
-        Log.w(tag, sanitizeMessage(message), throwable)
+        Timber.tag(tag).w(throwable, sanitizeMessage(message))
     }
 
     /**
      * Error logging - for errors and exceptions
      */
     fun e(tag: String = DEFAULT_TAG, message: String, throwable: Throwable? = null) {
-        Log.e(tag, sanitizeMessage(message), throwable)
+        Timber.tag(tag).e(throwable, sanitizeMessage(message))
     }
 
     /**
      * What a Terrible Failure - for critical errors
      */
     fun wtf(tag: String = DEFAULT_TAG, message: String, throwable: Throwable? = null) {
-        Log.wtf(tag, sanitizeMessage(message), throwable)
+        Timber.tag(tag).wtf(throwable, sanitizeMessage(message))
     }
 
     /**

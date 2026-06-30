@@ -1,19 +1,18 @@
-# TODO — Code Quality Improvements
+# TODO — Code Quality Issues
 
-## Fixed
+## Dependency Updates
+- **Gradle** `9.5.1` → `9.6.1` (`gradle-wrapper.properties:3`)
+- **maplibre-sdk** `13.3.0` → `13.3.1` (`libs.versions.toml:26`)
+- **ktor** `3.5.0` → `3.5.1` (`libs.versions.toml:32`)
+- **spotless** `8.7.0` → `8.8.0` (`libs.versions.toml:41`)
 
-### Code Quality
-- **`NarsGeoman` constructor: 8 params → 6** — grouped 3 callbacks into `FeatureCallbacks` data class; removed unused `map` param
-- **`NarsGeoman` CoroutineScope** — now injected via constructor (shared with `GeomanEventHandler`)
-- **`ApiService.login()` extracted** — cookie/token parsing and user creation moved to private methods; inner catch narrowed from `Exception` to `SerializationException`
-- **`@Suppress("DEPRECATION")` on `NarsGeoman`** — removed (class-level suppress no longer needed)
-- **`@Suppress("DEPRECATION")` on `SecurePreferences`** — updated `MasterKey.Builder` API (removed alias param); kept scoped suppress for library-level deprecation
-- **`FeatureStore` interface extracted** — `FeatureStoreInterface` created, consumers updated to use it for testability
-- **detekt config** — raised `TooManyFunctions` interface limit from 11 to 15 to match class limit
-- **Spotless + ktlint configured** — enforces Kotlin formatting across `app/src/**/*.kt`; integrated with `spotlessCheck`/`spotlessApply`
-- **Fixed detekt issues** — `LongMethod` & `MaxLineLength` violations resolved (extraction, line breaks, targeted `@Suppress`)
-- **KDoc added** — to `NarsGeoman` factory, `FeatureCallbacks`, `FeatureStoreInterface`, `ApiService.login()`
+## Use Timber Instead of Log
+- `NarsLogger.kt:32,41,50,58,65,72` — 6 calls using `android.util.Log` instead of `Timber`
 
-### New Files Created
-- `data/store/FeatureStoreInterface.kt` — interface for `FeatureStore`
-- `modes/NarsGeoman.kt` — added `FeatureCallbacks` data class
+## Composable Naming
+- `LoginScreen.kt:262` — `LoginFieldColors()` returns a value; should start with lowercase
+
+## Unused Resources
+- `colors.xml` — `R.color.primary`
+- `ic_launcher.xml`, `ic_launcher_round.xml` — mipmap launcher icons
+- `ic_launcher_foreground.xml`, `ic_launcher_monochrome.xml` — drawable launcher icons

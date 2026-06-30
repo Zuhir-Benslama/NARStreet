@@ -23,13 +23,13 @@ compose-bom = "2026.06.00"
 compose-material3 = "1.4.0"
 
 # MapLibre
-maplibre-sdk = "13.3.0"
+maplibre-sdk = "13.3.1"
 
 # Koin (DI)
 koin = "4.2.2"
 
 # Ktor (HTTP Client)
-ktor = "3.5.0"
+ktor = "3.5.1"
 
 # Coil
 coil = "3.5.0"
@@ -37,8 +37,11 @@ coil = "3.5.0"
 # Detekt
 detekt = "2.0.0-alpha.5"
 
+# Logging
+timber = "5.0.1"
+
 # Formatting
-spotless = "8.7.0"
+spotless = "8.8.0"
 
 # Material
 material = "1.14.0"
@@ -77,6 +80,9 @@ compose-ui-test-manifest = { group = "androidx.compose.ui", name = "ui-test-mani
 
 # MapLibre
 maplibre-android-sdk = { group = "org.maplibre.gl", name = "android-sdk", version.ref = "maplibre-sdk" }
+
+# Timber
+timber = { group = "com.jakewharton.timber", name = "timber", version.ref = "timber" }
 
 # Coil
 coil-compose = { group = "io.coil-kt.coil3", name = "coil-compose", version.ref = "coil" }

@@ -146,6 +146,9 @@ dependencies {
     implementation(libs.koin.android)
     implementation(libs.koin.androidx.compose)
 
+    // Timber logging
+    implementation(libs.timber)
+
     // Ktor HTTP Client
     implementation(libs.ktor.client.okhttp)
     implementation(libs.ktor.client.content.negotiation)
