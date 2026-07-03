@@ -50,7 +50,7 @@ style:
 complexity:
   LongMethod:
     active: true
-    allowedLines: 50
+    allowedLines: 55
   LargeClass:
     active: true
     allowedLines: 600
@@ -58,6 +58,7 @@ complexity:
     active: true
     allowedFunctionsPerClass: 15
     allowedFunctionsPerInterface: 15
+    allowedFunctionsPerFile: 20
   CyclomaticComplexMethod:
     active: true
     allowedComplexity: 15

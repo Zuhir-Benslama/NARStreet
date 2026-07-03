@@ -52,6 +52,7 @@ import com.nars.maplibre.data.model.BaseLayerType
 import com.nars.maplibre.data.model.NarsFeature
 import com.nars.maplibre.data.model.PhaseDefinition
 import com.nars.maplibre.data.model.Phases
+import com.nars.maplibre.data.model.User
 import com.nars.maplibre.ui.components.CompactInfoPanel
 import com.nars.maplibre.ui.components.FeatureValidationModal
 import com.nars.maplibre.ui.components.NarsMap
@@ -341,7 +342,6 @@ private fun MapScreenBody(
 }
 
 @Composable
-@Suppress("LongMethod")
 private fun MapScreenBoxContent(
     paddingValues: androidx.compose.foundation.layout.PaddingValues,
     state: MapScreenViewState,
@@ -366,50 +366,141 @@ private fun MapScreenBoxContent(
             editModeEnabled = state.editModeEnabled,
             onEditFeature = onEditFeature,
         )
-        ProfileMenu(
+        MapScreenProfileOverlay(
+            modifier = Modifier.align(Alignment.TopEnd),
             user = callbacks.sessionManager.getUser(),
             onSettingsClick = callbacks.onNavigateToSettings,
             onLogoutClick = { callbacks.handlers.logout(callbacks.onLogout) },
-            modifier = Modifier.align(Alignment.TopEnd).padding(end = 12.dp, top = 12.dp),
         )
-        Box(Modifier.align(Alignment.CenterEnd).padding(end = 12.dp)) {
-            MapScreenSidePanel(
-                currentPhase = state.currentPhase,
-                featureCounts = state.featureCounts,
-                baseLayer = state.baseLayer,
-                viewModel = callbacks.viewModel,
-                snackbarHostState = snackbarHostState,
-                scope = scope,
-            )
-        }
-        CompactInfoPanel(
+        MapScreenSidePanelWrapper(
+            modifier = Modifier.align(Alignment.CenterEnd),
+            currentPhase = state.currentPhase,
+            featureCounts = state.featureCounts,
+            baseLayer = state.baseLayer,
+            viewModel = callbacks.viewModel,
+            snackbarHostState = snackbarHostState,
+            scope = scope,
+        )
+        MapScreenCompactInfo(
+            modifier = Modifier.align(Alignment.BottomStart),
             featureCounts = state.featureCounts,
             totalFeatures = state.allFeatures.size,
-            modifier = Modifier.align(Alignment.BottomStart).padding(start = 12.dp, bottom = 12.dp).width(140.dp),
         )
         MapLoadingOverlay(isLoading = state.uiState.isLoading)
-        Box(Modifier.align(Alignment.BottomCenter).fillMaxWidth()) {
-            MapScreenFeatureSheet(
-                selectedFeature = state.selectedFeature,
-                editModeEnabled = state.editModeEnabled,
-                editingFeature = editingFeature,
-                onDismissFeature = { callbacks.viewModel.clearSelection() },
-                onEditGeometry = { callbacks.handlers.toggleEditing(state.editModeEnabled) },
-                onEditFeature = onEditFeature,
-                onSaveEdits = onSaveEdits,
-                onCancelEdits = onCancelEdits,
-            )
-        }
-        val feature = editingFeature ?: return@Box
-        val phase = state.currentPhase ?: return@Box
-        if (showFeatureModal) {
-            FeatureValidationModal(
-                feature = feature,
-                phase = phase,
-                onSave = onSaveFeature,
-                onDismiss = onDismissModal,
-            )
-        }
+        MapScreenBottomSheet(
+            modifier = Modifier.align(Alignment.BottomCenter),
+            selectedFeature = state.selectedFeature,
+            editModeEnabled = state.editModeEnabled,
+            editingFeature = editingFeature,
+            onDismissFeature = { callbacks.viewModel.clearSelection() },
+            onEditGeometry = { callbacks.handlers.toggleEditing(state.editModeEnabled) },
+            onEditFeature = onEditFeature,
+            onSaveEdits = onSaveEdits,
+            onCancelEdits = onCancelEdits,
+        )
+        FeatureModalOverlay(
+            editingFeature = editingFeature,
+            currentPhase = state.currentPhase,
+            showFeatureModal = showFeatureModal,
+            onSave = onSaveFeature,
+            onDismiss = onDismissModal,
+        )
+    }
+}
+
+@Composable
+private fun MapScreenCompactInfo(
+    modifier: Modifier = Modifier,
+    featureCounts: Map<String, Int>,
+    totalFeatures: Int,
+) {
+    CompactInfoPanel(
+        featureCounts = featureCounts,
+        totalFeatures = totalFeatures,
+        modifier = modifier.padding(start = 12.dp, bottom = 12.dp).width(140.dp),
+    )
+}
+
+@Composable
+private fun MapScreenProfileOverlay(
+    modifier: Modifier = Modifier,
+    user: User?,
+    onSettingsClick: () -> Unit,
+    onLogoutClick: () -> Unit,
+) {
+    ProfileMenu(
+        user = user,
+        onSettingsClick = onSettingsClick,
+        onLogoutClick = onLogoutClick,
+        modifier = modifier.padding(end = 12.dp, top = 12.dp),
+    )
+}
+
+@Composable
+private fun MapScreenSidePanelWrapper(
+    modifier: Modifier = Modifier,
+    currentPhase: PhaseDefinition?,
+    featureCounts: Map<String, Int>,
+    baseLayer: BaseLayerType,
+    viewModel: MapViewModel,
+    snackbarHostState: SnackbarHostState,
+    scope: CoroutineScope,
+) {
+    Box(modifier = modifier.padding(end = 12.dp)) {
+        MapScreenSidePanel(
+            currentPhase = currentPhase,
+            featureCounts = featureCounts,
+            baseLayer = baseLayer,
+            viewModel = viewModel,
+            snackbarHostState = snackbarHostState,
+            scope = scope,
+        )
+    }
+}
+
+@Composable
+private fun MapScreenBottomSheet(
+    modifier: Modifier = Modifier,
+    selectedFeature: NarsFeature?,
+    editModeEnabled: Boolean,
+    editingFeature: NarsFeature?,
+    onDismissFeature: () -> Unit,
+    onEditGeometry: () -> Unit,
+    onEditFeature: (NarsFeature) -> Unit,
+    onSaveEdits: () -> Unit,
+    onCancelEdits: () -> Unit,
+) {
+    Box(modifier = modifier.fillMaxWidth()) {
+        MapScreenFeatureSheet(
+            selectedFeature = selectedFeature,
+            editModeEnabled = editModeEnabled,
+            editingFeature = editingFeature,
+            onDismissFeature = onDismissFeature,
+            onEditGeometry = onEditGeometry,
+            onEditFeature = onEditFeature,
+            onSaveEdits = onSaveEdits,
+            onCancelEdits = onCancelEdits,
+        )
+    }
+}
+
+@Composable
+private fun FeatureModalOverlay(
+    editingFeature: NarsFeature?,
+    currentPhase: PhaseDefinition?,
+    showFeatureModal: Boolean,
+    onSave: (NarsFeature) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val feature = editingFeature ?: return
+    val phase = currentPhase ?: return
+    if (showFeatureModal) {
+        FeatureValidationModal(
+            feature = feature,
+            phase = phase,
+            onSave = onSave,
+            onDismiss = onDismiss,
+        )
     }
 }
 

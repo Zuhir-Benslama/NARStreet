@@ -66,12 +66,6 @@
 # Network & API
 # =============================================================================
 
-# Keep generic signature of Call, Response (R8 full mode strips signatures from non-kept items).
--keep,allowobfuscation,allowshrinking interface retrofit2.Call
--keep,allowobfuscation,allowshrinking class retrofit2.Response
-
-# With full mode, just keeping the above class/interface may not be enough,
-# because the return type and/or parameter types may be obfuscated.
 -keep,allowobfuscation,allowshrinking class kotlin.coroutines.Continuation
 
 # Keep API client
