@@ -409,11 +409,7 @@ private fun MapScreenBoxContent(
 }
 
 @Composable
-private fun MapScreenCompactInfo(
-    modifier: Modifier = Modifier,
-    featureCounts: Map<String, Int>,
-    totalFeatures: Int,
-) {
+private fun MapScreenCompactInfo(modifier: Modifier = Modifier, featureCounts: Map<String, Int>, totalFeatures: Int) {
     CompactInfoPanel(
         featureCounts = featureCounts,
         totalFeatures = totalFeatures,
