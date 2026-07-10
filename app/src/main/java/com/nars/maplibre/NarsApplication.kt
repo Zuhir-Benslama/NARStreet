@@ -14,6 +14,7 @@ import org.koin.core.component.get
 import org.koin.core.context.startKoin
 import org.maplibre.android.MapLibre
 import org.maplibre.android.WellKnownTileServer
+import timber.log.Timber
 
 class NarsApplication :
     Application(),
@@ -22,6 +23,7 @@ class NarsApplication :
 
     override fun onCreate() {
         super.onCreate()
+        if (BuildConfig.DEBUG) Timber.plant(Timber.DebugTree())
         startKoin {
             androidContext(this@NarsApplication)
             modules(appModule)

@@ -24,6 +24,7 @@ import okhttp3.CertificatePinner
 import org.koin.android.ext.koin.androidContext
 import org.koin.core.module.dsl.viewModel
 import org.koin.dsl.module
+import timber.log.Timber
 
 val appModule =
     module {
@@ -54,7 +55,12 @@ val appModule =
                     )
                 }
                 install(Logging) {
-                    level = LogLevel.NONE
+                    level = LogLevel.ALL
+                    logger = object : io.ktor.client.plugins.logging.Logger {
+                        override fun log(message: String) {
+                            Timber.d("KtorClient: %s", message)
+                        }
+                    }
                 }
                 install(HttpTimeout) {
                     requestTimeoutMillis = Config.API_DEFAULT_TIMEOUT_MS.toLong()
