@@ -29,7 +29,7 @@ cp build.gradle.kts app/build.gradle.kts gradle/wrapper/gradle-wrapper.propertie
 # Update Gradle Wrapper
 if [ -n "$LATEST_GRADLE" ]; then
     echo "Updating Gradle to $LATEST_GRADLE..."
-    ./gradlew wrapper --gradle-version $LATEST_GRADLE
+    ./gradlew wrapper --gradle-version "$LATEST_GRADLE"
 else
     echo "Using Gradle 8.12 (fallback)"
     LATEST_GRADLE="8.12"
