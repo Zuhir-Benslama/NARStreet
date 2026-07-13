@@ -1,5 +1,6 @@
 package com.nars.maplibre.ui.components
 
+import com.nars.maplibre.R
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -20,6 +21,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -51,24 +55,21 @@ fun VerticalPhaseNav(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(2.dp),
     ) {
-        Phases.ALL.forEachIndexed { index, phase ->
-            // Check if phase has features
-            val phaseHasFeatures = (phaseCounts[phase.key] ?: 0) > 0
+        val allPhases = Phases.ALL
+        val hasFeaturesPerPhase = allPhases.map { phase ->
+            (phaseCounts[phase.key] ?: 0) > 0
+        }
+        val previousAllDone = mutableListOf(false)
+        for (i in 1 until allPhases.size) {
+            val prevDone = previousAllDone[i - 1] && hasFeaturesPerPhase[i - 1]
+            previousAllDone.add(prevDone)
+        }
 
-            // Phase is done if it has features
+        allPhases.forEachIndexed { index, phase ->
+            val phaseHasFeatures = hasFeaturesPerPhase[index]
             val isDone = phaseHasFeatures
-            // Phase is active if it's the current phase
             val isActive = index == currentPhaseIndex
-            // Phase is locked if previous phase has no features (or if it's not the first phase and previous is empty)
-            val isLocked = if (index == 0) {
-                false // First phase is always unlocked
-            } else {
-                // Check if all previous phases have at least one feature
-                val previousPhasesHaveFeatures = (0 until index).all { prevIndex ->
-                    (phaseCounts[Phases.ALL[prevIndex].key] ?: 0) > 0
-                }
-                !previousPhasesHaveFeatures
-            }
+            val isLocked = index == 0 || !previousAllDone[index - 1]
 
             // Phase badge with larger touch target
             Box(
@@ -83,6 +84,7 @@ fun VerticalPhaseNav(
                     isActive = isActive,
                     isLocked = isLocked,
                     count = phaseCounts[phase.key] ?: 0,
+                    badgeIndex = index + 1,
                     onClick = { onPhaseSelected(phase) },
                 )
             }
@@ -127,16 +129,20 @@ private fun PhaseBadge(
     isActive: Boolean,
     isLocked: Boolean,
     count: Int,
+    badgeIndex: Int,
     onClick: () -> Unit,
 ) {
     val colors = phaseBadgeColors(isDone, isActive)
-    val badgeContent = if (isDone) "✓" else "${Phases.ALL.indexOf(phase) + 1}"
+    val badgeContent = if (isDone) "✓" else "$badgeIndex"
+
+    val badgeLabel = stringResource(R.string.map_phase_badge_label, phase.label)
 
     Box(
         modifier = Modifier
             .size(28.dp)
             .clip(CircleShape)
             .background(colors.background)
+            .semantics { contentDescription = badgeLabel }
             .pointerInput(isLocked, phase.key) {
                 detectTapGestures(
                     onTap = {

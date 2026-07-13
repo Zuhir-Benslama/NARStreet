@@ -1,6 +1,7 @@
 package com.nars.maplibre.data.api
 
 import com.nars.maplibre.utils.Config
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
 
 /**
@@ -87,16 +88,14 @@ suspend fun <T> withRetry(
     repeat(config.maxRetries + 1) { attempt ->
         try {
             return operation()
+        } catch (e: CancellationException) {
+            throw e
         } catch (ignored: Exception) {
             lastException = ignored
 
-            // Don't retry on the last attempt
-            if (attempt >= config.maxRetries) {
-                throw ignored
-            }
-
-            // Don't retry on certain errors
-            if (ignored is AuthError || ignored is ValidationError || ignored is NotFoundError) {
+            val isLastAttempt = attempt >= config.maxRetries
+            val isNonRetryable = ignored.isNonRetryable()
+            if (isLastAttempt || isNonRetryable) {
                 throw ignored
             }
 
@@ -122,6 +121,9 @@ data class RetryConfig(
     val maxDelayMs: Long = Config.API_RETRY_MAX_DELAY_MS.toLong(),
     val jitterFactor: Double = 0.2,
 )
+
+private fun Throwable.isNonRetryable(): Boolean =
+    this is AuthError || this is ValidationError || this is NotFoundError
 
 /**
  * Calculate backoff delay with exponential backoff and jitter

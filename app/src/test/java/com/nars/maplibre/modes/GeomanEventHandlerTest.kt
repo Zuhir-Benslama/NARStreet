@@ -169,14 +169,14 @@ class GeomanEventHandlerTest {
     }
 
     @Test
-    fun `extract with empty Polygon returns empty PolygonGeometry`() {
+    fun `extract with empty Polygon returns null`() {
         val polygon = mockk<Polygon>(relaxed = true)
         every { polygon.coordinates } returns emptyList<List<List<Double>>>()
         val featureData = mockk<FeatureData>(relaxed = true)
         every { featureData.geometry } returns polygon
 
         val result = handler.extractGeometryFromFeatureData(featureData)
-        assertEquals(PolygonGeometry(coordinates = emptyList()), result)
+        assertNull(result)
     }
 
     @Test
@@ -192,13 +192,13 @@ class GeomanEventHandlerTest {
     }
 
     @Test
-    fun `extract with unknown geometry returns fallback PointGeometry`() {
+    fun `extract with unknown geometry returns null`() {
         val unknown = mockk<com.geoman.maplibre.geoman.types.geojson.Geometry>(relaxed = true)
         val featureData = mockk<FeatureData>(relaxed = true)
         every { featureData.geometry } returns unknown
 
         val result = handler.extractGeometryFromFeatureData(featureData)
-        assertEquals(PointGeometry(coordinates = listOf(0.0, 0.0)), result)
+        assertNull(result)
     }
 
     // --- extractCircleGeometry ---
@@ -216,23 +216,23 @@ class GeomanEventHandlerTest {
     }
 
     @Test
-    fun `extractCircleGeometry without center or radius falls back`() {
+    fun `extractCircleGeometry without center or radius returns null`() {
         val featureData = mockk<FeatureData>(relaxed = true)
         every { featureData.properties } returns mutableMapOf<String, Any?>()
         every { featureData.geometry } returns mockk(relaxed = true)
 
         val result = handler.extractCircleGeometry(featureData)
-        assertNotNull(result)
+        assertNull(result)
     }
 
     @Test
-    fun `extractCircleGeometry with null properties returns fallback`() {
+    fun `extractCircleGeometry with null properties returns null`() {
         val featureData = mockk<FeatureData>(relaxed = true)
         every { featureData.properties } returns mutableMapOf()
         every { featureData.geometry } returns mockk(relaxed = true)
 
         val result = handler.extractCircleGeometry(featureData)
-        assertNotNull(result)
+        assertNull(result)
     }
 
     // --- handleFeatureCreated ---
@@ -268,12 +268,12 @@ class GeomanEventHandlerTest {
     }
 
     @Test
-    fun `handleFeatureCreated with null feature data creates feature with UUID`() {
+    fun `handleFeatureCreated with null feature data does not create feature`() {
         handler.setCurrentPhase(roadPhase)
 
         handler.handleFeatureCreated(null)
 
-        verify { onFeatureCreated(any()) }
+        verify(exactly = 0) { onFeatureCreated(any()) }
     }
 
     @Test
@@ -306,18 +306,18 @@ class GeomanEventHandlerTest {
 
         val result = handler.createNarsFeatureFromFeatureData(featureData, roadPhase)
 
-        assertEquals("f2", result.id)
+        assertNotNull(result)
+        assertEquals("f2", result!!.id)
         assertEquals(NarsFeatureType.ROAD, result.type)
         assertEquals(Phases.ROADS_KEY, result.properties.phase)
         assertEquals("#3498db", result.properties.color)
     }
 
     @Test
-    fun `createNarsFeatureFromFeatureData with null data uses fallback geometry`() {
+    fun `createNarsFeatureFromFeatureData with null data returns null`() {
         val result = handler.createNarsFeatureFromFeatureData(null, roadPhase)
 
-        assertEquals(NarsFeatureType.ROAD, result.type)
-        assertEquals(PointGeometry(coordinates = listOf(0.0, 0.0)), result.geometry)
+        assertNull(result)
     }
 
     // --- handleEditEnd ---

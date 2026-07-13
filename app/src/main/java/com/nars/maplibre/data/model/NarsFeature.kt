@@ -3,6 +3,7 @@ package com.nars.maplibre.data.model
 import androidx.core.graphics.toColorInt
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import timber.log.Timber
 
 enum class NarsFeatureType(val value: String) {
     ROAD("road"),
@@ -108,8 +109,12 @@ data class PhaseDefinition(
     val hint: String,
 ) {
     val parsedColor: androidx.compose.ui.graphics.Color by lazy {
-        androidx.compose.ui.graphics
-            .Color(color.toColorInt())
+        try {
+            androidx.compose.ui.graphics.Color(color.toColorInt())
+        } catch (e: IllegalArgumentException) {
+            Timber.w(e, "Invalid color string '%s', falling back to Gray", color)
+            androidx.compose.ui.graphics.Color.Gray
+        }
     }
 }
 

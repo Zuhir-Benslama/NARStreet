@@ -56,8 +56,4 @@ object Config {
     const val ATTR_CARTO = "© OpenStreetMap contributors, © CARTO"
 
     const val TOAST_DURATION_MS = 3500
-
-    val isDebug: Boolean = BuildConfig.DEBUG
-
-    val isRelease: Boolean = !isDebug
 }

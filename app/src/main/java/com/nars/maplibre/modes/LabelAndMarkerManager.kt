@@ -186,18 +186,16 @@ class LabelAndMarkerManager(private val map: MapLibreMap) {
 
     @Suppress("LongMethod")
     fun addVertexMarkers(feature: NarsFeature) {
+        removeVertexMarkers(feature.id)
+
         val coordinates =
             when (feature.geometry) {
                 is LineStringGeometry -> {
-                    feature.geometry.coordinates
-                        .chunked(2)
-                        .map { doubleArrayOf(it[0], it[1]) }
+                    feature.geometry.coordinates.chunked(2).map { doubleArrayOf(it[0], it[1]) }
                 }
 
                 is PolygonGeometry -> {
-                    feature.geometry.coordinates
-                        .chunked(2)
-                        .map { doubleArrayOf(it[0], it[1]) }
+                    feature.geometry.coordinates.chunked(2).map { doubleArrayOf(it[0], it[1]) }
                 }
 
                 else -> {
@@ -205,14 +203,14 @@ class LabelAndMarkerManager(private val map: MapLibreMap) {
                 }
             }
 
-        coordinates.forEachIndexed { index, coord ->
-            val vertexSourceName = "nars_vertex_${feature.id}_$index"
-            val vertexLayerName = "nars_vertex_layer_${feature.id}_$index"
+        val sourceName = "nars_vertices_${feature.id}"
+        val layerName = "nars_vertex_layer_${feature.id}"
 
-            try {
-                map.style?.getSource(vertexSourceName)?.let { map.style?.removeSource(vertexSourceName) }
-                val geoJson =
-                    buildJsonObject {
+        val geoJson = buildJsonObject {
+            put("type", "FeatureCollection")
+            putJsonArray("features") {
+                coordinates.forEach { coord ->
+                    addJsonObject {
                         put("type", "Feature")
                         putJsonObject("geometry") {
                             put("type", "Point")
@@ -222,44 +220,53 @@ class LabelAndMarkerManager(private val map: MapLibreMap) {
                             }
                         }
                         putJsonObject("properties") { put("isVertex", true) }
-                    }.toString()
-                map.style?.addSource(GeoJsonSource(vertexSourceName, geoJson))
-
-                val circleLayer =
-                    CircleLayer(vertexLayerName, vertexSourceName).apply {
-                        setProperties(
-                            org.maplibre.android.style.layers.PropertyFactory
-                                .circleColor(Color.RED),
-                            org.maplibre.android.style.layers.PropertyFactory
-                                .circleRadius(6f),
-                            org.maplibre.android.style.layers.PropertyFactory
-                                .circleStrokeColor(Color.WHITE),
-                            org.maplibre.android.style.layers.PropertyFactory
-                                .circleStrokeWidth(2f),
-                        )
                     }
-                map.style?.addLayer(circleLayer)
-                vertexMarkerIds.add(vertexLayerName)
-            } catch (e: IllegalArgumentException) {
-                NarsLogger.w(TAG, "Error adding vertex marker", e)
+                }
             }
+        }.toString()
+
+        try {
+            map.style?.getSource(sourceName)?.let { map.style?.removeSource(sourceName) }
+            map.style?.addSource(GeoJsonSource(sourceName, geoJson))
+        } catch (e: IllegalArgumentException) {
+            NarsLogger.w(TAG, "Error adding vertex source", e)
+            return
+        }
+
+        val circleLayer =
+            CircleLayer(layerName, sourceName).apply {
+                setProperties(
+                    org.maplibre.android.style.layers.PropertyFactory
+                        .circleColor(Color.RED),
+                    org.maplibre.android.style.layers.PropertyFactory
+                        .circleRadius(6f),
+                    org.maplibre.android.style.layers.PropertyFactory
+                        .circleStrokeColor(Color.WHITE),
+                    org.maplibre.android.style.layers.PropertyFactory
+                        .circleStrokeWidth(2f),
+                )
+            }
+        try {
+            map.style?.addLayer(circleLayer)
+            vertexMarkerIds.add(layerName)
+        } catch (e: IllegalArgumentException) {
+            NarsLogger.w(TAG, "Error adding vertex layer", e)
         }
     }
 
     fun removeVertexMarkers(featureId: String) {
-        val prefix = "nars_vertex_layer_${featureId}_"
-        val markersToRemove = vertexMarkerIds.filter { it.startsWith(prefix) }
-        for (markerId in markersToRemove) {
-            val sourceName = markerId.replace("nars_vertex_layer_", "nars_vertex_")
-            try {
-                map.style?.getLayer(markerId)?.let {
-                    map.style?.removeLayer(it)
-                    map.style?.removeSource(sourceName)
-                }
-                vertexMarkerIds.remove(markerId)
-            } catch (e: IllegalArgumentException) {
-                NarsLogger.w(TAG, "Failed to remove vertex marker $markerId", e)
+        val layerName = "nars_vertex_layer_$featureId"
+        val sourceName = "nars_vertices_$featureId"
+        try {
+            map.style?.getLayer(layerName)?.let {
+                map.style?.removeLayer(it)
             }
+            map.style?.getSource(sourceName)?.let {
+                map.style?.removeSource(sourceName)
+            }
+            vertexMarkerIds.remove(layerName)
+        } catch (e: IllegalArgumentException) {
+            NarsLogger.w(TAG, "Failed to remove vertex markers for $featureId", e)
         }
     }
 }

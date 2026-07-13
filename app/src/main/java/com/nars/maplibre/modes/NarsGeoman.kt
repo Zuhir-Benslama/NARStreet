@@ -31,7 +31,7 @@ class NarsGeoman internal constructor(
     private val callbacks: FeatureCallbacks,
     private val scope: CoroutineScope,
 ) {
-    private var destroyed = false
+    @Volatile private var destroyed = false
     private var currentPhase: PhaseDefinition? = null
 
     private val _isDrawing = MutableStateFlow(false)
@@ -161,8 +161,9 @@ class NarsGeoman internal constructor(
             if (updatedGeometry != null) {
                 originalFeature.copy(geometry = updatedGeometry)
             } else {
-                NarsLogger.w("NarsGeoman", "Could not find updated geometry for ${originalFeature.id}")
-                originalFeature
+                NarsLogger.w("NarsGeoman", "No updated geometry for ${originalFeature.id}, skipping commit")
+                stopEditing()
+                return
             }
         callbacks.onUpdated(updated)
         stopEditing()

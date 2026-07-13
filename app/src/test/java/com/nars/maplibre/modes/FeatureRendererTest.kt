@@ -11,6 +11,10 @@ import com.nars.maplibre.data.model.PolygonGeometry
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.buildJsonArray
+import kotlinx.serialization.json.buildJsonObject
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -46,7 +50,10 @@ class FeatureRendererTest {
 
         every { mockGeoJsonFeature.geometry } returns mockGeoJsonGeometry
         every { geometryConverter.convertToGeoJson(any()) } returns mockGeoJsonFeature
-        every { geometryConverter.geometryToJson(any()) } returns """{"type":"Point","coordinates":[0,0]}"""
+        every { geometryConverter.geometryToJsonElement(any()) } returns buildJsonObject {
+            put("type", JsonPrimitive("Point"))
+            put("coordinates", buildJsonArray { add(JsonPrimitive(0.0)); add(JsonPrimitive(0.0)) })
+        }
 
         renderer = FeatureRenderer(mockk(relaxed = true))
         renderer.labelAndMarkerManager = mockk(relaxed = true)

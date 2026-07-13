@@ -2,10 +2,15 @@ package com.nars.maplibre.ui.components
 
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
+import android.os.Bundle
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.viewinterop.AndroidView
@@ -43,18 +48,27 @@ fun NarsMap(
     val context = LocalContext.current
     val baseLayer = viewModel.baseLayer.collectAsState()
 
-    // MapView state
+    var currentOnMapClick by remember { mutableStateOf(onMapClick) }
+    var currentOnMapLongClick by remember { mutableStateOf(onMapLongClick) }
+    var currentShouldHandleClick by remember { mutableStateOf(shouldHandleClick) }
+
+    LaunchedEffect(onMapClick) { currentOnMapClick = onMapClick }
+    LaunchedEffect(onMapLongClick) { currentOnMapLongClick = onMapLongClick }
+    LaunchedEffect(shouldHandleClick) { currentShouldHandleClick = shouldHandleClick }
+
+    val mapViewBundle = rememberSaveable { Bundle() }
     val mapView = remember {
         MapView(context)
     }
 
     // Handle lifecycle
     DisposableEffect(Unit) {
-        mapView.onCreate(null)
+        mapView.onCreate(mapViewBundle)
         mapView.onStart()
         mapView.onResume()
 
         onDispose {
+            mapView.onSaveInstanceState(mapViewBundle)
             mapView.onStop()
             mapView.onPause()
             mapView.onDestroy()
@@ -70,8 +84,12 @@ fun NarsMap(
         factory = { ctx ->
             mapView.apply {
                 getMapAsync { mapLibreMap ->
-                    // Configure map
-                    configureMap(mapLibreMap, onMapClick, onMapLongClick, shouldHandleClick)
+                    configureMap(
+                        map = mapLibreMap,
+                        onMapClick = { latLng -> currentOnMapClick?.invoke(latLng) },
+                        onMapLongClick = { latLng -> currentOnMapLongClick?.invoke(latLng) },
+                        shouldHandleClick = { currentShouldHandleClick?.invoke() ?: true },
+                    )
 
                     // Set initial camera position (Algeria)
                     val cameraPosition = CameraPosition.Builder()

@@ -21,9 +21,10 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
+@Suppress("TooManyFunctions")
 class MapViewModel(
     application: Application,
-    val featureStore: FeatureStoreInterface,
+    private val featureStore: FeatureStoreInterface,
     private val appPreferences: AppPreferences,
     private val apiService: ApiService,
 ) : AndroidViewModel(application) {
@@ -48,7 +49,8 @@ class MapViewModel(
     val editModeEnabled: StateFlow<Boolean> = _editModeEnabled.asStateFlow()
 
     val referenceRoadDbId: StateFlow<String?> = featureStore.referenceRoadDbId
-    val canUndo: Boolean get() = featureStore.undoManager.canUndo
+    private val _canUndo = MutableStateFlow(false)
+    val canUndo: StateFlow<Boolean> = _canUndo.asStateFlow()
 
     init {
         featureStore.setCurrentPhase(Phases.ALL.first())
@@ -97,6 +99,7 @@ class MapViewModel(
 
     fun undo(): Boolean {
         val action = featureStore.undoManager.executeUndo()
+        _canUndo.value = featureStore.undoManager.canUndo
         val app = getApplication<Application>()
         if (action == null) {
             updateUiState(errorMessage = app.getString(R.string.map_nothing_undo))
@@ -121,7 +124,15 @@ class MapViewModel(
         return true
     }
 
-    fun addFeature(feature: NarsFeature) = featureStore.addFeature(feature, recordUndo = true)
+    fun addFeature(feature: NarsFeature) {
+        featureStore.addFeature(feature, recordUndo = true)
+        _canUndo.value = featureStore.undoManager.canUndo
+    }
+
+    fun addFeatures(features: List<NarsFeature>) {
+        featureStore.addFeatures(features)
+        _canUndo.value = featureStore.undoManager.canUndo
+    }
 
     fun updateFeature(feature: NarsFeature) {
         val oldFeature = featureStore.getFeatureById(feature.id)
@@ -135,6 +146,7 @@ class MapViewModel(
                 ),
             )
         }
+        _canUndo.value = featureStore.undoManager.canUndo
     }
 
     fun deleteFeature(featureId: String) {
@@ -148,6 +160,7 @@ class MapViewModel(
             )
         }
         featureStore.removeFeature(featureId)
+        _canUndo.value = featureStore.undoManager.canUndo
     }
 
     val selectedFeatureId: StateFlow<String?> =
@@ -178,9 +191,17 @@ class MapViewModel(
         _uiState.value =
             _uiState.value.copy(
                 isLoading = isLoading ?: _uiState.value.isLoading,
-                errorMessage = errorMessage,
-                successMessage = successMessage,
+                errorMessage = errorMessage ?: _uiState.value.errorMessage,
+                successMessage = successMessage ?: _uiState.value.successMessage,
             )
+    }
+
+    fun clearErrorMessage() {
+        _uiState.value = _uiState.value.copy(errorMessage = null)
+    }
+
+    fun clearSuccessMessage() {
+        _uiState.value = _uiState.value.copy(successMessage = null)
     }
 }
 

@@ -33,28 +33,20 @@ class ApiService(private val httpClient: HttpClient, private val preferences: Ap
 
     private val baseUrl: String = BuildConfig.API_BASE_URL.trimEnd('/')
 
-    @Volatile private var authToken: String? = null
+    @Volatile private var sessionToken: String? = null
 
-    @Volatile private var cookie: String? = null
-
-    fun setAuthToken(token: String?) {
-        authToken = token
+    fun setSessionToken(token: String?) {
+        sessionToken = token
     }
 
-    fun getAuthToken(): String? = authToken
-
-    fun setCookie(c: String?) {
-        cookie = c
-    }
-
-    fun getCookie(): String? = cookie
+    fun getSessionToken(): String? = sessionToken
 
     private fun extractAndSetCookie(response: io.ktor.client.statement.HttpResponse) {
         val cookieHeader = response.headers[HttpHeaders.SetCookie]
         cookieHeader?.let { rawCookie ->
             val tokenMatch = Regex("access_token=([^;]+)").find(rawCookie)
             tokenMatch?.let { match ->
-                cookie = match.groupValues[1]
+                sessionToken = match.groupValues[1]
             }
         }
     }
@@ -72,8 +64,11 @@ class ApiService(private val httpClient: HttpClient, private val preferences: Ap
 
     private fun authHeaders(): Map<String, String> {
         val headers = mutableMapOf<String, String>()
-        authToken?.let { headers["Authorization"] = "Bearer $it" }
-        cookie?.let { headers["Cookie"] = it }
+        sessionToken?.let { token ->
+            // Server accepts auth via Cookie (primary) or Bearer header (fallback)
+            headers["Cookie"] = "access_token=$token"
+            headers["Authorization"] = "Bearer $token"
+        }
         return headers
     }
 
@@ -112,7 +107,7 @@ class ApiService(private val httpClient: HttpClient, private val preferences: Ap
             }
 
             val token = apiResponse.token ?: apiResponse.accessToken
-            token?.let { authToken = it }
+            token?.let { sessionToken = it }
 
             val user = buildUserFromResponse(apiResponse)
             NarsLogger.logAuthEvent(TAG, "Login successful", username)
@@ -129,11 +124,15 @@ class ApiService(private val httpClient: HttpClient, private val preferences: Ap
     }
 
     suspend fun logout(): Result<Unit> = try {
-        httpClient.post("$baseUrl/api/logout") {
+        val response = httpClient.post("$baseUrl/api/logout") {
             authHeaders().forEach { (k, v) -> headers.append(k, v) }
             contentType(ContentType.Application.Json)
         }
-        Result.success(Unit)
+        if (!response.status.isSuccess()) {
+            Result.failure(Exception("Logout failed: HTTP ${response.status.value}"))
+        } else {
+            Result.success(Unit)
+        }
     } catch (e: CancellationException) {
         throw e
     } catch (e: java.io.IOException) {
@@ -179,6 +178,11 @@ class ApiService(private val httpClient: HttpClient, private val preferences: Ap
                 authHeaders().forEach { (k, v) -> headers.append(k, v) }
                 setBody(requestBody)
             }
+        if (!response.status.isSuccess()) {
+            val error = Exception("Save failed: HTTP ${response.status.value}")
+            NarsLogger.e(TAG, "saveFeature failed", error)
+            return Result.failure(error)
+        }
         val id =
             apiJson.decodeFromString<SaveFeatureResponse>(response.bodyAsText()).id
                 ?: feature.id
@@ -195,9 +199,14 @@ class ApiService(private val httpClient: HttpClient, private val preferences: Ap
 
     suspend fun updateFeature(featureId: String, feature: NarsFeature): Result<Unit> = try {
         val requestBody = apiJson.encodeToString(feature.toSaveFeatureRequest())
-        httpClient.put("$baseUrl/api/update/$featureId") {
+        val response = httpClient.put("$baseUrl/api/update/$featureId") {
             authHeaders().forEach { (k, v) -> headers.append(k, v) }
             setBody(requestBody)
+        }
+        if (!response.status.isSuccess()) {
+            val error = Exception("Update failed: HTTP ${response.status.value}")
+            NarsLogger.e(TAG, "updateFeature failed", error)
+            return Result.failure(error)
         }
         Result.success(Unit)
     } catch (e: CancellationException) {
@@ -208,8 +217,13 @@ class ApiService(private val httpClient: HttpClient, private val preferences: Ap
     }
 
     suspend fun deleteFeature(featureId: String): Result<Unit> = try {
-        httpClient.delete("$baseUrl/api/delete/$featureId") {
+        val response = httpClient.delete("$baseUrl/api/delete/$featureId") {
             authHeaders().forEach { (k, v) -> headers.append(k, v) }
+        }
+        if (!response.status.isSuccess()) {
+            val error = Exception("Delete failed: HTTP ${response.status.value}")
+            NarsLogger.e(TAG, "deleteFeature failed", error)
+            return Result.failure(error)
         }
         Result.success(Unit)
     } catch (e: CancellationException) {

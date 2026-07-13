@@ -36,44 +36,50 @@ class SecurePreferences(context: Context) {
             encodeDefaults = true
         }
 
-    fun saveAuthToken(token: String) {
+    private val lock = Any()
+
+    fun saveAuthToken(token: String) = synchronized(lock) {
         encryptedPrefs.edit {
             putString(KEY_AUTH_TOKEN, token)
         }
     }
 
-    fun getAuthToken(): String? = encryptedPrefs.getString(KEY_AUTH_TOKEN, null)
+    fun getAuthToken(): String? = synchronized(lock) {
+        encryptedPrefs.getString(KEY_AUTH_TOKEN, null)
+    }
 
-    fun clearAuthToken() {
+    fun clearAuthToken() = synchronized(lock) {
         encryptedPrefs.edit {
             remove(KEY_AUTH_TOKEN)
         }
     }
 
-    fun saveCookie(cookie: String) {
+    fun saveCookie(cookie: String) = synchronized(lock) {
         encryptedPrefs.edit {
             putString(KEY_COOKIE, cookie)
         }
     }
 
-    fun getCookie(): String? = encryptedPrefs.getString(KEY_COOKIE, null)
+    fun getCookie(): String? = synchronized(lock) {
+        encryptedPrefs.getString(KEY_COOKIE, null)
+    }
 
-    fun clearCookie() {
+    fun clearCookie() = synchronized(lock) {
         encryptedPrefs.edit {
             remove(KEY_COOKIE)
         }
     }
 
-    fun saveUser(user: User) {
+    fun saveUser(user: User) = synchronized(lock) {
         val userJson = json.encodeToString(user)
         encryptedPrefs.edit {
             putString(KEY_USER, userJson)
         }
     }
 
-    fun getUser(): User? {
+    fun getUser(): User? = synchronized(lock) {
         val userJson = encryptedPrefs.getString(KEY_USER, null) ?: return null
-        return try {
+        try {
             json.decodeFromString(User.serializer(), userJson)
         } catch (e: kotlinx.serialization.SerializationException) {
             NarsLogger.w("SecurePreferences", "Failed to deserialize user", e)
@@ -81,27 +87,33 @@ class SecurePreferences(context: Context) {
         }
     }
 
-    fun clearUser() {
+    fun clearUser() = synchronized(lock) {
         encryptedPrefs.edit {
             remove(KEY_USER)
         }
     }
 
-    fun saveMunicipalityName(name: String) {
+    fun hasUser(): Boolean = synchronized(lock) {
+        encryptedPrefs.contains(KEY_USER)
+    }
+
+    fun saveMunicipalityName(name: String) = synchronized(lock) {
         encryptedPrefs.edit {
             putString(KEY_MUNICIPALITY, name)
         }
     }
 
-    fun getMunicipalityName(): String? = encryptedPrefs.getString(KEY_MUNICIPALITY, null)
+    fun getMunicipalityName(): String? = synchronized(lock) {
+        encryptedPrefs.getString(KEY_MUNICIPALITY, null)
+    }
 
-    fun clearMunicipalityName() {
+    fun clearMunicipalityName() = synchronized(lock) {
         encryptedPrefs.edit {
             remove(KEY_MUNICIPALITY)
         }
     }
 
-    fun clearAll() {
+    fun clearAll() = synchronized(lock) {
         encryptedPrefs.edit {
             remove(KEY_AUTH_TOKEN)
             remove(KEY_COOKIE)

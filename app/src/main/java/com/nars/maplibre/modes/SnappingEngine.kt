@@ -5,6 +5,7 @@ import com.nars.maplibre.data.model.LineStringGeometry
 import com.nars.maplibre.data.model.NarsFeature
 import com.nars.maplibre.data.model.PointGeometry
 import com.nars.maplibre.data.model.PolygonGeometry
+import com.nars.maplibre.utils.GeometryUtils
 import com.nars.maplibre.utils.NarsLogger
 import org.maplibre.android.geometry.LatLng
 import kotlin.math.cos
@@ -14,7 +15,6 @@ class SnappingEngine {
     companion object {
         private const val TAG = "SnappingEngine"
         private const val DEFAULT_SNAP_THRESHOLD_METERS = 20.0
-        private const val EARTH_RADIUS_METERS = 6378137.0
     }
 
     fun snapPoint(
@@ -139,7 +139,7 @@ class SnappingEngine {
         val bearingAB = bearingDeg(p1, p2)
         val bearingAC = bearingDeg(p1, point)
 
-        val angularDistAC = d1 / EARTH_RADIUS_METERS
+        val angularDistAC = d1 / GeometryUtils.EARTH_RADIUS_METERS
         val crossTrack = Math.asin(
             (Math.sin(angularDistAC) * Math.sin(Math.toRadians(bearingAC - bearingAB)))
                 .coerceIn(-1.0, 1.0),
@@ -147,7 +147,7 @@ class SnappingEngine {
         val alongTrack = Math.acos(
             (Math.cos(angularDistAC) / Math.cos(crossTrack)).coerceIn(-1.0, 1.0),
         )
-        val fraction = (alongTrack / (segLength / EARTH_RADIUS_METERS)).coerceIn(0.0, 1.0)
+        val fraction = (alongTrack / (segLength / GeometryUtils.EARTH_RADIUS_METERS)).coerceIn(0.0, 1.0)
 
         return interpolateBearing(p1, bearingAB, fraction * segLength)
     }
@@ -162,7 +162,7 @@ class SnappingEngine {
     }
 
     private fun interpolateBearing(from: LatLng, bearingDeg: Double, distanceMeters: Double): LatLng {
-        val angularDist = distanceMeters / EARTH_RADIUS_METERS
+        val angularDist = distanceMeters / GeometryUtils.EARTH_RADIUS_METERS
         val lat1 = Math.toRadians(from.latitude)
         val lng1 = Math.toRadians(from.longitude)
         val brng = Math.toRadians(bearingDeg)

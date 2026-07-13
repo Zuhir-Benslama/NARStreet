@@ -75,11 +75,13 @@ fun LoginScreen(onLoginSuccess: () -> Unit, modifier: Modifier = Modifier) {
 
     fun performLogin() {
         if (!isLoading && username.isNotBlank() && password.isNotBlank()) {
+            val user = username
+            val pass = password
             scope.launch {
                 isLoading = true
                 errorMessage = null
                 try {
-                    val result = sessionManager.login(username, password)
+                    val result = sessionManager.login(user, pass)
                     result.onSuccess { onLoginSuccess() }
                     result.onFailure { error -> errorMessage = "$loginFailed: ${error.message}" }
                 } catch (e: CancellationException) {
@@ -102,9 +104,9 @@ fun LoginScreen(onLoginSuccess: () -> Unit, modifier: Modifier = Modifier) {
     ) {
         LoginForm(
             username = username,
-            onUsernameChange = { username = it },
+            onUsernameChange = { username = it; errorMessage = null },
             password = password,
-            onPasswordChange = { password = it },
+            onPasswordChange = { password = it; errorMessage = null },
             isLoading = isLoading,
             errorMessage = errorMessage,
             onLogin = { performLogin() },

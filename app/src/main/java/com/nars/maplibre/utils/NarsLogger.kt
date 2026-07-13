@@ -92,19 +92,22 @@ object NarsLogger {
      * - Passwords
      * - API keys
      */
-    private fun sanitizeMessage(message: String): String = message
-        // Mask authorization tokens (Bearer tokens)
-        .replace(Regex("Bearer\\s+[A-Za-z0-9\\-_]+"), "Bearer [REDACTED]")
-        // Mask session cookies
-        .replace(Regex("session[_-]?id[=:]\\s*[A-Za-z0-9\\-_]+"), "session_id=[REDACTED]")
-        // Mask password fields
-        .replace(Regex("password[=:]\\s*[^\\s,}]+"), "password=[REDACTED]")
-        // Mask API keys
-        .replace(Regex("api[_-]?key[=:]\\s*[A-Za-z0-9\\-_]+"), "api_key=[REDACTED]")
-        // Mask access tokens
-        .replace(Regex("access[_-]?token[=:]\\s*[A-Za-z0-9\\-_]+"), "access_token=[REDACTED]")
-        // Mask refresh tokens
-        .replace(Regex("refresh[_-]?token[=:]\\s*[A-Za-z0-9\\-_]+"), "refresh_token=[REDACTED]")
+    private val SENSITIVE_PATTERNS = listOf(
+        Regex("Bearer\\s+[A-Za-z0-9\\-_]+") to "Bearer [REDACTED]",
+        Regex("session[_-]?id[=:]\\s*[A-Za-z0-9\\-_]+") to "session_id=[REDACTED]",
+        Regex("password[=:]\\s*[^\\s,}]+") to "password=[REDACTED]",
+        Regex("api[_-]?key[=:]\\s*[A-Za-z0-9\\-_]+") to "api_key=[REDACTED]",
+        Regex("access[_-]?token[=:]\\s*[A-Za-z0-9\\-_]+") to "access_token=[REDACTED]",
+        Regex("refresh[_-]?token[=:]\\s*[A-Za-z0-9\\-_]+") to "refresh_token=[REDACTED]",
+    )
+
+    private fun sanitizeMessage(message: String): String {
+        var result = message
+        for ((pattern, replacement) in SENSITIVE_PATTERNS) {
+            result = pattern.replace(result, replacement)
+        }
+        return result
+    }
 
     /**
      * Log network request without sensitive headers

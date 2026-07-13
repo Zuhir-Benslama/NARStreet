@@ -89,6 +89,7 @@
     <string name="map_delete_failed">Failed to delete from backend</string>
     <string name="map_phase_changed">Phase</string>
     <string name="map_cannot_advance">Cannot advance: requirements not met</string>
+    <string name="map_phase_badge_label">Phase %1$s</string>
     <string name="map_nothing_undo">Nothing to undo</string>
     <string name="map_edit_hint">Drag vertices to edit. Tap Save when done.</string>
     <string name="map_select_feature_hint">Please select a feature to edit first</string>

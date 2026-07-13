@@ -15,11 +15,10 @@ class SessionManager(private val apiService: ApiService, private val appPreferen
     suspend fun login(username: String, password: String): Result<LoginResponse> {
         val result = apiService.login(username, password)
         result.onSuccess { response ->
-            apiService.getCookie()?.let { jwtToken ->
-                appPreferences.authToken = jwtToken
-                apiService.setAuthToken(jwtToken)
+            apiService.getSessionToken()?.let { token ->
+                appPreferences.authToken = token
+                appPreferences.sessionCookie = token
             }
-            appPreferences.sessionCookie = apiService.getCookie()
             appPreferences.user =
                 response.user.copy(
                     username = username,
@@ -43,8 +42,7 @@ class SessionManager(private val apiService: ApiService, private val appPreferen
         appPreferences.sessionCookie = null
         appPreferences.user = null
         appPreferences.municipalityName = null
-        apiService.setAuthToken(null)
-        apiService.setCookie(null)
+        apiService.setSessionToken(null)
     }
 
     fun getUser() = appPreferences.user

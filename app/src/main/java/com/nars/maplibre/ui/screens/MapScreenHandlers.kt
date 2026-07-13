@@ -214,7 +214,7 @@ class MapScreenHandlers(
             viewModel.updateUiState(isLoading = true)
             val result = apiService.loadFeatures()
             result.onSuccess { features ->
-                viewModel.featureStore.addFeatures(features)
+                viewModel.addFeatures(features)
                 narsGeoman?.displayManager?.updateDisplayedFeatures(features)
                 val msg =
                     if (features.isEmpty()) {

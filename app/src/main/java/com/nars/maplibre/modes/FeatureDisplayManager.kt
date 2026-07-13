@@ -7,6 +7,7 @@ import com.nars.maplibre.data.model.PhaseDefinition
 import com.nars.maplibre.data.model.Phases
 import com.nars.maplibre.utils.NarsLogger
 import org.maplibre.android.maps.MapLibreMap
+import java.util.Collections
 
 val GEOMAN_SOURCE_NAMES =
     listOf(
@@ -22,7 +23,7 @@ class FeatureDisplayManager(
     private val geometryConverter: GeometryConverter,
     private val map: MapLibreMap?,
 ) {
-    private val displayedFeatureIds = mutableSetOf<String>()
+    private val displayedFeatureIds: MutableSet<String> = Collections.synchronizedSet(mutableSetOf())
     var currentPhase: PhaseDefinition? = null
 
     companion object {
@@ -84,7 +85,7 @@ class FeatureDisplayManager(
         val source = map?.style?.getSource(sourceName)
         if (source is org.maplibre.android.style.sources.GeoJsonSource) {
             val geoJsonFeature = geometryConverter.convertToGeoJson(feature)
-            val geoJsonString = buildGeoJsonString(geoJsonFeature)
+            val geoJsonString = geometryConverter.buildFeatureGeoJson(geoJsonFeature, properties = null)
             source.setGeoJson(geoJsonString)
             NarsLogger.d("FeatureDisplayManager", "Updated feature ${feature.id} in-place")
         } else {
@@ -141,11 +142,5 @@ class FeatureDisplayManager(
         displayedFeatureIds.clear()
         geoman.clearAllFeatures()
         featureRenderer.clearTracking()
-    }
-
-    private fun buildGeoJsonString(feature: com.geoman.maplibre.geoman.types.geojson.Feature): String {
-        val geometryJson = geometryConverter.geometryToJson(feature.geometry)
-        val id = feature.id ?: ""
-        return """{"type":"Feature","id":"$id","geometry":$geometryJson}"""
     }
 }

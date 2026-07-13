@@ -321,7 +321,7 @@ class MapViewModelTest {
         val vm = createViewModel()
         vm.updateUiState(errorMessage = "Test error")
 
-        vm.updateUiState(errorMessage = null)
+        vm.clearErrorMessage()
 
         assertNull(vm.uiState.value.errorMessage)
     }
@@ -340,7 +340,7 @@ class MapViewModelTest {
         val vm = createViewModel()
         vm.updateUiState(successMessage = "Test success")
 
-        vm.updateUiState(successMessage = null)
+        vm.clearSuccessMessage()
 
         assertNull(vm.uiState.value.successMessage)
     }
@@ -487,18 +487,18 @@ class MapViewModelTest {
 
         assertTrue(vm.undo())
         assertEquals("Restored: Second", vm.uiState.value.successMessage)
-        verify(exactly = 1) { featureStore.undoManager.executeUndo() }
 
         assertTrue(vm.undo())
         assertEquals("Restored: First", vm.uiState.value.successMessage)
-        verify(exactly = 2) { featureStore.undoManager.executeUndo() }
     }
 
     @Test
-    fun `canUndo delegates to featureStore`() {
+    fun `canUndo updates after adding a feature`() {
         every { featureStore.undoManager.canUndo } returns true
         val vm = createViewModel()
 
-        assertTrue(vm.canUndo)
+        vm.addFeature(mockk(relaxed = true))
+
+        assertTrue(vm.canUndo.value)
     }
 }

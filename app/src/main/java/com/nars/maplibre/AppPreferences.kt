@@ -7,7 +7,9 @@ import com.nars.maplibre.data.model.BaseLayerType
 import com.nars.maplibre.data.model.User
 import com.nars.maplibre.security.SecurePreferences
 import com.nars.maplibre.ui.theme.ThemeMode
-import kotlinx.serialization.json.Json
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 
 class AppPreferences(context: Context) {
     private val prefs: SharedPreferences =
@@ -17,7 +19,17 @@ class AppPreferences(context: Context) {
         )
 
     private val securePrefs: SecurePreferences = SecurePreferences(context)
-    private val json = Json { ignoreUnknownKeys = true }
+
+    private val _themeModeFlow = MutableStateFlow(themeMode)
+    val themeModeFlow: StateFlow<ThemeMode> = _themeModeFlow.asStateFlow()
+
+    init {
+        prefs.registerOnSharedPreferenceChangeListener { _, key ->
+            if (key == KEY_THEME) {
+                _themeModeFlow.value = themeMode
+            }
+        }
+    }
 
     var themeMode: ThemeMode
         get() =
@@ -81,7 +93,7 @@ class AppPreferences(context: Context) {
         }
 
     val isLoggedIn: Boolean
-        get() = user != null && authToken != null
+        get() = securePrefs.hasUser() && authToken != null
 
     companion object {
         private const val PREFS_NAME = "nars_preferences"

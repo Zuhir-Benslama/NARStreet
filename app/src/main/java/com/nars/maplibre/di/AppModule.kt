@@ -43,6 +43,11 @@ val appModule =
                                 }
                             }
                             certificatePinner(pinnerBuilder.build())
+                        } else if (!BuildConfig.DEBUG) {
+                            Timber.w(
+                                "Release build has no SSL certificate pinning" +
+                                    " configured — traffic is vulnerable to MITM",
+                            )
                         }
                     }
                 }
@@ -55,7 +60,7 @@ val appModule =
                     )
                 }
                 install(Logging) {
-                    level = LogLevel.ALL
+                    level = if (BuildConfig.DEBUG) LogLevel.ALL else LogLevel.BODY
                     logger = object : io.ktor.client.plugins.logging.Logger {
                         override fun log(message: String) {
                             Timber.d("KtorClient: %s", message)

@@ -1,6 +1,10 @@
 package com.nars.maplibre
 
 import android.app.Application
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.ProcessLifecycleOwner
+import com.nars.maplibre.data.api.ApiService
 import com.nars.maplibre.di.appModule
 import com.nars.maplibre.utils.NarsLogger
 import kotlinx.coroutines.CoroutineScope
@@ -33,17 +37,43 @@ class NarsApplication :
         applicationScope.launch {
             try {
                 val prefs: AppPreferences = get()
-                prefs.authToken?.let { jwtToken ->
+                val apiService: ApiService = get()
+                prefs.authToken?.let { token ->
+                    apiService.setSessionToken(token)
                     NarsLogger.d("NarsApplication", "User session found on startup")
                 }
             } catch (ignored: RuntimeException) {
                 NarsLogger.w("NarsApplication", "Session check skipped", ignored)
             }
         }
+
+        registerTokenClearingOnBackground()
     }
 
-    override fun onTerminate() {
-        applicationScope.cancel()
-        super.onTerminate()
+    private fun registerTokenClearingOnBackground() {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_STOP) {
+                try {
+                    val apiService: ApiService = get()
+                    val prefs: AppPreferences = get()
+                    apiService.setSessionToken(null)
+                    NarsLogger.d("NarsApplication", "In-memory tokens cleared (app backgrounded)")
+                } catch (ignored: RuntimeException) {
+                    NarsLogger.w("NarsApplication", "Token clearing skipped", ignored)
+                }
+            } else if (event == Lifecycle.Event.ON_START) {
+                try {
+                    val apiService: ApiService = get()
+                    val prefs: AppPreferences = get()
+                    prefs.authToken?.let { token ->
+                        apiService.setSessionToken(token)
+                        NarsLogger.d("NarsApplication", "In-memory tokens restored (app foregrounded)")
+                    }
+                } catch (ignored: RuntimeException) {
+                    NarsLogger.w("NarsApplication", "Token restore skipped", ignored)
+                }
+            }
+        }
+        ProcessLifecycleOwner.get().lifecycle.addObserver(observer)
     }
 }

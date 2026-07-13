@@ -6,9 +6,13 @@ import com.nars.maplibre.data.model.Phases
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import java.util.concurrent.locks.ReentrantLock
+import kotlin.concurrent.withLock
 
+@Suppress("TooManyFunctions")
 class FeatureStore : FeatureStoreInterface {
     override val undoManager = UndoManager(this)
+    private val lock = ReentrantLock()
 
     private val _featuresByPhase = MutableStateFlow<Map<String, List<NarsFeature>>>(emptyMap())
     override val featuresByPhase: StateFlow<Map<String, List<NarsFeature>>> = _featuresByPhase.asStateFlow()
@@ -25,6 +29,12 @@ class FeatureStore : FeatureStoreInterface {
     private val _referenceRoadDbId = MutableStateFlow<String?>(null)
     override val referenceRoadDbId: StateFlow<String?> = _referenceRoadDbId.asStateFlow()
 
+    private inline fun withPhaseMap(block: (MutableMap<String, List<NarsFeature>>) -> Unit) {
+        val currentMap = _featuresByPhase.value.toMutableMap()
+        block(currentMap)
+        _featuresByPhase.value = currentMap
+    }
+
     init {
         _currentPhase.value = Phases.ALL.first()
     }
@@ -37,12 +47,10 @@ class FeatureStore : FeatureStoreInterface {
         Phases.getByKey(key)?.let { setCurrentPhase(it) }
     }
 
-    override fun addFeature(feature: NarsFeature, recordUndo: Boolean) {
-        val currentMap = _featuresByPhase.value.toMutableMap()
-        val phaseFeatures = currentMap.getOrDefault(feature.properties.phase, emptyList())
-        currentMap[feature.properties.phase] = phaseFeatures + feature
-        _featuresByPhase.value = currentMap
-
+    override fun addFeature(feature: NarsFeature, recordUndo: Boolean) = lock.withLock {
+        withPhaseMap { map ->
+            map[feature.properties.phase] = map.getOrDefault(feature.properties.phase, emptyList()) + feature
+        }
         _allFeatures.value = _allFeatures.value + feature
 
         if (recordUndo) {
@@ -50,40 +58,40 @@ class FeatureStore : FeatureStoreInterface {
         }
     }
 
-    override fun addFeatures(features: List<NarsFeature>) {
-        val currentMap = _featuresByPhase.value.toMutableMap()
-        features.forEach { feature ->
-            val phaseFeatures = currentMap.getOrDefault(feature.properties.phase, emptyList())
-            currentMap[feature.properties.phase] = phaseFeatures + feature
+    override fun addFeatures(features: List<NarsFeature>) = lock.withLock {
+        withPhaseMap { map ->
+            features.forEach { feature ->
+                map[feature.properties.phase] = map.getOrDefault(feature.properties.phase, emptyList()) + feature
+            }
         }
-        _featuresByPhase.value = currentMap
         _allFeatures.value = _allFeatures.value + features
     }
 
-    override fun updateFeature(featureId: String, updatedFeature: NarsFeature) {
-        val currentMap = _featuresByPhase.value.toMutableMap()
-        val updatedMap = mutableMapOf<String, List<NarsFeature>>()
-        currentMap.forEach { (phase, features) ->
-            updatedMap[phase] = features.map { if (it.id == featureId) updatedFeature else it }
+    override fun updateFeature(featureId: String, updatedFeature: NarsFeature) = lock.withLock {
+        withPhaseMap { map ->
+            for (phase in map.keys) {
+                map[phase] = map[phase]!!.map { if (it.id == featureId) updatedFeature else it }
+            }
         }
-        _featuresByPhase.value = updatedMap
         _allFeatures.value = _allFeatures.value.map { if (it.id == featureId) updatedFeature else it }
         if (_selectedFeature.value?.id == featureId) {
             _selectedFeature.value = updatedFeature
         }
     }
 
-    override fun removeFeature(featureId: String) {
-        val currentMap = _featuresByPhase.value.toMutableMap()
-        currentMap.forEach { (phase, features) ->
-            val filtered = features.filter { it.id != featureId }
-            if (filtered.isEmpty()) {
-                currentMap.remove(phase)
-            } else {
-                currentMap[phase] = filtered
+    override fun removeFeature(featureId: String) = lock.withLock {
+        withPhaseMap { map ->
+            val iterator = map.entries.iterator()
+            while (iterator.hasNext()) {
+                val entry = iterator.next()
+                val filtered = entry.value.filter { it.id != featureId }
+                if (filtered.isEmpty()) {
+                    iterator.remove()
+                } else {
+                    map[entry.key] = filtered
+                }
             }
         }
-        _featuresByPhase.value = currentMap
         _allFeatures.value = _allFeatures.value.filter { it.id != featureId }
 
         if (_selectedFeature.value?.id == featureId) {
@@ -103,16 +111,14 @@ class FeatureStore : FeatureStoreInterface {
         _selectedFeature.value = feature
     }
 
-    override fun clearAll() {
+    override fun clearAll() = lock.withLock {
         _featuresByPhase.value = emptyMap()
         _allFeatures.value = emptyList()
         _selectedFeature.value = null
     }
 
-    override fun clearPhase(phaseKey: String) {
-        val currentMap = _featuresByPhase.value.toMutableMap()
-        currentMap.remove(phaseKey)
-        _featuresByPhase.value = currentMap
+    override fun clearPhase(phaseKey: String) = lock.withLock {
+        withPhaseMap { it.remove(phaseKey) }
         _allFeatures.value = _allFeatures.value.filter { it.properties.phase != phaseKey }
     }
 

@@ -3,7 +3,6 @@ package com.nars.maplibre.modes
 import android.graphics.Color
 import androidx.core.graphics.toColorInt
 import com.geoman.maplibre.geoman.types.geojson.Feature
-import com.nars.maplibre.data.api.escapeJson
 import com.nars.maplibre.data.model.CircleGeometry
 import com.nars.maplibre.data.model.LineStringGeometry
 import com.nars.maplibre.data.model.NarsFeature
@@ -11,16 +10,12 @@ import com.nars.maplibre.data.model.Phases
 import com.nars.maplibre.data.model.PointGeometry
 import com.nars.maplibre.data.model.PolygonGeometry
 import com.nars.maplibre.utils.NarsLogger
-import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.buildJsonObject
-import kotlinx.serialization.json.put
-import kotlinx.serialization.json.putJsonArray
-import kotlinx.serialization.json.putJsonObject
 import org.maplibre.android.maps.MapLibreMap
 import org.maplibre.android.style.layers.FillLayer
 import org.maplibre.android.style.layers.LineLayer
 import org.maplibre.android.style.layers.SymbolLayer
 import org.maplibre.android.style.sources.GeoJsonSource
+import java.util.Collections
 
 class FeatureRenderer(private val map: MapLibreMap) {
     lateinit var labelAndMarkerManager: LabelAndMarkerManager
@@ -33,9 +28,10 @@ class FeatureRenderer(private val map: MapLibreMap) {
         { name, source -> FillLayer(name, source) }
     internal var symbolLayerFactory: (name: String, source: String) -> SymbolLayer =
         { name, source -> SymbolLayer(name, source) }
-    internal var geometryConverterProvider: () -> GeometryConverter = { GeometryConverter() }
+    internal var geometryConverterProvider: () -> GeometryConverter = { sharedGeometryConverter }
 
     companion object {
+        private val sharedGeometryConverter = GeometryConverter()
         private const val TAG = "FeatureRenderer"
         private const val DEFAULT_MARKER_ICON_SIZE = 0.5f
         private const val DEFAULT_CIRCLE_RADIUS_METERS = 50.0
@@ -50,7 +46,7 @@ class FeatureRenderer(private val map: MapLibreMap) {
         const val STYLE_FILL_OPACITY_DEFAULT = 0.3
     }
 
-    private val addedFeatureIds = mutableSetOf<String>()
+    private val addedFeatureIds: MutableSet<String> = Collections.synchronizedSet(mutableSetOf())
 
     fun addFeature(feature: NarsFeature) {
         if (addedFeatureIds.contains(feature.id)) {
@@ -158,11 +154,11 @@ class FeatureRenderer(private val map: MapLibreMap) {
         }
     }
 
-    private fun getFeatureStyle(phaseKey: String): FeatureStyle = when (phaseKey) {
-        Phases.ROADS_KEY -> FeatureStyle("#3498db", STYLE_LINE_WIDTH_THICK)
-        Phases.HOUSE_ENTRANCES_KEY -> FeatureStyle("#27ae60", STYLE_LINE_WIDTH_THIN)
-        Phases.NAMING_PANELS_KEY -> FeatureStyle("#9b59b6", STYLE_LINE_WIDTH_THIN)
-        else -> FeatureStyle("#8e44ad", STYLE_LINE_WIDTH_THIN)
+    private fun getFeatureStyle(phaseKey: String): FeatureStyle {
+        val phase = Phases.getByKey(phaseKey)
+        val color = phase?.color ?: "#8e44ad"
+        val width = if (phaseKey == Phases.ROADS_KEY) STYLE_LINE_WIDTH_THICK else STYLE_LINE_WIDTH_THIN
+        return FeatureStyle(color, width)
     }
 
     data class FeatureStyle(val lineColor: String, val lineWidth: Int)
@@ -174,29 +170,8 @@ class FeatureRenderer(private val map: MapLibreMap) {
         Color.GRAY
     }
 
-    private fun buildGeoJsonString(feature: com.geoman.maplibre.geoman.types.geojson.Feature): String {
-        val geometry = feature.geometry
-        val props = feature.properties
-        return buildJsonObject {
-            put("type", "Feature")
-            put("id", feature.id ?: "")
-            put(
-                "geometry",
-                Json.parseToJsonElement(
-                    geometryConverterProvider().geometryToJson(geometry),
-                ),
-            )
-            putJsonObject("properties") {
-                val mutableProps = props.toMutableMap()
-                if (mutableProps.containsKey("name") && !mutableProps.containsKey("label")) {
-                    mutableProps["label"] = mutableProps["name"]
-                }
-                mutableProps.forEach { (key, value) ->
-                    put(key, value?.toString() ?: "")
-                }
-            }
-        }.toString()
-    }
+    private fun buildGeoJsonString(feature: com.geoman.maplibre.geoman.types.geojson.Feature): String =
+        geometryConverterProvider().buildFeatureGeoJson(feature)
 
     fun isFeatureAdded(featureId: String): Boolean = addedFeatureIds.contains(featureId)
 

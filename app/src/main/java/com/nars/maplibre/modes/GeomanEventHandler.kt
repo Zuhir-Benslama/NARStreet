@@ -5,22 +5,16 @@ import com.geoman.maplibre.geoman.core.features.FeatureData
 import com.geoman.maplibre.geoman.types.events.GmDrawEvent
 import com.geoman.maplibre.geoman.types.events.GmEditEvent
 import com.geoman.maplibre.geoman.types.events.GmMapEvent
-import com.geoman.maplibre.geoman.types.geojson.LineString
 import com.geoman.maplibre.geoman.types.geojson.LngLat
-import com.geoman.maplibre.geoman.types.geojson.MultiPolygon
-import com.geoman.maplibre.geoman.types.geojson.Point
 import com.geoman.maplibre.geoman.types.geojson.Polygon
 import com.geoman.maplibre.geoman.utils.GeometryUtils
 import com.nars.maplibre.data.model.CircleGeometry
 import com.nars.maplibre.data.model.FeatureProperties
 import com.nars.maplibre.data.model.Geometry
-import com.nars.maplibre.data.model.LineStringGeometry
 import com.nars.maplibre.data.model.NarsFeature
 import com.nars.maplibre.data.model.NarsFeatureType
 import com.nars.maplibre.data.model.PhaseDefinition
 import com.nars.maplibre.data.model.Phases
-import com.nars.maplibre.data.model.PointGeometry
-import com.nars.maplibre.data.model.PolygonGeometry
 import com.nars.maplibre.utils.NarsLogger
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
@@ -36,9 +30,9 @@ class GeomanEventHandler(
         private const val TAG = "GeomanEventHandler"
     }
 
-    private var currentPhase: PhaseDefinition? = null
-    private var editingFeatureId: String? = null
-    private var editingFeature: NarsFeature? = null
+    @Volatile private var currentPhase: PhaseDefinition? = null
+    @Volatile private var editingFeatureId: String? = null
+    @Volatile private var editingFeature: NarsFeature? = null
 
     fun setCurrentPhase(phase: PhaseDefinition) {
         currentPhase = phase
@@ -93,11 +87,14 @@ class GeomanEventHandler(
             }
 
         NarsLogger.d(TAG, "Creating feature for phase: ${phase.label} (${phase.key})")
-        val narsFeature = createNarsFeatureFromFeatureData(featureData, phase)
+        val narsFeature = createNarsFeatureFromFeatureData(featureData, phase) ?: run {
+            NarsLogger.e(TAG, "Failed to extract geometry from feature data — discarding")
+            return
+        }
         onFeatureCreated(narsFeature)
     }
 
-    internal fun createNarsFeatureFromFeatureData(featureData: FeatureData?, phase: PhaseDefinition): NarsFeature {
+    internal fun createNarsFeatureFromFeatureData(featureData: FeatureData?, phase: PhaseDefinition): NarsFeature? {
         val geometry =
             if (featureData != null) {
                 if (featureData.properties["shapeType"] == "circle" ||
@@ -111,13 +108,15 @@ class GeomanEventHandler(
                 extractGeometryFromGeoJson(null)
             }
 
+        val safeGeometry = geometry ?: return null
+
         return NarsFeature(
             id =
             featureData?.id ?: java.util.UUID
                 .randomUUID()
                 .toString(),
             type = getFeatureTypeFromPhase(phase),
-            geometry = geometry,
+            geometry = safeGeometry,
             properties =
             when (phase.key) {
                 Phases.ROADS_KEY -> {
@@ -133,7 +132,8 @@ class GeomanEventHandler(
                 }
 
                 else -> {
-                    FeatureProperties.RoadProperties()
+                    NarsLogger.e(TAG, "Unknown phase key: ${phase.key} — cannot create feature")
+                    return null
                 }
             },
         )
@@ -146,7 +146,10 @@ class GeomanEventHandler(
 
     internal fun handleGeometryChanged(featureData: FeatureData?) {
         val data = featureData ?: return
-        val geometry = extractGeometryFromFeatureData(data)
+        val geometry = extractGeometryFromFeatureData(data) ?: run {
+            NarsLogger.e(TAG, "Failed to extract geometry during edit — skipping update")
+            return
+        }
         editingFeature?.let { original ->
             val updated = original.copy(geometry = geometry)
             onFeatureUpdated(updated)
@@ -161,51 +164,10 @@ class GeomanEventHandler(
         editingFeature = null
     }
 
-    private fun extractGeometryFromGeoJson(geometry: com.geoman.maplibre.geoman.types.geojson.Geometry?): Geometry {
-        if (geometry == null) {
-            NarsLogger.w(TAG, "No geometry in feature")
-            return PointGeometry(coordinates = listOf(0.0, 0.0))
-        }
+    private fun extractGeometryFromGeoJson(geometry: com.geoman.maplibre.geoman.types.geojson.Geometry?): Geometry? =
+        GeometryConverter.extractGeometryFromGeoJson(geometry)
 
-        return when (geometry) {
-            is Point -> {
-                val coords = geometry.coordinates
-                PointGeometry(coordinates = listOf(coords[0], coords[1]))
-            }
-
-            is LineString -> {
-                val flattened = geometry.coordinates.flatMap { coord -> listOf(coord[0], coord[1]) }
-                LineStringGeometry(coordinates = flattened)
-            }
-
-            is Polygon -> {
-                if (geometry.coordinates.isNotEmpty()) {
-                    val exteriorRing = geometry.coordinates[0]
-                    val flattened = exteriorRing.flatMap { coord -> listOf(coord[0], coord[1]) }
-                    PolygonGeometry(coordinates = flattened)
-                } else {
-                    PolygonGeometry(coordinates = emptyList())
-                }
-            }
-
-            is MultiPolygon -> {
-                if (geometry.coordinates.isNotEmpty() && geometry.coordinates[0].isNotEmpty()) {
-                    val exteriorRing = geometry.coordinates[0][0]
-                    val flattened = exteriorRing.flatMap { coord -> listOf(coord[0], coord[1]) }
-                    PolygonGeometry(coordinates = flattened)
-                } else {
-                    PolygonGeometry(coordinates = emptyList())
-                }
-            }
-
-            else -> {
-                NarsLogger.w(TAG, "Unknown geometry type: ${geometry::class.simpleName}")
-                PointGeometry(coordinates = listOf(0.0, 0.0))
-            }
-        }
-    }
-
-    internal fun extractCircleGeometry(featureData: FeatureData): CircleGeometry {
+    internal fun extractCircleGeometry(featureData: FeatureData): CircleGeometry? {
         val center = featureData.properties["center"] as? LngLat
         val radius = featureData.properties["radius"] as? Double
 
@@ -232,10 +194,11 @@ class GeomanEventHandler(
             }
         }
 
-        return CircleGeometry(coordinates = listOf(0.0, 0.0, 0.0))
+        NarsLogger.e(TAG, "Cannot extract circle geometry: no center/radius or valid polygon")
+        return null
     }
 
-    fun extractGeometryFromFeatureData(featureData: FeatureData): Geometry =
+    fun extractGeometryFromFeatureData(featureData: FeatureData): Geometry? =
         extractGeometryFromGeoJson(featureData.geometry)
 
     internal fun getFeatureTypeFromPhase(phase: PhaseDefinition): NarsFeatureType = when (phase.key) {

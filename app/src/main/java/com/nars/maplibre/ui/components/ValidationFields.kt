@@ -175,7 +175,7 @@ fun ValidationRadioGroup(
 fun ValidationNumberField(label: String, value: String, onValueChanged: (String) -> Unit) {
     OutlinedTextField(
         value = value,
-        onValueChange = onValueChanged,
+        onValueChange = { filtered -> onValueChanged(filtered.filter { it.isDigit() }) },
         label = { Text(label) },
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
         modifier = Modifier.fillMaxWidth(),

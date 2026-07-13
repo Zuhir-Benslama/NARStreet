@@ -216,17 +216,15 @@ class NarsGeomanTest {
     }
 
     @Test
-    fun `commitEdits falls back to original when geometry not found`() {
+    fun `commitEdits skips callback when geometry not found`() {
         val original = createRoad("Road")
         every { eventHandler.getEditingFeature() } returns original
         every { geoman.features.getFeature(any(), original.id) } returns null
 
-        val capturedFeature = slot<NarsFeature>()
-        every { onFeatureUpdated(capture(capturedFeature)) } just Runs
-
         narsGeoman.commitEdits()
 
-        assertEquals(original.geometry, capturedFeature.captured.geometry)
+        verify(exactly = 0) { onFeatureUpdated(any()) }
+        assertFalse(narsGeoman.isEditing.value)
     }
 
     // --- cancelEdits ---

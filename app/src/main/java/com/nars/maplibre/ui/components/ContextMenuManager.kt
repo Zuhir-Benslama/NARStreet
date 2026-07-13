@@ -38,10 +38,3 @@ class ContextMenuManager(
         const val MENU_DELETE = 3
     }
 }
-
-data class ContextMenuState(
-    val isVisible: Boolean = false,
-    val feature: NarsFeature? = null,
-    val positionX: Float = 0f,
-    val positionY: Float = 0f,
-)

@@ -24,6 +24,7 @@ import androidx.compose.material.icons.filled.BrightnessAuto
 import androidx.compose.material.icons.filled.BrightnessHigh
 import androidx.compose.material.icons.filled.BrightnessLow
 import androidx.compose.material.icons.filled.Palette
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CenterAlignedTopAppBar
@@ -33,9 +34,13 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -171,31 +176,49 @@ private fun SettingsAppearanceContent(themeMode: ThemeMode, onThemeModeSelected:
 
 @Composable
 private fun SettingsAboutContent(onLogout: () -> Unit) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-    ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Text(text = stringResource(R.string.settings_app_name), fontSize = 16.sp, color = TextPrimary)
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(text = stringResource(R.string.settings_app_description), fontSize = 12.sp, color = TextSecondary)
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = stringResource(R.string.settings_version),
-                fontSize = 12.sp,
-                color = TextSecondary.copy(alpha = 0.5f),
-            )
-        }
+    Column(modifier = Modifier.padding(8.dp)) {
+        Text(text = stringResource(R.string.settings_app_name), fontSize = 16.sp, color = TextPrimary)
+        Spacer(modifier = Modifier.height(4.dp))
+        Text(text = stringResource(R.string.settings_app_description), fontSize = 12.sp, color = TextSecondary)
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(
+            text = stringResource(R.string.settings_version),
+            fontSize = 12.sp,
+            color = TextSecondary.copy(alpha = 0.5f),
+        )
+        Spacer(modifier = Modifier.height(16.dp))
+        SettingsLogoutButton(onLogout = onLogout)
     }
-    Spacer(modifier = Modifier.height(16.dp))
-    SettingsLogoutButton(onLogout = onLogout)
 }
 
 @Composable
 private fun SettingsLogoutButton(onLogout: () -> Unit) {
+    var showConfirm by remember { mutableStateOf(false) }
+
+    if (showConfirm) {
+        AlertDialog(
+            onDismissRequest = { showConfirm = false },
+            title = { Text(stringResource(R.string.settings_logout)) },
+            text = { Text("Are you sure you want to log out?") },
+            confirmButton = {
+                TextButton(onClick = {
+                    showConfirm = false
+                    onLogout()
+                }) {
+                    Text(stringResource(R.string.settings_logout))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showConfirm = false }) {
+                    Text("Cancel")
+                }
+            },
+        )
+    }
+
     Box(
         modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp))
-            .background(DangerColor.copy(alpha = 0.2f)).clickable(onClick = onLogout).padding(16.dp),
+            .background(DangerColor.copy(alpha = 0.2f)).clickable(onClick = { showConfirm = true }).padding(16.dp),
         contentAlignment = Alignment.Center,
     ) {
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {

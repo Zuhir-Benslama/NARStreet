@@ -2,26 +2,26 @@ package com.nars.maplibre.data.store
 
 import com.nars.maplibre.data.model.NarsFeature
 import com.nars.maplibre.utils.NarsLogger
-import java.util.Collections
 
 class UndoManager(private val featureStore: FeatureStoreInterface) {
     companion object {
         private const val MAX_UNDO_SIZE = 50
     }
 
-    private val undoStack = Collections.synchronizedList(mutableListOf<UndoAction>())
-    val canUndo: Boolean get() = undoStack.isNotEmpty()
+    private val lock = Any()
+    private val undoStack = mutableListOf<UndoAction>()
+    val canUndo: Boolean get() = synchronized(lock) { undoStack.isNotEmpty() }
 
-    fun addUndoAction(action: UndoAction) {
+    fun addUndoAction(action: UndoAction) = synchronized(lock) {
         undoStack.add(action)
         if (undoStack.size > MAX_UNDO_SIZE) {
             undoStack.removeAt(0)
         }
     }
 
-    fun popUndoAction(): UndoAction? {
-        if (undoStack.isEmpty()) return null
-        return undoStack.removeAt(undoStack.lastIndex)
+    fun popUndoAction(): UndoAction? = synchronized(lock) {
+        if (undoStack.isEmpty()) return@synchronized null
+        undoStack.removeAt(undoStack.lastIndex)
     }
 
     fun executeUndo(): UndoAction? {

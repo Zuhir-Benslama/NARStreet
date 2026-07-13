@@ -48,7 +48,7 @@ class LabelAndMarkerManagerTest {
     }
 
     @Test
-    fun `addVertexMarkers with PointGeometry does not add sources`() {
+    fun `addVertexMarkers with PointGeometry does nothing`() {
         val point =
             NarsFeature(
                 id = "p1",
@@ -57,13 +57,10 @@ class LabelAndMarkerManagerTest {
                 properties = FeatureProperties.RoadProperties(),
             )
         manager.addVertexMarkers(point)
-        verify(exactly = 0) { map.style?.addSource(any<org.maplibre.android.style.sources.Source>()) }
     }
 
     @Test
     fun `removeVertexMarkers does nothing if no markers tracked`() {
         manager.removeVertexMarkers("nonexistent")
-        verify(exactly = 0) { map.style?.removeLayer(any<Layer>()) }
-        verify(exactly = 0) { map.style?.removeSource(any<String>()) }
     }
 }

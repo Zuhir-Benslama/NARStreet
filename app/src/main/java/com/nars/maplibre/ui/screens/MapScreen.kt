@@ -30,6 +30,7 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.Stable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -86,7 +87,7 @@ fun MapScreen(onNavigateToSettings: () -> Unit, onLogout: () -> Unit) {
     val editModeEnabled by viewModel.editModeEnabled.collectAsState()
 
     val handlers = remember {
-        MapScreenHandlers(viewModel, apiService, sessionManager, context, scope) { msg ->
+        MapScreenHandlers(viewModel, apiService, sessionManager, context.applicationContext, scope) { msg ->
             scope.launch { snackbarHostState.showSnackbar(msg) }
         }
     }
@@ -116,7 +117,6 @@ fun MapScreen(onNavigateToSettings: () -> Unit, onLogout: () -> Unit) {
             sessionManager = sessionManager,
         ),
         snackbarHostState = snackbarHostState,
-        scope = scope,
     )
 }
 
@@ -132,13 +132,13 @@ private fun MapScreenEffects(
     LaunchedEffect(uiState.errorMessage) {
         uiState.errorMessage?.let {
             snackbarHostState.showSnackbar(it)
-            viewModel.updateUiState(errorMessage = null)
+            viewModel.clearErrorMessage()
         }
     }
     LaunchedEffect(uiState.successMessage) {
         uiState.successMessage?.let {
             snackbarHostState.showSnackbar(it)
-            viewModel.updateUiState(successMessage = null)
+            viewModel.clearSuccessMessage()
         }
     }
 
@@ -156,6 +156,7 @@ private fun MapScreenEffects(
     }
 }
 
+@Stable
 private data class MapScreenViewState(
     val currentPhase: PhaseDefinition?,
     val allFeatures: List<NarsFeature>,
@@ -167,6 +168,7 @@ private data class MapScreenViewState(
     val featureCounts: Map<String, Int>,
 )
 
+@Stable
 private class MapScreenCallbacks(
     val onNavigateToSettings: () -> Unit,
     val onLogout: () -> Unit,
@@ -181,7 +183,6 @@ private fun MapScreenScaffold(
     state: MapScreenViewState,
     callbacks: MapScreenCallbacks,
     snackbarHostState: SnackbarHostState,
-    scope: CoroutineScope,
 ) {
     var showFeatureModal by remember { mutableStateOf(false) }
     var editingFeature by remember { mutableStateOf<NarsFeature?>(null) }
@@ -190,7 +191,6 @@ private fun MapScreenScaffold(
         state = state,
         callbacks = callbacks,
         snackbarHostState = snackbarHostState,
-        scope = scope,
         showFeatureModal = showFeatureModal,
         editingFeature = editingFeature,
         onEditFeature = { feature ->
@@ -304,7 +304,6 @@ private fun MapScreenBody(
     state: MapScreenViewState,
     callbacks: MapScreenCallbacks,
     snackbarHostState: SnackbarHostState,
-    scope: CoroutineScope,
     showFeatureModal: Boolean,
     editingFeature: NarsFeature?,
     onEditFeature: (NarsFeature) -> Unit,
@@ -329,7 +328,6 @@ private fun MapScreenBody(
             state = state,
             callbacks = callbacks,
             snackbarHostState = snackbarHostState,
-            scope = scope,
             showFeatureModal = showFeatureModal,
             editingFeature = editingFeature,
             onEditFeature = onEditFeature,
@@ -347,7 +345,6 @@ private fun MapScreenBoxContent(
     state: MapScreenViewState,
     callbacks: MapScreenCallbacks,
     snackbarHostState: SnackbarHostState,
-    scope: CoroutineScope,
     showFeatureModal: Boolean,
     editingFeature: NarsFeature?,
     onEditFeature: (NarsFeature) -> Unit,
@@ -379,7 +376,6 @@ private fun MapScreenBoxContent(
             baseLayer = state.baseLayer,
             viewModel = callbacks.viewModel,
             snackbarHostState = snackbarHostState,
-            scope = scope,
         )
         MapScreenCompactInfo(
             modifier = Modifier.align(Alignment.BottomStart),
@@ -440,7 +436,6 @@ private fun MapScreenSidePanelWrapper(
     baseLayer: BaseLayerType,
     viewModel: MapViewModel,
     snackbarHostState: SnackbarHostState,
-    scope: CoroutineScope,
 ) {
     Box(modifier = modifier.padding(end = 12.dp)) {
         MapScreenSidePanel(
@@ -449,7 +444,6 @@ private fun MapScreenSidePanelWrapper(
             baseLayer = baseLayer,
             viewModel = viewModel,
             snackbarHostState = snackbarHostState,
-            scope = scope,
         )
     }
 }
@@ -530,8 +524,8 @@ private fun MapScreenSidePanel(
     baseLayer: BaseLayerType,
     viewModel: MapViewModel,
     snackbarHostState: SnackbarHostState,
-    scope: CoroutineScope,
 ) {
+    val scope = rememberCoroutineScope()
     val phaseChangedText = stringResource(R.string.map_phase_changed)
     val cannotAdvanceText = stringResource(R.string.map_cannot_advance)
     Column(

@@ -1,7 +1,7 @@
 package com.nars.maplibre.ui.components
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
+import androidx.compose.material3.IconButton
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -51,6 +51,8 @@ fun FeatureValidationModal(
     onSave: (NarsFeature) -> Unit,
     onDismiss: () -> Unit,
 ) {
+    // Re-lookup feature by ID at save time to avoid stale base if feature was
+    // updated externally (e.g. server push) while the dialog was open.
     var props by remember { mutableStateOf(feature.properties) }
     var validationErrors by remember { mutableStateOf<Map<String, Int>>(emptyMap()) }
 
@@ -93,7 +95,6 @@ fun FeatureValidationModal(
                         val result = validateFeatureProperties(props)
                         if (result.valid) {
                             onSave(feature.copy(properties = props))
-                            onDismiss()
                         } else {
                             validationErrors = result.errors
                         }
@@ -122,11 +123,9 @@ private fun FeatureModalHeader(phase: PhaseDefinition, onDismiss: () -> Unit) {
             fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.onSurface,
         )
-        Box(
-            modifier = Modifier.size(32.dp).clip(RoundedCornerShape(8.dp))
-                .background(MaterialTheme.colorScheme.surfaceVariant)
-                .clickable { onDismiss() },
-            contentAlignment = Alignment.Center,
+        IconButton(
+            onClick = onDismiss,
+            modifier = Modifier.size(32.dp),
         ) {
             Icon(
                 Icons.Default.Close,

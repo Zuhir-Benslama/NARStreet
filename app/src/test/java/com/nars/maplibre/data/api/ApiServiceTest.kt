@@ -99,7 +99,7 @@ class ApiServiceTest {
         val result = apiService.login("testuser", "password")
 
         assertTrue(result.isSuccess)
-        assertEquals("test123", apiService.getCookie())
+        assertEquals("test123", apiService.getSessionToken())
     }
 
     @Test
@@ -131,15 +131,9 @@ class ApiServiceTest {
     }
 
     @Test
-    fun `setAuthToken and getAuthToken round trip`() {
-        apiService.setAuthToken("token123")
-        assertEquals("token123", apiService.getAuthToken())
-    }
-
-    @Test
-    fun `setCookie and getCookie round trip`() {
-        apiService.setCookie("cookie123")
-        assertEquals("cookie123", apiService.getCookie())
+    fun `setSessionToken and getSessionToken round trip`() {
+        apiService.setSessionToken("token123")
+        assertEquals("token123", apiService.getSessionToken())
     }
 
     @Test

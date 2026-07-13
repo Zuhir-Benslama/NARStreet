@@ -32,8 +32,7 @@ class SessionManagerTest {
         val loginResponse = LoginResponse(user = user, token = "token123")
 
         coEvery { apiService.login("testuser", "pass123") } returns Result.success(loginResponse)
-        coEvery { apiService.getCookie() } returns "cookie123"
-        every { apiService.setAuthToken(any()) } just runs
+        coEvery { apiService.getSessionToken() } returns "cookie123"
         every { appPreferences.authToken = any() } just runs
         every { appPreferences.sessionCookie = any() } just runs
         every { appPreferences.user = any() } just runs
@@ -64,8 +63,7 @@ class SessionManagerTest {
         every { appPreferences.sessionCookie = null } just runs
         every { appPreferences.user = null } just runs
         every { appPreferences.municipalityName = null } just runs
-        every { apiService.setAuthToken(null) } just runs
-        every { apiService.setCookie(null) } just runs
+        every { apiService.setSessionToken(null) } just runs
 
         sessionManager.logout()
 
@@ -73,8 +71,7 @@ class SessionManagerTest {
         verify { appPreferences.sessionCookie = null }
         verify { appPreferences.user = null }
         verify { appPreferences.municipalityName = null }
-        verify { apiService.setAuthToken(null) }
-        verify { apiService.setCookie(null) }
+        verify { apiService.setSessionToken(null) }
     }
 
     @Test

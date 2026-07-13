@@ -8,12 +8,16 @@ import com.geoman.maplibre.geoman.types.geojson.LineString
 import com.geoman.maplibre.geoman.types.geojson.LngLat
 import com.geoman.maplibre.geoman.types.geojson.Point
 import com.geoman.maplibre.geoman.types.geojson.Polygon
+import com.geoman.maplibre.geoman.types.geojson.MultiPolygon
 import com.nars.maplibre.data.model.CircleGeometry
 import com.nars.maplibre.data.model.LineStringGeometry
 import com.nars.maplibre.data.model.NarsFeature
 import com.nars.maplibre.data.model.PointGeometry
 import com.nars.maplibre.data.model.PolygonGeometry
+import com.nars.maplibre.utils.GeometryUtils
 import com.nars.maplibre.utils.NarsLogger
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.add
 import kotlinx.serialization.json.buildJsonArray
 import kotlinx.serialization.json.buildJsonObject
@@ -28,8 +32,26 @@ class GeometryConverter {
     companion object {
         private const val TAG = "GeometryConverter"
         private const val CIRCLE_APPROXIMATION_SEGMENTS = 32
-        private const val EARTH_RADIUS_METERS = 6378137.0
         private const val DEGREES_IN_CIRCLE = 360.0
+
+        fun extractGeometryFromGeoJson(
+            geometry: com.geoman.maplibre.geoman.types.geojson.Geometry?,
+        ): com.nars.maplibre.data.model.Geometry? {
+            if (geometry == null) return null
+            return when (geometry) {
+                is Point -> PointGeometry(coordinates = listOf(geometry.coordinates[0], geometry.coordinates[1]))
+                is LineString -> LineStringGeometry(coordinates = geometry.coordinates.flatMap { listOf(it[0], it[1]) })
+                is Polygon -> {
+                    val ring = geometry.coordinates.firstOrNull() ?: return null
+                    PolygonGeometry(coordinates = ring.flatMap { listOf(it[0], it[1]) })
+                }
+                is MultiPolygon -> {
+                    val ring = geometry.coordinates.firstOrNull()?.firstOrNull() ?: return null
+                    PolygonGeometry(coordinates = ring.flatMap { listOf(it[0], it[1]) })
+                }
+                else -> null
+            }
+        }
     }
 
     /**
@@ -71,6 +93,7 @@ class GeometryConverter {
         }
 
         is CircleGeometry -> {
+            // Circle becomes Point for Geoman; radius preserved in NarsFeature.geometry.coordinates[2]
             Point.fromLngLat(LngLat(geometry.coordinates[0], geometry.coordinates[1]))
         }
     }
@@ -80,16 +103,9 @@ class GeometryConverter {
      */
     fun convertToGeomanFeatureData(narsFeature: NarsFeature): FeatureData {
         val geoJsonFeature = convertToGeoJson(narsFeature)
-        val sourceName =
-            when (narsFeature.geometry) {
-                is PointGeometry -> GeomanCoreConstants.SOURCE_MARKERS
-                is LineStringGeometry -> GeomanCoreConstants.SOURCE_LINES
-                is PolygonGeometry -> GeomanCoreConstants.SOURCE_POLYGONS
-                is CircleGeometry -> GeomanCoreConstants.SOURCE_CIRCLES
-            }
         return FeatureData(
             id = narsFeature.id,
-            sourceName = sourceName,
+            sourceName = getSourceNameForGeometry(narsFeature.geometry),
             feature = geoJsonFeature,
             properties = mutableMapOf(),
         )
@@ -106,9 +122,11 @@ class GeometryConverter {
     }
 
     /**
-     * Convert GeoJSON geometry to JSON string
+     * Convert GeoJSON geometry to JsonObject (avoids string roundtrip)
      */
-    fun geometryToJson(geometry: com.geoman.maplibre.geoman.types.geojson.Geometry): String = buildJsonObject {
+    fun geometryToJsonElement(
+        geometry: com.geoman.maplibre.geoman.types.geojson.Geometry,
+    ): JsonObject = buildJsonObject {
         when (geometry) {
             is Point -> {
                 put("type", "Point")
@@ -158,7 +176,7 @@ class GeometryConverter {
                 }
             }
         }
-    }.toString()
+    }
 
     private fun coordinatesToLngLats(coords: List<Double>): List<LngLat> = coords
         .chunked(2)
@@ -206,7 +224,7 @@ class GeometryConverter {
      */
     fun buildCircleGeoJson(centerLng: Double, centerLat: Double, radiusMeters: Double): String {
         val segments = CIRCLE_APPROXIMATION_SEGMENTS
-        val earthRadius = EARTH_RADIUS_METERS
+        val earthRadius = GeometryUtils.EARTH_RADIUS_METERS
         val radiusDegrees = Math.toDegrees(radiusMeters / earthRadius)
 
         val ring =
@@ -243,4 +261,25 @@ class GeometryConverter {
             putJsonObject("properties") { }
         }.toString()
     }
+
+    /**
+     * Build a GeoJSON Feature string from a Geoman Feature, with optional properties.
+     */
+    fun buildFeatureGeoJson(
+        feature: Feature,
+        properties: Map<String, Any?>? = feature.properties,
+    ): String = buildJsonObject {
+        put("type", "Feature")
+        put("id", feature.id ?: "")
+        put("geometry", geometryToJsonElement(feature.geometry))
+        putJsonObject("properties") {
+            val mutableProps = properties?.toMutableMap() ?: mutableMapOf()
+            if (mutableProps.containsKey("name") && !mutableProps.containsKey("label")) {
+                mutableProps["label"] = mutableProps["name"]
+            }
+            mutableProps.forEach { (key, value) ->
+                put(key, value?.toString() ?: "")
+            }
+        }
+    }.toString()
 }

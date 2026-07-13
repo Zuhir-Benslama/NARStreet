@@ -173,7 +173,7 @@ private fun CompactPhaseCounts(featureCounts: Map<String, Int>) {
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceEvenly,
     ) {
-        Phases.ALL.take(4).forEach { phase ->
+        Phases.ALL.forEach { phase ->
             val count = featureCounts[phase.key] ?: 0
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Text(
