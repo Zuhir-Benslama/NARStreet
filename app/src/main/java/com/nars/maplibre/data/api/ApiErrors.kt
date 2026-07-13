@@ -122,8 +122,7 @@ data class RetryConfig(
     val jitterFactor: Double = 0.2,
 )
 
-private fun Throwable.isNonRetryable(): Boolean =
-    this is AuthError || this is ValidationError || this is NotFoundError
+private fun Throwable.isNonRetryable(): Boolean = this is AuthError || this is ValidationError || this is NotFoundError
 
 /**
  * Calculate backoff delay with exponential backoff and jitter

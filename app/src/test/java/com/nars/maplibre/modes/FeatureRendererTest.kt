@@ -52,7 +52,13 @@ class FeatureRendererTest {
         every { geometryConverter.convertToGeoJson(any()) } returns mockGeoJsonFeature
         every { geometryConverter.geometryToJsonElement(any()) } returns buildJsonObject {
             put("type", JsonPrimitive("Point"))
-            put("coordinates", buildJsonArray { add(JsonPrimitive(0.0)); add(JsonPrimitive(0.0)) })
+            put(
+                "coordinates",
+                buildJsonArray {
+                    add(JsonPrimitive(0.0))
+                    add(JsonPrimitive(0.0))
+                },
+            )
         }
 
         renderer = FeatureRenderer(mockk(relaxed = true))

@@ -104,9 +104,15 @@ fun LoginScreen(onLoginSuccess: () -> Unit, modifier: Modifier = Modifier) {
     ) {
         LoginForm(
             username = username,
-            onUsernameChange = { username = it; errorMessage = null },
+            onUsernameChange = {
+                username = it
+                errorMessage = null
+            },
             password = password,
-            onPasswordChange = { password = it; errorMessage = null },
+            onPasswordChange = {
+                password = it
+                errorMessage = null
+            },
             isLoading = isLoading,
             errorMessage = errorMessage,
             onLogin = { performLogin() },

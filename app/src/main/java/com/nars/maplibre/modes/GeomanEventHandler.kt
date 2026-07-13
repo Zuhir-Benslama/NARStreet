@@ -31,7 +31,9 @@ class GeomanEventHandler(
     }
 
     @Volatile private var currentPhase: PhaseDefinition? = null
+
     @Volatile private var editingFeatureId: String? = null
+
     @Volatile private var editingFeature: NarsFeature? = null
 
     fun setCurrentPhase(phase: PhaseDefinition) {

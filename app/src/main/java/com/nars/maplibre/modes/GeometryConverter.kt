@@ -6,9 +6,9 @@ import com.geoman.maplibre.geoman.types.geojson.Feature
 import com.geoman.maplibre.geoman.types.geojson.Geometry
 import com.geoman.maplibre.geoman.types.geojson.LineString
 import com.geoman.maplibre.geoman.types.geojson.LngLat
+import com.geoman.maplibre.geoman.types.geojson.MultiPolygon
 import com.geoman.maplibre.geoman.types.geojson.Point
 import com.geoman.maplibre.geoman.types.geojson.Polygon
-import com.geoman.maplibre.geoman.types.geojson.MultiPolygon
 import com.nars.maplibre.data.model.CircleGeometry
 import com.nars.maplibre.data.model.LineStringGeometry
 import com.nars.maplibre.data.model.NarsFeature
@@ -40,15 +40,19 @@ class GeometryConverter {
             if (geometry == null) return null
             return when (geometry) {
                 is Point -> PointGeometry(coordinates = listOf(geometry.coordinates[0], geometry.coordinates[1]))
+
                 is LineString -> LineStringGeometry(coordinates = geometry.coordinates.flatMap { listOf(it[0], it[1]) })
+
                 is Polygon -> {
                     val ring = geometry.coordinates.firstOrNull() ?: return null
                     PolygonGeometry(coordinates = ring.flatMap { listOf(it[0], it[1]) })
                 }
+
                 is MultiPolygon -> {
                     val ring = geometry.coordinates.firstOrNull()?.firstOrNull() ?: return null
                     PolygonGeometry(coordinates = ring.flatMap { listOf(it[0], it[1]) })
                 }
+
                 else -> null
             }
         }
@@ -124,59 +128,58 @@ class GeometryConverter {
     /**
      * Convert GeoJSON geometry to JsonObject (avoids string roundtrip)
      */
-    fun geometryToJsonElement(
-        geometry: com.geoman.maplibre.geoman.types.geojson.Geometry,
-    ): JsonObject = buildJsonObject {
-        when (geometry) {
-            is Point -> {
-                put("type", "Point")
-                putJsonArray("coordinates") {
-                    add(geometry.coordinates[0])
-                    add(geometry.coordinates[1])
-                }
-            }
-
-            is LineString -> {
-                put("type", "LineString")
-                putJsonArray("coordinates") {
-                    for (coord in geometry.coordinates) {
-                        add(
-                            buildJsonArray {
-                                coord.forEach { add(it) }
-                            },
-                        )
+    fun geometryToJsonElement(geometry: com.geoman.maplibre.geoman.types.geojson.Geometry): JsonObject =
+        buildJsonObject {
+            when (geometry) {
+                is Point -> {
+                    put("type", "Point")
+                    putJsonArray("coordinates") {
+                        add(geometry.coordinates[0])
+                        add(geometry.coordinates[1])
                     }
                 }
-            }
 
-            is Polygon -> {
-                put("type", "Polygon")
-                putJsonArray("coordinates") {
-                    for (ring in geometry.coordinates) {
-                        add(
-                            buildJsonArray {
-                                for (coord in ring) {
-                                    add(
-                                        buildJsonArray {
-                                            coord.forEach { add(it) }
-                                        },
-                                    )
-                                }
-                            },
-                        )
+                is LineString -> {
+                    put("type", "LineString")
+                    putJsonArray("coordinates") {
+                        for (coord in geometry.coordinates) {
+                            add(
+                                buildJsonArray {
+                                    coord.forEach { add(it) }
+                                },
+                            )
+                        }
                     }
                 }
-            }
 
-            else -> {
-                put("type", "Point")
-                putJsonArray("coordinates") {
-                    add(0.0)
-                    add(0.0)
+                is Polygon -> {
+                    put("type", "Polygon")
+                    putJsonArray("coordinates") {
+                        for (ring in geometry.coordinates) {
+                            add(
+                                buildJsonArray {
+                                    for (coord in ring) {
+                                        add(
+                                            buildJsonArray {
+                                                coord.forEach { add(it) }
+                                            },
+                                        )
+                                    }
+                                },
+                            )
+                        }
+                    }
+                }
+
+                else -> {
+                    put("type", "Point")
+                    putJsonArray("coordinates") {
+                        add(0.0)
+                        add(0.0)
+                    }
                 }
             }
         }
-    }
 
     private fun coordinatesToLngLats(coords: List<Double>): List<LngLat> = coords
         .chunked(2)
@@ -265,21 +268,19 @@ class GeometryConverter {
     /**
      * Build a GeoJSON Feature string from a Geoman Feature, with optional properties.
      */
-    fun buildFeatureGeoJson(
-        feature: Feature,
-        properties: Map<String, Any?>? = feature.properties,
-    ): String = buildJsonObject {
-        put("type", "Feature")
-        put("id", feature.id ?: "")
-        put("geometry", geometryToJsonElement(feature.geometry))
-        putJsonObject("properties") {
-            val mutableProps = properties?.toMutableMap() ?: mutableMapOf()
-            if (mutableProps.containsKey("name") && !mutableProps.containsKey("label")) {
-                mutableProps["label"] = mutableProps["name"]
+    fun buildFeatureGeoJson(feature: Feature, properties: Map<String, Any?>? = feature.properties): String =
+        buildJsonObject {
+            put("type", "Feature")
+            put("id", feature.id ?: "")
+            put("geometry", geometryToJsonElement(feature.geometry))
+            putJsonObject("properties") {
+                val mutableProps = properties?.toMutableMap() ?: mutableMapOf()
+                if (mutableProps.containsKey("name") && !mutableProps.containsKey("label")) {
+                    mutableProps["label"] = mutableProps["name"]
+                }
+                mutableProps.forEach { (key, value) ->
+                    put(key, value?.toString() ?: "")
+                }
             }
-            mutableProps.forEach { (key, value) ->
-                put(key, value?.toString() ?: "")
-            }
-        }
-    }.toString()
+        }.toString()
 }
