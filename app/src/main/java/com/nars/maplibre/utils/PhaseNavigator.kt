@@ -36,17 +36,9 @@ class PhaseNavigator(private val featureStore: FeatureStoreInterface) {
     }
 
     /**
-     * Check road coverage - at least one road must exist
+     * Check if at least one road exists
      */
-    fun checkRoadCoverage(): CoverageResult {
-        val roads = featureStore.getFeaturesByPhase(Phases.ROADS_KEY)
-
-        if (roads.isEmpty()) {
-            return CoverageResult(false, "No roads defined")
-        }
-
-        return CoverageResult(true, "OK")
-    }
+    fun hasAnyRoads(): Boolean = featureStore.getFeaturesByPhase(Phases.ROADS_KEY).isNotEmpty()
 
     /**
      * Try to navigate to target phase
@@ -110,8 +102,3 @@ class PhaseNavigator(private val featureStore: FeatureStoreInterface) {
         return phase
     }
 }
-
-/**
- * Coverage validation result
- */
-data class CoverageResult(val covered: Boolean, val message: String)

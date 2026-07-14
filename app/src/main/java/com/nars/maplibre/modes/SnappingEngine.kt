@@ -8,8 +8,11 @@ import com.nars.maplibre.data.model.PolygonGeometry
 import com.nars.maplibre.utils.GeometryUtils
 import com.nars.maplibre.utils.NarsLogger
 import org.maplibre.android.geometry.LatLng
+import kotlin.math.acos
+import kotlin.math.atan2
 import kotlin.math.cos
 import kotlin.math.roundToInt
+import kotlin.math.sin
 
 class SnappingEngine {
     companion object {
@@ -140,12 +143,12 @@ class SnappingEngine {
         val bearingAC = bearingDeg(p1, point)
 
         val angularDistAC = d1 / GeometryUtils.EARTH_RADIUS_METERS
-        val crossTrack = Math.asin(
-            (Math.sin(angularDistAC) * Math.sin(Math.toRadians(bearingAC - bearingAB)))
+        val crossTrack = sin(
+            (sin(angularDistAC) * sin(Math.toRadians(bearingAC - bearingAB)))
                 .coerceIn(-1.0, 1.0),
         )
-        val alongTrack = Math.acos(
-            (Math.cos(angularDistAC) / Math.cos(crossTrack)).coerceIn(-1.0, 1.0),
+        val alongTrack = acos(
+            (cos(angularDistAC) / cos(crossTrack)).coerceIn(-1.0, 1.0),
         )
         val fraction = (alongTrack / (segLength / GeometryUtils.EARTH_RADIUS_METERS)).coerceIn(0.0, 1.0)
 
@@ -156,9 +159,9 @@ class SnappingEngine {
         val dLng = Math.toRadians(to.longitude - from.longitude)
         val lat1 = Math.toRadians(from.latitude)
         val lat2 = Math.toRadians(to.latitude)
-        val y = Math.sin(dLng) * Math.cos(lat2)
-        val x = Math.cos(lat1) * Math.sin(lat2) - Math.sin(lat1) * Math.cos(lat2) * Math.cos(dLng)
-        return (Math.toDegrees(Math.atan2(y, x)) + 360.0) % 360.0
+        val y = sin(dLng) * cos(lat2)
+        val x = cos(lat1) * sin(lat2) - sin(lat1) * cos(lat2) * cos(dLng)
+        return (Math.toDegrees(atan2(y, x)) + 360.0) % 360.0
     }
 
     private fun interpolateBearing(from: LatLng, bearingDeg: Double, distanceMeters: Double): LatLng {
@@ -167,16 +170,16 @@ class SnappingEngine {
         val lng1 = Math.toRadians(from.longitude)
         val brng = Math.toRadians(bearingDeg)
 
-        val lat2 = Math.asin(
+        val lat2 = sin(
             (
-                Math.sin(lat1) * Math.cos(angularDist) +
-                    Math.cos(lat1) * Math.sin(angularDist) * Math.cos(brng)
+                sin(lat1) * cos(angularDist) +
+                    cos(lat1) * sin(angularDist) * cos(brng)
                 )
                 .coerceIn(-1.0, 1.0),
         )
-        val lng2 = lng1 + Math.atan2(
-            Math.sin(brng) * Math.sin(angularDist) * Math.cos(lat1),
-            Math.cos(angularDist) - Math.sin(lat1) * Math.sin(lat2),
+        val lng2 = lng1 + atan2(
+            sin(brng) * sin(angularDist) * cos(lat1),
+            cos(angularDist) - sin(lat1) * sin(lat2),
         )
         return LatLng(Math.toDegrees(lat2), Math.toDegrees(lng2))
     }

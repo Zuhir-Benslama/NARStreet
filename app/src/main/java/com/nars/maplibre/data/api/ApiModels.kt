@@ -33,11 +33,12 @@ data class ApiFeatureResponse(
 ) {
     fun toNarsFeature(): NarsFeature? {
         val featureType = NarsFeatureType.fromValue(type)
+        val modelGeometry = geometry.toModelGeometry() ?: return null
         return NarsFeature(
             id = id,
             dbId = dbId,
             type = featureType,
-            geometry = geometry.toModelGeometry(),
+            geometry = modelGeometry,
             properties = properties.toFeatureProperties(featureType),
             createdAt = createdAt,
             updatedAt = updatedAt,
@@ -68,10 +69,7 @@ data class ApiGeometryResponse(val type: String, val coordinates: List<Double>) 
                 .CircleGeometry(type, coordinates)
         }
 
-        else -> {
-            com.nars.maplibre.data.model
-                .PointGeometry(type, coordinates)
-        }
+        else -> null
     }
 }
 

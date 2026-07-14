@@ -88,6 +88,6 @@ val appModule =
 
         single { SessionManager(get(), get()) }
 
-        viewModel { MapViewModel(androidContext().applicationContext as android.app.Application, get(), get(), get()) }
+        viewModel { MapViewModel(get(), get(), get(), get()) }
         viewModel { SettingsViewModel(get()) }
     }

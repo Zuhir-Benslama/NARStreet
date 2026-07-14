@@ -40,6 +40,7 @@ import com.nars.maplibre.R
 import com.nars.maplibre.data.model.FeatureProperties
 import com.nars.maplibre.data.model.NarsFeature
 import com.nars.maplibre.data.model.PhaseDefinition
+import com.nars.maplibre.data.model.Phases
 import com.nars.maplibre.ui.theme.GlassBackground
 import com.nars.maplibre.utils.formatDecimal
 import com.nars.maplibre.utils.validateFeatureProperties
@@ -114,9 +115,9 @@ private fun FeatureModalHeader(phase: PhaseDefinition, onDismiss: () -> Unit) {
     ) {
         Text(
             text = when (phase.key) {
-                "roads" -> stringResource(R.string.feature_road_attributes)
-                "houseEntrances" -> stringResource(R.string.feature_entrance_check)
-                "namingPanels" -> stringResource(R.string.feature_panel_check)
+                Phases.ROADS_KEY -> stringResource(R.string.feature_road_attributes)
+                Phases.HOUSE_ENTRANCES_KEY -> stringResource(R.string.feature_entrance_check)
+                Phases.NAMING_PANELS_KEY -> stringResource(R.string.feature_panel_check)
                 else -> stringResource(R.string.feature_details)
             },
             fontSize = 18.sp,

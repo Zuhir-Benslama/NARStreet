@@ -23,6 +23,7 @@ import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.filled.BrightnessAuto
 import androidx.compose.material.icons.filled.BrightnessHigh
 import androidx.compose.material.icons.filled.BrightnessLow
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
@@ -105,7 +106,7 @@ fun SettingsScreen(onNavigateBack: () -> Unit, onLogout: () -> Unit) {
 
                 SettingsSection(
                     title = stringResource(R.string.settings_about),
-                    icon = Icons.Default.Palette,
+                    icon = Icons.Default.Info,
                 ) {
                     SettingsAboutContent(onLogout = onLogout)
                 }
@@ -199,7 +200,7 @@ private fun SettingsLogoutButton(onLogout: () -> Unit) {
         AlertDialog(
             onDismissRequest = { showConfirm = false },
             title = { Text(stringResource(R.string.settings_logout)) },
-            text = { Text("Are you sure you want to log out?") },
+            text = { Text(stringResource(R.string.settings_logout_confirm)) },
             confirmButton = {
                 TextButton(onClick = {
                     showConfirm = false
@@ -210,7 +211,7 @@ private fun SettingsLogoutButton(onLogout: () -> Unit) {
             },
             dismissButton = {
                 TextButton(onClick = { showConfirm = false }) {
-                    Text("Cancel")
+                    Text(stringResource(R.string.action_cancel))
                 }
             },
         )

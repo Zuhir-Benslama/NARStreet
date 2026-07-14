@@ -104,7 +104,7 @@ class FeatureDisplayManager(
             }
         }
 
-        val safeId = featureId.replace(Regex("[^a-zA-Z0-9_]"), "_")
+        val safeId = featureId.replace(SAFE_ID_REGEX, "_")
         val layerName = "nars_layer_$safeId"
         val layerNames =
             listOf(

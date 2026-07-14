@@ -3,8 +3,6 @@ package com.nars.maplibre.utils
 import com.nars.maplibre.BuildConfig
 
 object Config {
-    val API_BASE_URL: String = BuildConfig.API_BASE_URL
-
     const val API_DEFAULT_TIMEOUT_MS = 15000
 
     const val API_CONNECT_TIMEOUT_MS = 10000

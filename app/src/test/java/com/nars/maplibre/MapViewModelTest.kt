@@ -13,7 +13,9 @@ import com.nars.maplibre.data.model.Phases
 import com.nars.maplibre.data.model.PointGeometry
 import com.nars.maplibre.data.store.FeatureStoreInterface
 import com.nars.maplibre.data.store.UndoAction
+import io.mockk.Runs
 import io.mockk.every
+import io.mockk.just
 import io.mockk.mockk
 import io.mockk.unmockkAll
 import io.mockk.verify
@@ -79,9 +81,10 @@ class MapViewModelTest {
     }
 
     @Test
-    fun `init sets first phase`() {
+    fun `init does not override FeatureStore default phase`() {
         createViewModel()
-        verify { featureStore.setCurrentPhase(Phases.ALL.first()) }
+        // FeatureStore.init sets first phase; MapViewModel no longer duplicates it
+        verify(exactly = 0) { featureStore.setCurrentPhase(match { true }) }
     }
 
     @Test

@@ -205,7 +205,7 @@ private fun LoginCredentialsForm(
         leadingIcon = {
             Icon(
                 Icons.Default.Person,
-                contentDescription = "Person",
+                contentDescription = stringResource(R.string.login_username_icon),
                 tint = Color.White.copy(alpha = 0.6f),
             )
         },
@@ -224,7 +224,7 @@ private fun LoginCredentialsForm(
         leadingIcon = {
             Icon(
                 Icons.Default.Lock,
-                contentDescription = "Lock",
+                contentDescription = stringResource(R.string.login_password_icon),
                 tint = Color.White.copy(alpha = 0.6f),
             )
         },

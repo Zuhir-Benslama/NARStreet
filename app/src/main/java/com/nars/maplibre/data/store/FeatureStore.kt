@@ -70,7 +70,7 @@ class FeatureStore : FeatureStoreInterface {
     override fun updateFeature(featureId: String, updatedFeature: NarsFeature) = lock.withLock {
         withPhaseMap { map ->
             for (phase in map.keys) {
-                map[phase] = map[phase]!!.map { if (it.id == featureId) updatedFeature else it }
+                map[phase] = map[phase].orEmpty().map { if (it.id == featureId) updatedFeature else it }
             }
         }
         _allFeatures.value = _allFeatures.value.map { if (it.id == featureId) updatedFeature else it }

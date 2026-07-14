@@ -285,25 +285,21 @@ class PhaseNavigatorTest {
         assertEquals(Phases.ALL[1], store.currentPhase.value)
     }
 
-    // ── checkRoadCoverage ──────────────────────────────────────────────────
+    // ── hasAnyRoads ─────────────────────────────────────────────────────
 
     @Test
-    fun `checkRoadCoverage returns uncovered when no roads`() {
+    fun `hasAnyRoads returns false when no roads`() {
         val store = FeatureStore()
         val navigator = PhaseNavigator(store)
-        val result = navigator.checkRoadCoverage()
-        assertFalse(result.covered)
-        assertEquals("No roads defined", result.message)
+        assertFalse(navigator.hasAnyRoads())
     }
 
     @Test
-    fun `checkRoadCoverage returns covered when roads exist`() {
+    fun `hasAnyRoads returns true when roads exist`() {
         val store = FeatureStore()
         val navigator = PhaseNavigator(store)
         store.addFeature(createRoad("r1"))
-        val result = navigator.checkRoadCoverage()
-        assertTrue(result.covered)
-        assertEquals("OK", result.message)
+        assertTrue(navigator.hasAnyRoads())
     }
 
     // ── Edge cases ─────────────────────────────────────────────────────────

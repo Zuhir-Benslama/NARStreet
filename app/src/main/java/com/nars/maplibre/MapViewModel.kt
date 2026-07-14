@@ -53,7 +53,6 @@ class MapViewModel(
     val canUndo: StateFlow<Boolean> = _canUndo.asStateFlow()
 
     init {
-        featureStore.setCurrentPhase(Phases.ALL.first())
         viewModelScope.launch {
             featureStore.currentPhase.collect { phase ->
                 phase?.let {
@@ -209,6 +208,4 @@ data class UiState(
     val isLoading: Boolean = false,
     val errorMessage: String? = null,
     val successMessage: String? = null,
-    val showSettings: Boolean = false,
-    val showFeatureModal: Boolean = false,
 )

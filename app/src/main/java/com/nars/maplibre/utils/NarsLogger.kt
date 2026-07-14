@@ -17,12 +17,7 @@ object NarsLogger {
      * Enable/disable logging
      * In production, automatically disabled
      */
-    val isEnabled: Boolean =
-        try {
-            com.nars.maplibre.BuildConfig.DEBUG
-        } catch (_: Exception) {
-            true
-        }
+    val isEnabled: Boolean = com.nars.maplibre.BuildConfig.DEBUG
 
     /**
      * Verbose logging - most detailed, disabled in production
