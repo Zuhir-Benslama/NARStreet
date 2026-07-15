@@ -55,12 +55,11 @@ val appModule =
                     json(
                         Json {
                             ignoreUnknownKeys = true
-                            isLenient = true
                         },
                     )
                 }
                 install(Logging) {
-                    level = if (BuildConfig.DEBUG) LogLevel.ALL else LogLevel.BODY
+                    level = if (BuildConfig.DEBUG) LogLevel.ALL else LogLevel.NONE
                     logger = object : io.ktor.client.plugins.logging.Logger {
                         override fun log(message: String) {
                             Timber.d("KtorClient: %s", message)

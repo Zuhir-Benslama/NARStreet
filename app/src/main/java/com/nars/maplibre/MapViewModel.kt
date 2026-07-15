@@ -97,8 +97,8 @@ class MapViewModel(
     fun setReferenceRoad(dbId: String?) = featureStore.setReferenceRoad(dbId)
 
     fun undo(): Boolean {
-        val action = featureStore.undoManager.executeUndo()
-        _canUndo.value = featureStore.undoManager.canUndo
+        val action = featureStore.executeUndo()
+        _canUndo.value = featureStore.canUndo
         val app = getApplication<Application>()
         if (action == null) {
             updateUiState(errorMessage = app.getString(R.string.map_nothing_undo))
@@ -125,19 +125,19 @@ class MapViewModel(
 
     fun addFeature(feature: NarsFeature) {
         featureStore.addFeature(feature, recordUndo = true)
-        _canUndo.value = featureStore.undoManager.canUndo
+        _canUndo.value = featureStore.canUndo
     }
 
     fun addFeatures(features: List<NarsFeature>) {
         featureStore.addFeatures(features)
-        _canUndo.value = featureStore.undoManager.canUndo
+        _canUndo.value = featureStore.canUndo
     }
 
     fun updateFeature(feature: NarsFeature) {
         val oldFeature = featureStore.getFeatureById(feature.id)
         featureStore.updateFeature(feature.id, feature)
         oldFeature?.let {
-            featureStore.undoManager.addUndoAction(
+            featureStore.addUndoAction(
                 UndoAction.Update(
                     oldFeature = it,
                     newFeature = feature,
@@ -145,21 +145,21 @@ class MapViewModel(
                 ),
             )
         }
-        _canUndo.value = featureStore.undoManager.canUndo
+        _canUndo.value = featureStore.canUndo
     }
 
     fun deleteFeature(featureId: String) {
         val feature = featureStore.getFeatureById(featureId)
-        if (feature != null) {
-            featureStore.undoManager.addUndoAction(
+        feature?.let {
+            featureStore.addUndoAction(
                 UndoAction.Delete(
-                    feature = feature,
-                    phaseKey = feature.properties.phase,
+                    feature = it,
+                    phaseKey = it.properties.phase,
                 ),
             )
         }
         featureStore.removeFeature(featureId)
-        _canUndo.value = featureStore.undoManager.canUndo
+        _canUndo.value = featureStore.canUndo
     }
 
     val selectedFeatureId: StateFlow<String?> =

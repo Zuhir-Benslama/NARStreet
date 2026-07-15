@@ -34,12 +34,6 @@ data class User(
 }
 
 /**
- * Login request
- */
-@Serializable
-data class LoginRequest(val username: String, val password: String)
-
-/**
  * Login response
  */
 @Serializable

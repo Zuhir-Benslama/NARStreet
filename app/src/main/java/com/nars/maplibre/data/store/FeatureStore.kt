@@ -11,7 +11,7 @@ import kotlin.concurrent.withLock
 
 @Suppress("TooManyFunctions")
 class FeatureStore : FeatureStoreInterface {
-    override val undoManager = UndoManager(this)
+    val undoManager = UndoManager(this)
     private val lock = ReentrantLock()
 
     private val _featuresByPhase = MutableStateFlow<Map<String, List<NarsFeature>>>(emptyMap())
@@ -39,7 +39,7 @@ class FeatureStore : FeatureStoreInterface {
         _currentPhase.value = Phases.ALL.first()
     }
 
-    override fun setCurrentPhase(phase: PhaseDefinition) {
+    override fun setCurrentPhase(phase: PhaseDefinition) = lock.withLock {
         _currentPhase.value = phase
     }
 
@@ -129,6 +129,12 @@ class FeatureStore : FeatureStoreInterface {
     }
 
     override fun getAllRoads(): List<NarsFeature> = _featuresByPhase.value[Phases.ROADS_KEY] ?: emptyList()
+
+    override val canUndo: Boolean get() = undoManager.canUndo
+
+    override fun executeUndo(): UndoAction? = undoManager.executeUndo()
+
+    override fun addUndoAction(action: UndoAction) = undoManager.addUndoAction(action)
 }
 
 data class FeatureCounts(

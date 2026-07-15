@@ -9,8 +9,8 @@ import kotlinx.coroutines.flow.StateFlow
  * Implementations manage in-memory feature state, phase-based organization,
  * and undo history via [undoManager].
  */
+@Suppress("TooManyFunctions")
 interface FeatureStoreInterface {
-    val undoManager: UndoManager
     val featuresByPhase: StateFlow<Map<String, List<NarsFeature>>>
     val allFeatures: StateFlow<List<NarsFeature>>
     val selectedFeature: StateFlow<NarsFeature?>
@@ -46,4 +46,10 @@ interface FeatureStoreInterface {
     fun setReferenceRoad(dbId: String?)
 
     fun getAllRoads(): List<NarsFeature>
+
+    val canUndo: Boolean
+
+    fun executeUndo(): UndoAction?
+
+    fun addUndoAction(action: UndoAction)
 }

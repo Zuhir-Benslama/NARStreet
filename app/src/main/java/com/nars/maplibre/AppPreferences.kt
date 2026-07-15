@@ -32,20 +32,22 @@ class AppPreferences(context: Context) {
     }
 
     var themeMode: ThemeMode
-        get() =
-            runCatching {
-                ThemeMode.valueOf(prefs.getString(KEY_THEME, ThemeMode.AUTO.name) ?: ThemeMode.AUTO.name)
-            }.getOrDefault(ThemeMode.AUTO)
+        get() = try {
+            ThemeMode.valueOf(prefs.getString(KEY_THEME, ThemeMode.AUTO.name) ?: ThemeMode.AUTO.name)
+        } catch (_: IllegalArgumentException) {
+            ThemeMode.AUTO
+        }
         set(value) = prefs.edit { putString(KEY_THEME, value.name) }
 
     var baseLayer: BaseLayerType
-        get() =
-            runCatching {
-                BaseLayerType.valueOf(
-                    prefs.getString(KEY_BASE_LAYER, BaseLayerType.SATELLITE.name)
-                        ?: BaseLayerType.SATELLITE.name,
-                )
-            }.getOrDefault(BaseLayerType.SATELLITE)
+        get() = try {
+            BaseLayerType.valueOf(
+                prefs.getString(KEY_BASE_LAYER, BaseLayerType.SATELLITE.name)
+                    ?: BaseLayerType.SATELLITE.name,
+            )
+        } catch (_: IllegalArgumentException) {
+            BaseLayerType.SATELLITE
+        }
         set(value) = prefs.edit { putString(KEY_BASE_LAYER, value.name) }
 
     var currentPhase: String?

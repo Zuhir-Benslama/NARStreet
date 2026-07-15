@@ -4,6 +4,7 @@ import android.graphics.Color
 import androidx.core.graphics.toColorInt
 import com.nars.maplibre.data.model.LineStringGeometry
 import com.nars.maplibre.data.model.NarsFeature
+import com.nars.maplibre.data.model.Phases
 import com.nars.maplibre.data.model.PolygonGeometry
 import com.nars.maplibre.utils.NarsLogger
 import kotlinx.serialization.json.add
@@ -67,7 +68,7 @@ class LabelAndMarkerManager(private val map: MapLibreMap) {
 
     fun addRoadEndpointMarkers(allFeatures: List<NarsFeature>) {
         allFeatures
-            .filter { it.properties.phase == "roads" }
+            .filter { it.properties.phase == Phases.ROADS_KEY }
             .mapNotNull { road -> (road.geometry as? LineStringGeometry)?.let { road to it } }
             .filter { (_, geometry) -> geometry.coordinates.chunked(2).size >= 2 }
             .forEach { (road, geometry) ->

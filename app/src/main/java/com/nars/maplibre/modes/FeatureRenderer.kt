@@ -17,7 +17,7 @@ import org.maplibre.android.style.layers.SymbolLayer
 import org.maplibre.android.style.sources.GeoJsonSource
 import java.util.Collections
 
-class FeatureRenderer(private val map: MapLibreMap) {
+class FeatureRenderer(internal val map: MapLibreMap) {
     lateinit var labelAndMarkerManager: LabelAndMarkerManager
 
     internal var geoJsonSourceFactory: (name: String, json: String) -> GeoJsonSource =
@@ -33,6 +33,7 @@ class FeatureRenderer(private val map: MapLibreMap) {
     companion object {
         private val sharedGeometryConverter = GeometryConverter()
         private const val TAG = "FeatureRenderer"
+        private const val DEFAULT_FALLBACK_COLOR = "#8e44ad"
         private const val DEFAULT_MARKER_ICON_SIZE = 0.5f
         private const val DEFAULT_CIRCLE_RADIUS_METERS = 50.0
         private const val CIRCLE_FILL_OPACITY = 0f
@@ -156,7 +157,7 @@ class FeatureRenderer(private val map: MapLibreMap) {
 
     private fun getFeatureStyle(phaseKey: String): FeatureStyle {
         val phase = Phases.getByKey(phaseKey)
-        val color = phase?.color ?: "#8e44ad"
+        val color = phase?.color ?: DEFAULT_FALLBACK_COLOR
         val width = if (phaseKey == Phases.ROADS_KEY) STYLE_LINE_WIDTH_THICK else STYLE_LINE_WIDTH_THIN
         return FeatureStyle(color, width)
     }

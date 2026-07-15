@@ -3,7 +3,6 @@ package com.nars.maplibre.data.api
 import com.nars.maplibre.AppPreferences
 import com.nars.maplibre.BuildConfig
 import com.nars.maplibre.data.model.LoginApiResponse
-import com.nars.maplibre.data.model.LoginRequest
 import com.nars.maplibre.data.model.LoginResponse
 import com.nars.maplibre.data.model.NarsFeature
 import com.nars.maplibre.data.model.User
@@ -65,8 +64,6 @@ class ApiService(private val httpClient: HttpClient, private val preferences: Ap
     private fun authHeaders(): Map<String, String> {
         val headers = mutableMapOf<String, String>()
         sessionToken?.let { token ->
-            // Server accepts auth via Cookie (primary) or Bearer header (fallback)
-            headers["Cookie"] = "access_token=$token"
             headers["Authorization"] = "Bearer $token"
         }
         return headers

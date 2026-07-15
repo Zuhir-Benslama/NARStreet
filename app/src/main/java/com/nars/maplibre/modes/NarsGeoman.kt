@@ -12,8 +12,6 @@ import com.nars.maplibre.data.model.PhaseDefinition
 import com.nars.maplibre.utils.Config
 import com.nars.maplibre.utils.NarsLogger
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -49,6 +47,7 @@ class NarsGeoman internal constructor(
             mapView: MapView,
             map: MapLibreMap,
             context: Context,
+            scope: CoroutineScope,
             onFeatureCreated: (NarsFeature) -> Unit,
             onFeatureUpdated: (NarsFeature) -> Unit,
             onFeatureDeleted: (String) -> Unit,
@@ -70,7 +69,6 @@ class NarsGeoman internal constructor(
                 }
             val geometryConverter = GeometryConverter()
             val displayManager = FeatureDisplayManager(geoman, featureRenderer, geometryConverter, map)
-            val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
             val eventHandler =
                 GeomanEventHandler(
                     scope,

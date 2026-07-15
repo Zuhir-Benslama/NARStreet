@@ -1,8 +1,5 @@
 package com.nars.maplibre.data.store
 
-import com.nars.maplibre.data.model.NarsFeature
-import com.nars.maplibre.utils.NarsLogger
-
 class UndoManager(private val featureStore: FeatureStoreInterface) {
     companion object {
         private const val MAX_UNDO_SIZE = 50
@@ -31,13 +28,6 @@ class UndoManager(private val featureStore: FeatureStoreInterface) {
             is UndoAction.Delete -> {
                 val feature = action.feature
                 if (featureStore.getFeatureById(feature.id) == null) featureStore.addFeature(feature)
-                val roadDbId = when (val props = feature.properties) {
-                    is com.nars.maplibre.data.model.FeatureProperties.HouseEntranceProperties -> props.roadDbId
-                    else -> null
-                }
-                if (roadDbId != null) {
-                    NarsLogger.d("UndoManager", "Cross-reference restored: entrance for road")
-                }
             }
 
             is UndoAction.Create -> {

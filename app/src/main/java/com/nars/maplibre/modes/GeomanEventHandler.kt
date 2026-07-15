@@ -32,22 +32,24 @@ class GeomanEventHandler(
 
     @Volatile private var currentPhase: PhaseDefinition? = null
 
-    @Volatile private var editingFeatureId: String? = null
-
-    @Volatile private var editingFeature: NarsFeature? = null
+    private val editingLock = Any()
+    private var editingFeatureId: String? = null
+    private var editingFeature: NarsFeature? = null
 
     fun setCurrentPhase(phase: PhaseDefinition) {
         currentPhase = phase
     }
 
     fun setEditingFeature(id: String?, feature: NarsFeature?) {
-        editingFeatureId = id
-        editingFeature = feature
+        synchronized(editingLock) {
+            editingFeatureId = id
+            editingFeature = feature
+        }
     }
 
-    fun getEditingFeatureId(): String? = editingFeatureId
+    fun getEditingFeatureId(): String? = synchronized(editingLock) { editingFeatureId }
 
-    fun getEditingFeature(): NarsFeature? = editingFeature
+    fun getEditingFeature(): NarsFeature? = synchronized(editingLock) { editingFeature }
 
     fun setupEventListeners() {
         scope.launch {
@@ -142,8 +144,10 @@ class GeomanEventHandler(
     }
 
     internal fun handleEditEnd() {
-        editingFeatureId = null
-        editingFeature = null
+        synchronized(editingLock) {
+            editingFeatureId = null
+            editingFeature = null
+        }
     }
 
     internal fun handleGeometryChanged(featureData: FeatureData?) {
@@ -159,11 +163,13 @@ class GeomanEventHandler(
     }
 
     internal fun handleDeleted() {
-        editingFeatureId?.let { featureId ->
-            onFeatureDeleted(featureId)
+        val featureId = synchronized(editingLock) {
+            val id = editingFeatureId
+            editingFeatureId = null
+            editingFeature = null
+            id
         }
-        editingFeatureId = null
-        editingFeature = null
+        featureId?.let { onFeatureDeleted(it) }
     }
 
     private fun extractGeometryFromGeoJson(geometry: com.geoman.maplibre.geoman.types.geojson.Geometry?): Geometry? =

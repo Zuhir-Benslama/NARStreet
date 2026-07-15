@@ -1,3 +1,5 @@
+@file:Suppress("TooGenericExceptionCaught")
+
 package com.nars.maplibre.data.api
 
 import com.nars.maplibre.utils.Config
@@ -90,20 +92,20 @@ suspend fun <T> withRetry(
             return operation()
         } catch (e: CancellationException) {
             throw e
-        } catch (ignored: Exception) {
-            lastException = ignored
+        } catch (e: Exception) {
+            lastException = e
 
             val isLastAttempt = attempt >= config.maxRetries
-            val isNonRetryable = ignored.isNonRetryable()
+            val isNonRetryable = e.isNonRetryable()
             if (isLastAttempt || isNonRetryable) {
-                throw ignored
+                throw e
             }
 
             // Calculate delay with exponential backoff and jitter
             val delayMs = calculateBackoff(attempt + 1, config)
 
             // Log retry attempt
-            onRetry?.invoke(ignored, attempt + 1)
+            onRetry?.invoke(e, attempt + 1)
 
             delay(delayMs)
         }

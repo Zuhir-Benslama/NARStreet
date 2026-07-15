@@ -215,7 +215,7 @@ class MapViewModelTest {
         vm.updateFeature(newFeature)
 
         verify { featureStore.updateFeature("f1", newFeature) }
-        verify { featureStore.undoManager.addUndoAction(any()) }
+        verify { featureStore.addUndoAction(any()) }
     }
 
     @Test
@@ -234,7 +234,7 @@ class MapViewModelTest {
         vm.deleteFeature("f1")
 
         verify { featureStore.removeFeature("f1") }
-        verify { featureStore.undoManager.addUndoAction(any()) }
+        verify { featureStore.addUndoAction(any()) }
     }
 
     @Test
@@ -279,7 +279,7 @@ class MapViewModelTest {
 
         vm.undo()
 
-        verify { featureStore.undoManager.executeUndo() }
+        verify { featureStore.executeUndo() }
     }
 
     @Test
@@ -380,7 +380,7 @@ class MapViewModelTest {
             )
         val undoAction = io.mockk.mockk<com.nars.maplibre.data.store.UndoAction.Delete>(relaxed = true)
         every { undoAction.feature } returns feature
-        every { featureStore.undoManager.executeUndo() } returns undoAction
+        every { featureStore.executeUndo() } returns undoAction
 
         val vm = createViewModel()
         vm.undo()
@@ -399,7 +399,7 @@ class MapViewModelTest {
             )
         val undoAction = io.mockk.mockk<com.nars.maplibre.data.store.UndoAction.Create>(relaxed = true)
         every { undoAction.feature } returns feature
-        every { featureStore.undoManager.executeUndo() } returns undoAction
+        every { featureStore.executeUndo() } returns undoAction
 
         val vm = createViewModel()
         val result = vm.undo()
@@ -419,7 +419,7 @@ class MapViewModelTest {
             )
         val undoAction = io.mockk.mockk<com.nars.maplibre.data.store.UndoAction.Update>(relaxed = true)
         every { undoAction.oldFeature } returns oldFeature
-        every { featureStore.undoManager.executeUndo() } returns undoAction
+        every { featureStore.executeUndo() } returns undoAction
 
         val vm = createViewModel()
         val result = vm.undo()
@@ -430,7 +430,7 @@ class MapViewModelTest {
 
     @Test
     fun `undo returns false when nothing to undo`() {
-        every { featureStore.undoManager.executeUndo() } returns null
+        every { featureStore.executeUndo() } returns null
         val vm = createViewModel()
 
         val result = vm.undo()
@@ -449,7 +449,7 @@ class MapViewModelTest {
                 geometry = PointGeometry(coordinates = listOf(0.0, 0.0)),
                 properties = FeatureProperties.RoadProperties(),
             )
-        every { featureStore.undoManager.executeUndo() } returns undoAction
+        every { featureStore.executeUndo() } returns undoAction
 
         val vm = createViewModel()
         val result = vm.undo()
@@ -477,7 +477,7 @@ class MapViewModelTest {
             )
 
         var callCount = 0
-        every { featureStore.undoManager.executeUndo() } answers {
+        every { featureStore.executeUndo() } answers {
             callCount++
             when (callCount) {
                 1 -> secondAction
@@ -497,7 +497,7 @@ class MapViewModelTest {
 
     @Test
     fun `canUndo updates after adding a feature`() {
-        every { featureStore.undoManager.canUndo } returns true
+        every { featureStore.canUndo } returns true
         val vm = createViewModel()
 
         vm.addFeature(mockk(relaxed = true))

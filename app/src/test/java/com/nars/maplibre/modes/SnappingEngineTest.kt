@@ -40,7 +40,7 @@ class SnappingEngineTest {
         val point = LatLng(36.0001, 3.0001)
         val feature = createPoint(36.0, 3.0)
         val result = engine.snapPoint(point, listOf(feature), 50.0)
-        assertNotNull(result)
+        assertEquals(LatLng(36.0, 3.0), result)
     }
 
     @Test
@@ -60,9 +60,9 @@ class SnappingEngineTest {
                 geometry = LineStringGeometry(coordinates = listOf(3.0, 36.0, 3.1, 36.1, 3.2, 36.2)),
                 properties = FeatureProperties.RoadProperties(),
             )
-        val point = LatLng(36.05, 3.05)
+        val point = LatLng(36.01, 3.01)
         val result = engine.snapPoint(point, listOf(line), 20000.0)
-        assertNotNull(result)
+        assertEquals(LatLng(36.0, 3.0), result)
     }
 
     @Test
@@ -74,9 +74,9 @@ class SnappingEngineTest {
                 geometry = PolygonGeometry(coordinates = listOf(3.0, 36.0, 3.1, 36.1, 3.0, 36.2, 3.0, 36.0)),
                 properties = FeatureProperties.RoadProperties(),
             )
-        val point = LatLng(36.05, 3.05)
+        val point = LatLng(36.01, 3.01)
         val result = engine.snapPoint(point, listOf(poly), 20000.0)
-        assertNotNull(result)
+        assertEquals(LatLng(36.0, 3.0), result)
     }
 
     @Test
@@ -90,7 +90,7 @@ class SnappingEngineTest {
             )
         val point = LatLng(36.001, 3.001)
         val result = engine.snapPoint(point, listOf(circle), 200.0)
-        assertNotNull(result)
+        assertEquals(LatLng(36.0, 3.0), result)
     }
 
     @Test

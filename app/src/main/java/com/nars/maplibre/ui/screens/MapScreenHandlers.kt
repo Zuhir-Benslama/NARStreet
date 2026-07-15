@@ -45,6 +45,7 @@ class MapScreenHandlers(
                     mapView = mv,
                     map = map,
                     context = context,
+                    scope = scope,
                     onFeatureCreated = { feature -> handleFeatureCreated(feature) },
                     onFeatureUpdated = { feature ->
                         viewModel.updateFeature(feature)
@@ -114,25 +115,7 @@ class MapScreenHandlers(
     fun handleMapLongClick(latLng: LatLng): NarsFeature? {
         val clickedFeature =
             currentPhaseFeatures()
-                .firstOrNull { feature ->
-                    when (val geometry = feature.geometry) {
-                        is PointGeometry -> {
-                            val fp = LatLng(geometry.coordinates[1], geometry.coordinates[0])
-                            latLng.distanceTo(fp) < LONG_CLICK_DISTANCE_THRESHOLD
-                        }
-
-                        is LineStringGeometry -> {
-                            geometry.coordinates.chunked(2).filter { it.size == 2 }.any { coord ->
-                                val lp = LatLng(coord[1], coord[0])
-                                latLng.distanceTo(lp) < LONG_CLICK_DISTANCE_THRESHOLD
-                            }
-                        }
-
-                        else -> {
-                            false
-                        }
-                    }
-                }
+                .firstOrNull { feature -> isPointNearFeature(latLng, feature, LONG_CLICK_DISTANCE_THRESHOLD) }
 
         if (clickedFeature != null) viewModel.selectFeature(clickedFeature)
         return clickedFeature
@@ -233,31 +216,32 @@ class MapScreenHandlers(
         }
     }
 
-    private fun isPointNearFeature(latLng: LatLng, feature: NarsFeature): Boolean {
-        val threshold = NEAR_FEATURE_DISTANCE_THRESHOLD
-        return when (val geometry = feature.geometry) {
-            is PointGeometry -> {
-                val fp = LatLng(geometry.coordinates[1], geometry.coordinates[0])
-                latLng.distanceTo(fp) < threshold
-            }
+    private fun isPointNearFeature(
+        latLng: LatLng,
+        feature: NarsFeature,
+        threshold: Double = NEAR_FEATURE_DISTANCE_THRESHOLD,
+    ): Boolean = when (val geometry = feature.geometry) {
+        is PointGeometry -> {
+            val fp = LatLng(geometry.coordinates[1], geometry.coordinates[0])
+            latLng.distanceTo(fp) < threshold
+        }
 
-            is CircleGeometry -> {
-                val cp = LatLng(geometry.coordinates[1], geometry.coordinates[0])
-                latLng.distanceTo(cp) < geometry.coordinates[2].coerceAtLeast(MIN_CIRCLE_RADIUS)
-            }
+        is CircleGeometry -> {
+            val cp = LatLng(geometry.coordinates[1], geometry.coordinates[0])
+            latLng.distanceTo(cp) < geometry.coordinates[2].coerceAtLeast(MIN_CIRCLE_RADIUS)
+        }
 
-            is LineStringGeometry -> {
-                geometry.coordinates.chunked(2).filter { it.size == 2 }.any { coord ->
-                    val lp = LatLng(coord[1], coord[0])
-                    latLng.distanceTo(lp) < threshold
-                }
+        is LineStringGeometry -> {
+            geometry.coordinates.chunked(2).filter { it.size == 2 }.any { coord ->
+                val lp = LatLng(coord[1], coord[0])
+                latLng.distanceTo(lp) < threshold
             }
+        }
 
-            is PolygonGeometry -> {
-                geometry.coordinates.chunked(2).filter { it.size == 2 }.any { coord ->
-                    val pp = LatLng(coord[1], coord[0])
-                    latLng.distanceTo(pp) < threshold
-                }
+        is PolygonGeometry -> {
+            geometry.coordinates.chunked(2).filter { it.size == 2 }.any { coord ->
+                val pp = LatLng(coord[1], coord[0])
+                latLng.distanceTo(pp) < threshold
             }
         }
     }

@@ -3,6 +3,7 @@ package com.nars.maplibre.data.api
 import com.nars.maplibre.data.model.FeatureProperties
 import com.nars.maplibre.data.model.NarsFeature
 import com.nars.maplibre.data.model.NarsFeatureType
+import com.nars.maplibre.data.model.Phases
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
@@ -10,9 +11,11 @@ import kotlinx.serialization.json.Json
 val apiJson =
     Json {
         ignoreUnknownKeys = true
-        isLenient = true
         coerceInputValues = true
     }
+
+@Serializable
+data class LoginRequest(val username: String, val password: String)
 
 @Serializable
 data class ApiFeatureListResponse(
@@ -102,7 +105,7 @@ data class ApiPropertiesResponse(
         NarsFeatureType.ROAD -> {
             FeatureProperties.RoadProperties(
                 name = name,
-                phase = phase ?: "roads",
+                phase = phase ?: Phases.ROADS_KEY,
                 color = color ?: "#3498db",
                 roadTypeKey = roadTypeKey,
                 roadTraffic = roadTraffic,

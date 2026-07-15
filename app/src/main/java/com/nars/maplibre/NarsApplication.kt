@@ -42,8 +42,8 @@ class NarsApplication :
                     apiService.setSessionToken(token)
                     NarsLogger.d("NarsApplication", "User session found on startup")
                 }
-            } catch (ignored: RuntimeException) {
-                NarsLogger.w("NarsApplication", "Session check skipped", ignored)
+            } catch (e: IllegalStateException) {
+                NarsLogger.w("NarsApplication", "Session check skipped: Koin not ready", e)
             }
         }
 
@@ -55,11 +55,10 @@ class NarsApplication :
             if (event == Lifecycle.Event.ON_STOP) {
                 try {
                     val apiService: ApiService = get()
-                    val prefs: AppPreferences = get()
                     apiService.setSessionToken(null)
                     NarsLogger.d("NarsApplication", "In-memory tokens cleared (app backgrounded)")
-                } catch (ignored: RuntimeException) {
-                    NarsLogger.w("NarsApplication", "Token clearing skipped", ignored)
+                } catch (e: IllegalStateException) {
+                    NarsLogger.w("NarsApplication", "Token clearing skipped: Koin not ready", e)
                 }
             } else if (event == Lifecycle.Event.ON_START) {
                 try {
@@ -69,8 +68,8 @@ class NarsApplication :
                         apiService.setSessionToken(token)
                         NarsLogger.d("NarsApplication", "In-memory tokens restored (app foregrounded)")
                     }
-                } catch (ignored: RuntimeException) {
-                    NarsLogger.w("NarsApplication", "Token restore skipped", ignored)
+                } catch (e: IllegalStateException) {
+                    NarsLogger.w("NarsApplication", "Token restore skipped: Koin not ready", e)
                 }
             }
         }

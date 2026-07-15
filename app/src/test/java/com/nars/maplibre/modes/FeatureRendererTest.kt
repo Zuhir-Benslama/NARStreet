@@ -165,26 +165,31 @@ class FeatureRendererTest {
 
     @Test
     fun `addFeature with PointGeometry creates symbol layer`() {
+        val map = renderer.map
         renderer.addFeature(createRoad())
-        verify { renderer.labelAndMarkerManager.addLabelLayer(any(), any(), "Main Road") }
+        verify { map.style?.addLayer(symbolLayer) }
     }
 
     @Test
     fun `addFeature with LineStringGeometry uses lineLayerFactory`() {
+        val map = renderer.map
         renderer.addFeature(createRoad(LineStringGeometry(coordinates = listOf(3.0, 36.0, 3.1, 36.1))))
-        verify { renderer.labelAndMarkerManager.addLabelLayer(any(), any(), "Main Road") }
+        verify { map.style?.addLayer(lineLayer) }
     }
 
     @Test
     fun `addFeature with CircleGeometry uses fill and line layer factories`() {
+        val map = renderer.map
         renderer.addFeature(createRoad(CircleGeometry(coordinates = listOf(3.0, 36.0, 50.0))))
-        verify { renderer.labelAndMarkerManager.addLabelLayer(any(), any(), "Main Road") }
+        verify { map.style?.addLayer(fillLayer) }
+        verify { map.style?.addLayer(lineLayer) }
     }
 
     @Test
     fun `addFeature uses geoJsonSourceFactory`() {
+        val map = renderer.map
         renderer.addFeature(createRoad())
-        verify { renderer.labelAndMarkerManager.addLabelLayer(any(), any(), any()) }
+        verify { map.style?.addSource(geoJsonSource) }
     }
 
     @Test

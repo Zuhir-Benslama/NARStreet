@@ -4,6 +4,7 @@ import com.nars.maplibre.utils.Config
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
+import org.junit.Assert.fail
 import org.junit.Test
 
 class ApiErrorsTest {
@@ -52,6 +53,7 @@ class ApiErrorsTest {
                 },
                 config = RetryConfig(maxRetries = 2, baseDelayMs = 1, maxDelayMs = 10),
             )
+            fail("Expected IllegalStateException")
         } catch (_: IllegalStateException) {
             assertEquals(3, callCount)
         }
@@ -69,6 +71,7 @@ class ApiErrorsTest {
                 },
                 config = RetryConfig(maxRetries = 3, baseDelayMs = 1, maxDelayMs = 10),
             )
+            fail("Expected AuthError")
         } catch (_: AuthError) {
             assertEquals(1, callCount)
         }
@@ -86,6 +89,7 @@ class ApiErrorsTest {
                 },
                 config = RetryConfig(maxRetries = 3, baseDelayMs = 1, maxDelayMs = 10),
             )
+            fail("Expected ValidationError")
         } catch (_: ValidationError) {
             assertEquals(1, callCount)
         }
@@ -103,6 +107,7 @@ class ApiErrorsTest {
                 },
                 config = RetryConfig(maxRetries = 3, baseDelayMs = 1, maxDelayMs = 10),
             )
+            fail("Expected NotFoundError")
         } catch (_: NotFoundError) {
             assertEquals(1, callCount)
         }
@@ -120,6 +125,7 @@ class ApiErrorsTest {
                 },
                 config = RetryConfig(maxRetries = 2, baseDelayMs = 1, maxDelayMs = 10),
             )
+            fail("Expected NetworkError")
         } catch (_: NetworkError) {
             assertTrue(callCount > 1)
         }
@@ -137,6 +143,7 @@ class ApiErrorsTest {
                 },
                 config = RetryConfig(maxRetries = 1, baseDelayMs = 1, maxDelayMs = 10),
             )
+            fail("Expected ServerError")
         } catch (_: ServerError) {
             assertEquals(2, callCount)
         }
@@ -152,6 +159,7 @@ class ApiErrorsTest {
                 config = RetryConfig(maxRetries = 2, baseDelayMs = 1, maxDelayMs = 10),
                 onRetry = { _, attempt -> retryCount = attempt },
             )
+            fail("Expected ServerError")
         } catch (_: ServerError) {
             assertTrue(retryCount > 0)
         }

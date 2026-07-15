@@ -111,7 +111,7 @@ class GeometryConverter {
             id = narsFeature.id,
             sourceName = getSourceNameForGeometry(narsFeature.geometry),
             feature = geoJsonFeature,
-            properties = mutableMapOf(),
+            properties = emptyMap(),
         )
     }
 
@@ -172,11 +172,8 @@ class GeometryConverter {
                 }
 
                 else -> {
-                    put("type", "Point")
-                    putJsonArray("coordinates") {
-                        add(0.0)
-                        add(0.0)
-                    }
+                    NarsLogger.w(TAG, "Unsupported geometry type: ${geometry::class.simpleName}")
+                    throw IllegalArgumentException("Unsupported geometry type: ${geometry::class.simpleName}")
                 }
             }
         }

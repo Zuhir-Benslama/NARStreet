@@ -65,7 +65,7 @@ import com.nars.maplibre.utils.NarsLogger
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import org.koin.androidx.compose.koinViewModel
-import org.koin.java.KoinJavaComponent.get
+import org.koin.compose.koinInject
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -75,8 +75,8 @@ fun MapScreen(onNavigateToSettings: () -> Unit, onLogout: () -> Unit) {
 
     val context = androidx.compose.ui.platform.LocalContext.current
     val viewModel: MapViewModel = koinViewModel()
-    val apiService: ApiService = get(ApiService::class.java)
-    val sessionManager: SessionManager = get(SessionManager::class.java)
+    val apiService: ApiService = koinInject()
+    val sessionManager: SessionManager = koinInject()
 
     val currentPhase by viewModel.currentPhase.collectAsState()
     val allFeatures by viewModel.allFeatures.collectAsState()
