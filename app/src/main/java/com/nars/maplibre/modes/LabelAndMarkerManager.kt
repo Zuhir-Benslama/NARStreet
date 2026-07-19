@@ -27,7 +27,7 @@ class LabelAndMarkerManager(private val map: MapLibreMap) {
         private const val LABEL_HALO_WIDTH = 2f
     }
 
-    private val vertexMarkerIds = mutableSetOf<String>()
+    private val vertexMarkerIds: MutableSet<String> = java.util.concurrent.ConcurrentHashMap.newKeySet()
 
     fun addLabelLayer(layerName: String, sourceName: String, labelText: String?) {
         if (labelText.isNullOrBlank()) return

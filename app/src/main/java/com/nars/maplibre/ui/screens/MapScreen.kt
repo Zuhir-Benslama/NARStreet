@@ -156,7 +156,6 @@ private fun MapScreenEffects(
     }
 }
 
-@Stable
 private data class MapScreenViewState(
     val currentPhase: PhaseDefinition?,
     val allFeatures: List<NarsFeature>,
@@ -168,7 +167,6 @@ private data class MapScreenViewState(
     val featureCounts: Map<String, Int>,
 )
 
-@Stable
 private class MapScreenCallbacks(
     val onNavigateToSettings: () -> Unit,
     val onLogout: () -> Unit,

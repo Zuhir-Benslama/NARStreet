@@ -19,6 +19,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 @Suppress("TooManyFunctions")
@@ -82,15 +83,19 @@ class MapViewModel(
 
     fun goToNextPhase(): PhaseDefinition? {
         val nextPhase = phaseNavigator.goNext()
-        if (nextPhase == null) {
-            val currentIndex = featureStore.currentPhase.value?.index ?: 0
-            val result = phaseNavigator.canAdvance(currentIndex + 1)
-            if (result is PhaseNavigationResult.Blocked) updateUiState(errorMessage = result.message)
+        if (nextPhase != null) {
+            return setCurrentPhase(nextPhase)
         }
-        return nextPhase
+        val currentIndex = featureStore.currentPhase.value?.index ?: 0
+        val result = phaseNavigator.canAdvance(currentIndex + 1)
+        if (result is PhaseNavigationResult.Blocked) updateUiState(errorMessage = result.message)
+        return null
     }
 
-    fun goToPreviousPhase(): PhaseDefinition? = phaseNavigator.goBack()
+    fun goToPreviousPhase(): PhaseDefinition? {
+        val prevPhase = phaseNavigator.goBack() ?: return null
+        return setCurrentPhase(prevPhase)
+    }
 
     fun canGoNextPhase(): Boolean = phaseNavigator.canGoForward()
 
@@ -187,12 +192,13 @@ class MapViewModel(
     fun clearSelection() = featureStore.selectFeature(null)
 
     fun updateUiState(isLoading: Boolean? = null, errorMessage: String? = null, successMessage: String? = null) {
-        _uiState.value =
-            _uiState.value.copy(
-                isLoading = isLoading ?: _uiState.value.isLoading,
-                errorMessage = errorMessage ?: _uiState.value.errorMessage,
-                successMessage = successMessage ?: _uiState.value.successMessage,
+        _uiState.update { current ->
+            current.copy(
+                isLoading = isLoading ?: current.isLoading,
+                errorMessage = errorMessage ?: current.errorMessage,
+                successMessage = successMessage ?: current.successMessage,
             )
+        }
     }
 
     fun clearErrorMessage() {

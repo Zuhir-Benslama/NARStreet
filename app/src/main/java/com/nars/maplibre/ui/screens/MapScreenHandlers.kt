@@ -36,7 +36,7 @@ class MapScreenHandlers(
         private const val NEAR_FEATURE_DISTANCE_THRESHOLD = 20.0
     }
 
-    var narsGeoman: NarsGeoman? = null
+    @Volatile var narsGeoman: NarsGeoman? = null
 
     val initializeNarsGeoman: (MapView, MapLibreMap) -> Unit =
         { mv, map ->
