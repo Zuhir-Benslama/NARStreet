@@ -29,8 +29,11 @@ class NarsGeoman internal constructor(
     private val callbacks: FeatureCallbacks,
     private val scope: CoroutineScope,
 ) {
-    @Volatile private var destroyed = false
-    @Volatile private var currentPhase: PhaseDefinition? = null
+    @Volatile
+    private var destroyed = false
+
+    @Volatile
+    private var currentPhase: PhaseDefinition? = null
 
     private val _isDrawing = MutableStateFlow(false)
     val isDrawing: StateFlow<Boolean> = _isDrawing.asStateFlow()

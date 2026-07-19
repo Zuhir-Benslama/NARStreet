@@ -24,7 +24,9 @@ class FeatureDisplayManager(
     private val map: MapLibreMap?,
 ) {
     private val displayedFeatureIds: MutableSet<String> = Collections.synchronizedSet(mutableSetOf())
-    @Volatile var currentPhase: PhaseDefinition? = null
+
+    @Volatile
+    var currentPhase: PhaseDefinition? = null
 
     companion object {
         private val SAFE_ID_REGEX = Regex("[^a-zA-Z0-9_]")
