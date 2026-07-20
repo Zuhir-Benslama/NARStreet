@@ -202,11 +202,11 @@ class MapViewModel(
     }
 
     fun clearErrorMessage() {
-        _uiState.value = _uiState.value.copy(errorMessage = null)
+        _uiState.update { it.copy(errorMessage = null) }
     }
 
     fun clearSuccessMessage() {
-        _uiState.value = _uiState.value.copy(successMessage = null)
+        _uiState.update { it.copy(successMessage = null) }
     }
 }
 

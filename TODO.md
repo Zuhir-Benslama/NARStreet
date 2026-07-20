@@ -18,7 +18,8 @@
 
 ### Low
 
-- [x] `_uiState.value = _uiState.value.copy(...)` — replaced with atomic `_uiState.update {}` (`MapViewModel.kt:189-195`)
+- [x] `_uiState.value = _uiState.value.copy(...)` — replaced with atomic `_uiState.update {}` (`MapViewModel.kt:194-202`)
+- [x] `clearErrorMessage()`/`clearSuccessMessage()` still use non-atomic `_uiState.value = _uiState.value.copy(...)` — should use `_uiState.update {}` for consistency (`MapViewModel.kt:204-209`)
 
 ---
 
@@ -26,24 +27,29 @@
 
 ### High
 
-- [x] `events.removeAllListeners()` called before `emit(Destroyed)` — swapped order so event reaches listeners (`Geoman.kt:444-453`)
+- [x] `destroy()` race condition — `scope.launch { emit(Destroyed) }` is async, so `removeAllListeners()` and `scope.cancel()` run before emission; Destroyed event is never received; needs non-suspending `tryEmit` path (`Geoman.kt:448-457`, `GmEventBus.kt:24`)
 - [x] Map/touch listeners registered in `addControl()` never unregistered in `removeControl()` — stored references and remove in `removeControl()` (`MapLibreAdapter.kt:60-81`)
 - [x] `updateFeature()` read-modify-write not atomic — added `@Synchronized` (`Features.kt:107-115`)
+- [x] `featuresMap` unsynchronized — only `updateFeature` is `@Synchronized`; `addFeature`, `removeFeature`, `clearSource`, `clearAll`, `getFeatures`, `getFeaturesInBounds` are not; concurrent access causes `ConcurrentModificationException` (`Features.kt:46-119`)
+- [x] `generateFeatureId()` collision risk — `System.currentTimeMillis() + Math.random()` can collide on fast devices; use `UUID.randomUUID()` (`Features.kt:313`)
 
 ### Medium
 
 - [x] `enabled` flag in `BaseAction` — added `@Volatile` (`BaseAction.kt:6`)
 - [x] TOCTOU race in `MapLibreAdapter.off()` — capture list reference before check-then-remove (`MapLibreAdapter.kt:367-371`)
 - [x] `activeModes` in `GmControl` — changed to `ConcurrentHashMap.newKeySet()` (`GmControl.kt:55`)
-- [ ] `destroy()` not idempotent — double-call causes double cleanup/scope cancel (`Geoman.kt:422-423`)
+- [x] `destroy()` is idempotent — `if (_destroyed.value) return` guard prevents double cleanup (`Geoman.kt:427`)
 - [x] `e.printStackTrace()` in `GmEventBus` — replaced with `android.util.Log.e()` (`GmEventBus.kt:31`)
 - [ ] `getAllFeatures()` exposes mutable inner `MutableMap` references (`Features.kt:64`)
 - [x] Empty catch blocks silently swallow layer errors in `MapLibreLayer` — added logging (`MapLibreLayer.kt:94-96,106-108`)
+- [x] `waitForGeomanLoaded()` polling loop — replace with `_loaded.first { it }` with timeout (`Geoman.kt:394-421`)
+- [x] `waitForBaseMap()` polling loop — replace with `addOnDidFinishLoadingStyleListener` callback (`Geoman.kt:114-137`)
 
 ### Low
 
 - [x] `getEnabledModes()` crashes on malformed key format — added bounds check and try/catch (`Geoman.kt:270-273`)
 - [x] `setLayoutProperty()` delegated to `setPaintProperty()` — now calls `setProperties()` correctly (`MapLibreLayer.kt:145-147`)
+- [x] Empty cancellation handler in `waitForGeomanLoaded()` — merged into polling-loop fix above
 
 ---
 
