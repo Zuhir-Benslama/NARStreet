@@ -136,10 +136,3 @@ class FeatureStore : FeatureStoreInterface {
 
     override fun addUndoAction(action: UndoAction) = undoManager.addUndoAction(action)
 }
-
-data class FeatureCounts(
-    val roads: Int = 0,
-    val mainEntrances: Int = 0,
-    val secondaryEntrances: Int = 0,
-    val namingPanels: Int = 0,
-)

@@ -86,6 +86,7 @@
     <string name="map_feature_deleted">Feature deleted from backend</string>
     <string name="map_save_failed">Failed to save feature</string>
     <string name="map_update_failed">Failed to update feature</string>
+    <string name="map_load_failed">Failed to load features</string>
     <string name="map_delete_failed">Failed to delete from backend</string>
     <string name="map_phase_changed">Phase</string>
     <string name="map_cannot_advance">Cannot advance: requirements not met</string>

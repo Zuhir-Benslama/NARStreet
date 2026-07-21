@@ -211,7 +211,7 @@ class MapScreenHandlers(
                     }
                 snackbar(msg)
             }
-            result.onFailure { snackbar("${context.getString(R.string.map_save_failed)}: ${it.message}") }
+            result.onFailure { snackbar("${context.getString(R.string.map_load_failed)}: ${it.message}") }
             viewModel.updateUiState(isLoading = false)
         }
     }

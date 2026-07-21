@@ -38,9 +38,11 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import com.nars.maplibre.R
 import com.nars.maplibre.data.model.FeatureProperties
+import com.nars.maplibre.data.model.LineStringGeometry
 import com.nars.maplibre.data.model.NarsFeature
 import com.nars.maplibre.data.model.PhaseDefinition
 import com.nars.maplibre.data.model.Phases
+import com.nars.maplibre.data.model.PointGeometry
 import com.nars.maplibre.ui.theme.GlassBackground
 import com.nars.maplibre.utils.formatDecimal
 import com.nars.maplibre.utils.validateFeatureProperties
@@ -148,12 +150,12 @@ private fun FeatureModalCoordinateInfo(feature: NarsFeature) {
     )
 
     val coords = when (val geom = feature.geometry) {
-        is com.nars.maplibre.data.model.LineStringGeometry -> {
+        is LineStringGeometry -> {
             val c = geom.coordinates.chunked(2)
             if (c.isNotEmpty()) "Lat: ${c[0][1].formatDecimal(6)}, Lng: ${c[0][0].formatDecimal(6)}" else null
         }
 
-        is com.nars.maplibre.data.model.PointGeometry -> {
+        is PointGeometry -> {
             if (geom.coordinates.size >= 2) {
                 "Lat: ${geom.coordinates[1].formatDecimal(6)}, Lng: ${geom.coordinates[0].formatDecimal(6)}"
             } else {

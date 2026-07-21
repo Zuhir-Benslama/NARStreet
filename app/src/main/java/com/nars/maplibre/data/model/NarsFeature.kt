@@ -1,6 +1,8 @@
 package com.nars.maplibre.data.model
 
+import androidx.compose.ui.graphics.Color
 import androidx.core.graphics.toColorInt
+import com.nars.maplibre.R
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import timber.log.Timber
@@ -108,12 +110,12 @@ data class PhaseDefinition(
     val color: String,
     val hint: String,
 ) {
-    val parsedColor: androidx.compose.ui.graphics.Color by lazy {
+    val parsedColor: Color by lazy {
         try {
-            androidx.compose.ui.graphics.Color(color.toColorInt())
+            Color(color.toColorInt())
         } catch (e: IllegalArgumentException) {
             Timber.w(e, "Invalid color string '%s', falling back to Gray", color)
-            androidx.compose.ui.graphics.Color.Gray
+            Color.Gray
         }
     }
 }
@@ -165,16 +167,16 @@ object Phases {
     fun getByIndex(index: Int): PhaseDefinition? = ALL.getOrNull(index)
 
     fun getDisplayLabel(phase: PhaseDefinition, context: android.content.Context): String = when (phase.key) {
-        ROADS_KEY -> context.getString(com.nars.maplibre.R.string.phase_roads)
-        HOUSE_ENTRANCES_KEY -> context.getString(com.nars.maplibre.R.string.phase_house_entrances)
-        NAMING_PANELS_KEY -> context.getString(com.nars.maplibre.R.string.phase_naming_panels)
+        ROADS_KEY -> context.getString(R.string.phase_roads)
+        HOUSE_ENTRANCES_KEY -> context.getString(R.string.phase_house_entrances)
+        NAMING_PANELS_KEY -> context.getString(R.string.phase_naming_panels)
         else -> phase.label
     }
 
     fun getHint(phase: PhaseDefinition, context: android.content.Context): String = when (phase.key) {
-        ROADS_KEY -> context.getString(com.nars.maplibre.R.string.phase_roads_hint)
-        HOUSE_ENTRANCES_KEY -> context.getString(com.nars.maplibre.R.string.phase_house_entrances_hint)
-        NAMING_PANELS_KEY -> context.getString(com.nars.maplibre.R.string.phase_naming_panels_hint)
+        ROADS_KEY -> context.getString(R.string.phase_roads_hint)
+        HOUSE_ENTRANCES_KEY -> context.getString(R.string.phase_house_entrances_hint)
+        NAMING_PANELS_KEY -> context.getString(R.string.phase_naming_panels_hint)
         else -> ""
     }
 }

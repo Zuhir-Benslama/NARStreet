@@ -27,7 +27,6 @@ import kotlinx.serialization.json.JsonObject
 class ApiService(private val httpClient: HttpClient, private val preferences: AppPreferences) {
     companion object {
         private const val TAG = "ApiService"
-        private const val LOGIN_TIMEOUT_MS = 15000
     }
 
     private val baseUrl: String = BuildConfig.API_BASE_URL.trimEnd('/')
