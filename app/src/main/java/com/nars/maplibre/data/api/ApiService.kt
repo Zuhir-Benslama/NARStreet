@@ -142,6 +142,11 @@ class ApiService(private val httpClient: HttpClient, private val preferences: Ap
                 httpClient.get("$baseUrl/api/load") {
                     authHeaders().forEach { (k, v) -> headers.append(k, v) }
                 }
+            if (!response.status.isSuccess()) {
+                val error = Exception("Load failed: HTTP ${response.status.value}")
+                NarsLogger.e(TAG, "loadFeatures failed", error)
+                return Result.failure(error)
+            }
             val body = response.bodyAsText()
             if (body.isBlank()) return Result.success(emptyList())
             val jsonElement = apiJson.parseToJsonElement(body)

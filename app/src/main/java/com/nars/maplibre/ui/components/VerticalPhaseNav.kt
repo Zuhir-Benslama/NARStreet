@@ -59,7 +59,7 @@ fun VerticalPhaseNav(
         val hasFeaturesPerPhase = allPhases.map { phase ->
             (phaseCounts[phase.key] ?: 0) > 0
         }
-        val previousAllDone = mutableListOf(false)
+        val previousAllDone = mutableListOf(true)
         for (i in 1 until allPhases.size) {
             val prevDone = previousAllDone[i - 1] && hasFeaturesPerPhase[i - 1]
             previousAllDone.add(prevDone)
@@ -69,7 +69,7 @@ fun VerticalPhaseNav(
             val phaseHasFeatures = hasFeaturesPerPhase[index]
             val isDone = phaseHasFeatures
             val isActive = index == currentPhaseIndex
-            val isLocked = index == 0 || !previousAllDone[index - 1]
+            val isLocked = index > 0 && !previousAllDone[index]
 
             // Phase badge with larger touch target
             Box(

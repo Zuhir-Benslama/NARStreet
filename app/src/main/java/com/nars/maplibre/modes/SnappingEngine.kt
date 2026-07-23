@@ -9,6 +9,7 @@ import com.nars.maplibre.utils.GeometryUtils
 import com.nars.maplibre.utils.NarsLogger
 import org.maplibre.android.geometry.LatLng
 import kotlin.math.acos
+import kotlin.math.asin
 import kotlin.math.atan2
 import kotlin.math.cos
 import kotlin.math.roundToInt
@@ -143,7 +144,7 @@ class SnappingEngine {
         val bearingAC = bearingDeg(p1, point)
 
         val angularDistAC = d1 / GeometryUtils.EARTH_RADIUS_METERS
-        val crossTrack = sin(
+        val crossTrack = asin(
             (sin(angularDistAC) * sin(Math.toRadians(bearingAC - bearingAB)))
                 .coerceIn(-1.0, 1.0),
         )
