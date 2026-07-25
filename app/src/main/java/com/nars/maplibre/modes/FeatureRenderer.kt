@@ -13,12 +13,12 @@ import com.nars.maplibre.utils.NarsLogger
 import org.maplibre.android.maps.MapLibreMap
 import org.maplibre.android.style.layers.FillLayer
 import org.maplibre.android.style.layers.LineLayer
+import org.maplibre.android.style.layers.PropertyFactory
 import org.maplibre.android.style.layers.SymbolLayer
 import org.maplibre.android.style.sources.GeoJsonSource
 import java.util.Collections
 
-class FeatureRenderer(internal val map: MapLibreMap) {
-    lateinit var labelAndMarkerManager: LabelAndMarkerManager
+class FeatureRenderer(internal val map: MapLibreMap, val labelAndMarkerManager: LabelAndMarkerManager) {
 
     internal var geoJsonSourceFactory: (name: String, json: String) -> GeoJsonSource =
         { name, json -> GeoJsonSource(name, json) }
@@ -79,12 +79,9 @@ class FeatureRenderer(internal val map: MapLibreMap) {
     private fun addPointLayer(layerName: String, sourceName: String) {
         symbolLayerFactory(layerName, sourceName).apply {
             setProperties(
-                org.maplibre.android.style.layers.PropertyFactory
-                    .iconImage("default-marker"),
-                org.maplibre.android.style.layers.PropertyFactory
-                    .iconSize(DEFAULT_MARKER_ICON_SIZE),
-                org.maplibre.android.style.layers.PropertyFactory
-                    .iconAllowOverlap(true),
+                PropertyFactory.iconImage("default-marker"),
+                PropertyFactory.iconSize(DEFAULT_MARKER_ICON_SIZE),
+                PropertyFactory.iconAllowOverlap(true),
             )
             map.style?.addLayer(this)
         }
@@ -93,10 +90,8 @@ class FeatureRenderer(internal val map: MapLibreMap) {
     private fun addLineLayer(layerName: String, sourceName: String, style: FeatureStyle) {
         lineLayerFactory(layerName, sourceName).apply {
             setProperties(
-                org.maplibre.android.style.layers.PropertyFactory
-                    .lineColor(parseColor(style.lineColor)),
-                org.maplibre.android.style.layers.PropertyFactory
-                    .lineWidth(style.lineWidth.toFloat()),
+                PropertyFactory.lineColor(parseColor(style.lineColor)),
+                PropertyFactory.lineWidth(style.lineWidth.toFloat()),
             )
             map.style?.addLayer(this)
         }
@@ -110,10 +105,8 @@ class FeatureRenderer(internal val map: MapLibreMap) {
 
         lineLayerFactory("${layerName}_outline", edgeSourceName).apply {
             setProperties(
-                org.maplibre.android.style.layers.PropertyFactory
-                    .lineColor(parseColor(style.lineColor)),
-                org.maplibre.android.style.layers.PropertyFactory
-                    .lineWidth(style.lineWidth.toFloat()),
+                PropertyFactory.lineColor(parseColor(style.lineColor)),
+                PropertyFactory.lineWidth(style.lineWidth.toFloat()),
             )
             map.style?.addLayer(this)
         }
@@ -130,18 +123,15 @@ class FeatureRenderer(internal val map: MapLibreMap) {
 
         fillLayerFactory(layerName, sourceName).apply {
             setProperties(
-                org.maplibre.android.style.layers.PropertyFactory
-                    .fillOpacity(CIRCLE_FILL_OPACITY),
+                PropertyFactory.fillOpacity(CIRCLE_FILL_OPACITY),
             )
             map.style?.addLayer(this)
         }
 
         lineLayerFactory("${layerName}_stroke", sourceName).apply {
             setProperties(
-                org.maplibre.android.style.layers.PropertyFactory
-                    .lineColor(parseColor(style.lineColor)),
-                org.maplibre.android.style.layers.PropertyFactory
-                    .lineWidth(style.lineWidth.toFloat()),
+                PropertyFactory.lineColor(parseColor(style.lineColor)),
+                PropertyFactory.lineWidth(style.lineWidth.toFloat()),
             )
             map.style?.addLayer(this)
         }

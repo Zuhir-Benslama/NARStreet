@@ -4,6 +4,7 @@ import android.app.Application
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.ProcessLifecycleOwner
+import com.geoman.maplibre.geoman.GeomanLogger
 import com.nars.maplibre.data.api.ApiService
 import com.nars.maplibre.di.appModule
 import com.nars.maplibre.utils.NarsLogger
@@ -28,6 +29,20 @@ class NarsApplication :
     override fun onCreate() {
         super.onCreate()
         if (BuildConfig.DEBUG) Timber.plant(Timber.DebugTree())
+        GeomanLogger.delegate =
+            object : GeomanLogger.Delegate {
+                override fun d(tag: String, message: String) {
+                    NarsLogger.d(tag, message)
+                }
+
+                override fun e(tag: String, message: String, throwable: Throwable?) {
+                    NarsLogger.e(tag, message, throwable)
+                }
+
+                override fun w(tag: String, message: String, throwable: Throwable?) {
+                    NarsLogger.w(tag, message, throwable)
+                }
+            }
         startKoin {
             androidContext(this@NarsApplication)
             modules(appModule)

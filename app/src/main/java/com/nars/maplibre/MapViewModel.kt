@@ -141,14 +141,16 @@ class MapViewModel(
     fun updateFeature(feature: NarsFeature) {
         val oldFeature = featureStore.getFeatureById(feature.id)
         featureStore.updateFeature(feature.id, feature)
-        oldFeature?.let {
-            featureStore.addUndoAction(
-                UndoAction.Update(
-                    oldFeature = it,
-                    newFeature = feature,
-                    phaseKey = feature.properties.phase,
-                ),
-            )
+        oldFeature?.let { previous ->
+            if (previous != feature) {
+                featureStore.addUndoAction(
+                    UndoAction.Update(
+                        oldFeature = previous,
+                        newFeature = feature,
+                        phaseKey = feature.properties.phase,
+                    ),
+                )
+            }
         }
         _canUndo.value = featureStore.canUndo
     }

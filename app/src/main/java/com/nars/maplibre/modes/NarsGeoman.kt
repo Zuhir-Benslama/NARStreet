@@ -66,10 +66,8 @@ class NarsGeoman internal constructor(
                     ),
                 )
             val geoman = Geoman(mapView, map, options)
-            val featureRenderer =
-                FeatureRenderer(map).also { renderer ->
-                    renderer.labelAndMarkerManager = LabelAndMarkerManager(map)
-                }
+            val labelAndMarkerManager = LabelAndMarkerManager(map)
+            val featureRenderer = FeatureRenderer(map, labelAndMarkerManager)
             val geometryConverter = GeometryConverter()
             val displayManager = FeatureDisplayManager(geoman, featureRenderer, geometryConverter, map)
             val eventHandler =

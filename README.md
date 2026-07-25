@@ -13,10 +13,10 @@ Android client for the NARS mapping system. Built with Jetpack Compose, MapLibre
 
 ## Prerequisites
 
-- Android Studio Ladybug (2024.2.x) or later
-- JDK 17+
-- Android SDK 35
-- Gradle 9.4.1 (wrapped)
+- Android Studio Meerkat (2025.1.x) or later
+- JDK 21+
+- Android SDK 37
+- Gradle 9.6+ (wrapped)
 - NARS backend running and accessible
 
 ## Setup

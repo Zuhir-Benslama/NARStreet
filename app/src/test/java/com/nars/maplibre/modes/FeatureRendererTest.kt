@@ -61,8 +61,7 @@ class FeatureRendererTest {
             )
         }
 
-        renderer = FeatureRenderer(mockk(relaxed = true))
-        renderer.labelAndMarkerManager = mockk(relaxed = true)
+        renderer = FeatureRenderer(mockk(relaxed = true), mockk(relaxed = true))
         renderer.geoJsonSourceFactory = { _, _ -> geoJsonSource }
         renderer.lineLayerFactory = { _, _ -> lineLayer }
         renderer.fillLayerFactory = { _, _ -> fillLayer }

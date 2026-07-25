@@ -1,58 +1,108 @@
 #!/bin/bash
+set -euo pipefail
 
-# --- 1. Fetch Latest Versions via API ---
+# --- 1. Read current versions from the project ---
+echo "Reading current versions from gradle/libs.versions.toml..."
+
+TOML="gradle/libs.versions.toml"
+if [ ! -f "$TOML" ]; then
+    echo "✖ $TOML not found — run from project root"
+    exit 1
+fi
+
+CURRENT_AGP=$(grep '^agp' "$TOML" | head -1 | sed 's/.*"\(.*\)".*/\1/')
+CURRENT_KOTLIN=$(grep '^kotlin = ' "$TOML" | head -1 | sed 's/.*"\(.*\)".*/\1/')
+CURRENT_COMPOSE_BOM=$(grep '^compose-bom' "$TOML" | head -1 | sed 's/.*"\(.*\)".*/\1/')
+CURRENT_SDK=$(grep 'compileSdk' app/build.gradle.kts | head -1 | sed 's/.*= \([0-9]*\).*/\1/')
+
+echo "Current versions:"
+echo "  AGP:        $CURRENT_AGP"
+echo "  Kotlin:     $CURRENT_KOTLIN"
+echo "  Compose BOM: $CURRENT_COMPOSE_BOM"
+echo "  compileSdk:  $CURRENT_SDK"
+
+# --- 2. Fetch latest stable versions via API ---
+echo ""
 echo "Fetching latest stable versions..."
 
 # Gradle (GitHub API)
-LATEST_GRADLE=$(curl -s https://api.github.com/repos/gradle/gradle/releases/latest | grep -Po '"tag_name": "v\K[0-9.]*' | head -1)
-
-# Android Gradle Plugin (Google Maven - gets the highest stable version)
-LATEST_AGP="8.9.1"  # Latest stable as of 2024
+LATEST_GRADLE=$(curl -s https://api.github.com/repos/gradle/gradle/releases/latest | grep -Po '"tag_name": "v\K[0-9.]*' | head -1) || true
 
 # Kotlin (GitHub API)
-LATEST_KOTLIN=$(curl -s https://api.github.com/repos/JetBrains/kotlin/releases/latest | grep -Po '"tag_name": "v\K[0-9.]*' | head -1)
+LATEST_KOTLIN=$(curl -s https://api.github.com/repos/JetBrains/kotlin/releases/latest | grep -Po '"tag_name": "v\K[0-9.]*' | head -1) || true
 
-# Compose BOM (Latest stable)
-LATEST_COMPOSE_BOM="2025.01.01"
+echo "Latest available:"
+echo "  Gradle: ${LATEST_GRADLE:-"(fetch failed)"}"
+echo "  Kotlin: ${LATEST_KOTLIN:-"(fetch failed)"}"
+echo "  AGP / Compose BOM / SDK: must be set manually below"
+echo ""
 
-# Compile SDK
-LATEST_SDK="35"
+# --- 3. Define target versions (edit these when upgrading) ---
+TARGET_AGP="$CURRENT_AGP"            # e.g. "9.2.1"
+TARGET_KOTLIN="${LATEST_KOTLIN:-$CURRENT_KOTLIN}"
+TARGET_COMPOSE_BOM="$CURRENT_COMPOSE_BOM"  # e.g. "2026.06.01"
+TARGET_SDK="$CURRENT_SDK"            # e.g. "37"
+TARGET_GRADLE="${LATEST_GRADLE:-}"    # leave empty to skip wrapper upgrade
 
-echo -e "Found Updates:\n- Gradle: $LATEST_GRADLE\n- AGP: $LATEST_AGP\n- Kotlin: $LATEST_KOTLIN\n- Compose BOM: $LATEST_COMPOSE_BOM\n"
+echo "Target versions (edit script to change):"
+echo "  AGP:        $TARGET_AGP"
+echo "  Kotlin:     $TARGET_KOTLIN"
+echo "  Compose BOM: $TARGET_COMPOSE_BOM"
+echo "  compileSdk:  $TARGET_SDK"
+echo "  Gradle:      ${TARGET_GRADLE:-"(skip)"}"
+echo ""
 
-# --- 2. Backup Current Files ---
-mkdir -p ./gradle_backup
-cp build.gradle.kts app/build.gradle.kts gradle/wrapper/gradle-wrapper.properties ./gradle_backup/ 2>/dev/null || true
+read -p "Proceed with upgrade? (yes/no): " confirm
+if [ "$confirm" != "yes" ]; then
+    echo "Cancelled."
+    exit 0
+fi
 
-# --- 3. Apply Upgrades ---
+# --- 4. Backup current files ---
+BACKUP_DIR="./gradle_backup_$(date +%Y%m%d_%H%M%S)"
+mkdir -p "$BACKUP_DIR"
+cp gradle/libs.versions.toml app/build.gradle.kts gradle/wrapper/gradle-wrapper.properties "$BACKUP_DIR/" 2>/dev/null || true
+echo "Backed up to $BACKUP_DIR/"
+
+# --- 5. Apply upgrades ---
 
 # Update Gradle Wrapper
-if [ -n "$LATEST_GRADLE" ]; then
-    echo "Updating Gradle to $LATEST_GRADLE..."
-    ./gradlew wrapper --gradle-version "$LATEST_GRADLE"
+if [ -n "$TARGET_GRADLE" ]; then
+    echo "Updating Gradle to $TARGET_GRADLE..."
+    ./gradlew wrapper --gradle-version "$TARGET_GRADLE"
 else
-    echo "Using Gradle 8.12 (fallback)"
-    LATEST_GRADLE="8.12"
+    echo "Skipping Gradle wrapper upgrade."
 fi
 
-# Update Plugins (using sed with the fetched variables)
-if [ -n "$LATEST_AGP" ]; then
-    sed -i "s/agp = \".*\"/agp = \"$LATEST_AGP\"/" gradle/libs.versions.toml
+# Update AGP
+if [ "$TARGET_AGP" != "$CURRENT_AGP" ]; then
+    sed -i "s/agp = \".*\"/agp = \"$TARGET_AGP\"/" "$TOML"
+    echo "AGP: $CURRENT_AGP → $TARGET_AGP"
 fi
 
-if [ -n "$LATEST_KOTLIN" ]; then
-    sed -i "s/kotlin = \".*\"/kotlin = \"$LATEST_KOTLIN\"/" gradle/libs.versions.toml
+# Update Kotlin
+if [ "$TARGET_KOTLIN" != "$CURRENT_KOTLIN" ]; then
+    sed -i "s/^kotlin = \".*\"/kotlin = \"$TARGET_KOTLIN\"/" "$TOML"
+    echo "Kotlin: $CURRENT_KOTLIN → $TARGET_KOTLIN"
 fi
 
-if [ -n "$LATEST_COMPOSE_BOM" ]; then
-    sed -i "s/compose-bom = \".*\"/compose-bom = \"$LATEST_COMPOSE_BOM\"/" gradle/libs.versions.toml
+# Update Compose BOM
+if [ "$TARGET_COMPOSE_BOM" != "$CURRENT_COMPOSE_BOM" ]; then
+    sed -i "s/compose-bom = \".*\"/compose-bom = \"$TARGET_COMPOSE_BOM\"/" "$TOML"
+    echo "Compose BOM: $CURRENT_COMPOSE_BOM → $TARGET_COMPOSE_BOM"
 fi
 
-# Update SDKs
-sed -i "s/compileSdk = [0-9]*/compileSdk = $LATEST_SDK/" app/build.gradle.kts
-sed -i "s/compileSdk = [0-9]*/compileSdk = $LATEST_SDK/" ../maplibre-geoman-android/app/build.gradle.kts
+# Update compileSdk in app and geoman modules
+if [ "$TARGET_SDK" != "$CURRENT_SDK" ]; then
+    sed -i "s/compileSdk = [0-9]*/compileSdk = $TARGET_SDK/" app/build.gradle.kts
+    sed -i "s/compileSdk = [0-9]*/compileSdk = $TARGET_SDK/" maplibre-geoman-android/app/build.gradle.kts
+    echo "compileSdk: $CURRENT_SDK → $TARGET_SDK"
+fi
 
-# --- 4. Verify ---
+# --- 6. Verify ---
+echo ""
 echo "Syncing project..."
+./gradlew --stop 2>/dev/null || true
 
-echo "Done! If the build fails, check ./gradle_backup/ to revert."
+echo ""
+echo "Done! If the build fails, restore from $BACKUP_DIR/"

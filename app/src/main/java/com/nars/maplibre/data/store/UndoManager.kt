@@ -22,7 +22,7 @@ class UndoManager(private val featureStore: FeatureStoreInterface) {
     }
 
     fun executeUndo(): UndoAction? {
-        val action = popUndoAction() ?: return null
+        val action = synchronized(lock) { popUndoAction() } ?: return null
 
         when (action) {
             is UndoAction.Delete -> {
