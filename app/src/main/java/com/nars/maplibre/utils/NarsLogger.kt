@@ -111,7 +111,7 @@ object NarsLogger {
         if (isEnabled) {
             d(tag, "$method $url")
             body?.let {
-                v(tag, "Request body: $it")
+                v(tag, "Request body: ${sanitizeMessage(it)}")
             }
         }
     }

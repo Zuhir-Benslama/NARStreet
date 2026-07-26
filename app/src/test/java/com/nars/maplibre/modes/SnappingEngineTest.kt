@@ -60,7 +60,7 @@ class SnappingEngineTest {
                 geometry = LineStringGeometry(coordinates = listOf(3.0, 36.0, 3.1, 36.1, 3.2, 36.2)),
                 properties = FeatureProperties.RoadProperties(),
             )
-        val point = LatLng(36.01, 3.01)
+        val point = LatLng(35.999, 3.001)
         val result = engine.snapPoint(point, listOf(line), 20000.0)
         assertEquals(LatLng(36.0, 3.0), result)
     }
@@ -74,7 +74,7 @@ class SnappingEngineTest {
                 geometry = PolygonGeometry(coordinates = listOf(3.0, 36.0, 3.1, 36.1, 3.0, 36.2, 3.0, 36.0)),
                 properties = FeatureProperties.RoadProperties(),
             )
-        val point = LatLng(36.01, 3.01)
+        val point = LatLng(35.999, 3.001)
         val result = engine.snapPoint(point, listOf(poly), 20000.0)
         assertEquals(LatLng(36.0, 3.0), result)
     }

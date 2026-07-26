@@ -124,7 +124,8 @@ data class RetryConfig(
     val jitterFactor: Double = 0.2,
 )
 
-private fun Throwable.isNonRetryable(): Boolean = this is AuthError || this is ValidationError || this is NotFoundError
+private fun Throwable.isNonRetryable(): Boolean =
+    this is AuthError || this is ValidationError || this is NotFoundError || this is ConflictError
 
 /**
  * Calculate backoff delay with exponential backoff and jitter
@@ -135,7 +136,7 @@ private fun calculateBackoff(attempt: Int, config: RetryConfig): Long {
 
     // Add jitter (±20% by default)
     val jitter = exponentialDelay * config.jitterFactor
-    val jitteredDelay = exponentialDelay + (jitter * (Math.random() * 2 - 1)).toLong()
+    val jitteredDelay = exponentialDelay + (jitter * (kotlin.random.Random.nextDouble() * 2 - 1)).toLong()
 
     // Cap at max delay
     return jitteredDelay.coerceIn(config.baseDelayMs, config.maxDelayMs)

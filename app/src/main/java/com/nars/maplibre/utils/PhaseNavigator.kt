@@ -86,9 +86,7 @@ class PhaseNavigator(private val featureStore: FeatureStoreInterface) {
      */
     fun goBack(): PhaseDefinition? {
         val prevIndex = getPreviousPhaseIndex() ?: return null
-        val phase = Phases.getByIndex(prevIndex) ?: return null
-        featureStore.setCurrentPhase(phase)
-        return phase
+        return Phases.getByIndex(prevIndex)
     }
 
     /**
@@ -97,8 +95,6 @@ class PhaseNavigator(private val featureStore: FeatureStoreInterface) {
      */
     fun goNext(): PhaseDefinition? {
         val nextIndex = getNextPhaseIndex() ?: return null
-        val phase = navigateTo(nextIndex) ?: return null
-        featureStore.setCurrentPhase(phase)
-        return phase
+        return navigateTo(nextIndex)
     }
 }

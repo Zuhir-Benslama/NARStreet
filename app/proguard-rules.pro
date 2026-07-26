@@ -58,10 +58,6 @@
 -keep class org.maplibre.** { *; }
 -dontwarn org.maplibre.**
 
-# Keep GeoJSON models
--keep class com.mapbox.** { *; }
--dontwarn com.mapbox.**
-
 # =============================================================================
 # Network & API
 # =============================================================================
@@ -75,10 +71,6 @@
 # Compose
 # =============================================================================
 
--keep class androidx.compose.** { *; }
--dontwarn androidx.compose.**
-
-# Keep Compose compiler generated classes
 -keepclassmembers,allowobfuscation class * implements androidx.compose.runtime.Composer {
     void <init>(...);
 }
@@ -97,11 +89,7 @@
 # ViewModel & Lifecycle
 # =============================================================================
 
--keep class * extends androidx.lifecycle.ViewModel { *; }
 -keep class * extends androidx.lifecycle.AndroidViewModel { *; }
--keepclassmembers class * extends androidx.lifecycle.ViewModel {
-    <init>(...);
-}
 
 # =============================================================================
 # Prevent obfuscation of classes used in reflection

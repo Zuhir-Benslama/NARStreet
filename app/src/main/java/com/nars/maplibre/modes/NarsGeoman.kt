@@ -206,9 +206,13 @@ class NarsGeoman internal constructor(
         }
     }
 
+    private val destroyLock = Any()
+
     fun destroy() {
-        if (destroyed) return
-        destroyed = true
+        synchronized(destroyLock) {
+            if (destroyed) return
+            destroyed = true
+        }
         stopDrawing()
         stopEditing()
         geoman.destroy()

@@ -17,7 +17,6 @@ import com.nars.maplibre.data.model.PolygonGeometry
 import com.nars.maplibre.utils.GeometryUtils
 import com.nars.maplibre.utils.NarsLogger
 import kotlinx.serialization.json.JsonObject
-import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.add
 import kotlinx.serialization.json.buildJsonArray
 import kotlinx.serialization.json.buildJsonObject
@@ -49,8 +48,13 @@ class GeometryConverter {
                 }
 
                 is MultiPolygon -> {
-                    val ring = geometry.coordinates.firstOrNull()?.firstOrNull() ?: return null
-                    PolygonGeometry(coordinates = ring.flatMap { listOf(it[0], it[1]) })
+                    val rings = geometry.coordinates.flatten()
+                    if (rings.isEmpty()) {
+                        null
+                    } else {
+                        val allCoords = rings.flatMap { ring -> ring.flatMap { listOf(it[0], it[1]) } }
+                        PolygonGeometry(coordinates = allCoords)
+                    }
                 }
 
                 else -> null

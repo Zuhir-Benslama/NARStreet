@@ -23,12 +23,14 @@ class AppPreferences(context: Context) {
     private val _themeModeFlow = MutableStateFlow(themeMode)
     val themeModeFlow: StateFlow<ThemeMode> = _themeModeFlow.asStateFlow()
 
-    init {
-        prefs.registerOnSharedPreferenceChangeListener { _, key ->
-            if (key == KEY_THEME) {
-                _themeModeFlow.value = themeMode
-            }
+    private val themeChangeListener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
+        if (key == KEY_THEME) {
+            _themeModeFlow.value = themeMode
         }
+    }
+
+    init {
+        prefs.registerOnSharedPreferenceChangeListener(themeChangeListener)
     }
 
     var themeMode: ThemeMode

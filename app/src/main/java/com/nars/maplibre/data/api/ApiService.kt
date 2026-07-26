@@ -27,6 +27,7 @@ import kotlinx.serialization.json.JsonObject
 class ApiService(private val httpClient: HttpClient, private val preferences: AppPreferences) {
     companion object {
         private const val TAG = "ApiService"
+        private val COOKIE_ACCESS_TOKEN_REGEX = Regex("access_token=([^;]+)")
     }
 
     private val baseUrl: String = BuildConfig.API_BASE_URL.trimEnd('/')
@@ -42,7 +43,7 @@ class ApiService(private val httpClient: HttpClient, private val preferences: Ap
     private fun extractAndSetCookie(response: io.ktor.client.statement.HttpResponse) {
         val cookieHeader = response.headers[HttpHeaders.SetCookie]
         cookieHeader?.let { rawCookie ->
-            val tokenMatch = Regex("access_token=([^;]+)").find(rawCookie)
+            val tokenMatch = COOKIE_ACCESS_TOKEN_REGEX.find(rawCookie)
             tokenMatch?.let { match ->
                 sessionToken = match.groupValues[1]
             }
@@ -177,6 +178,7 @@ class ApiService(private val httpClient: HttpClient, private val preferences: Ap
         val response =
             httpClient.post("$baseUrl/api/save") {
                 authHeaders().forEach { (k, v) -> headers.append(k, v) }
+                contentType(ContentType.Application.Json)
                 setBody(requestBody)
             }
         if (!response.status.isSuccess()) {
@@ -202,6 +204,7 @@ class ApiService(private val httpClient: HttpClient, private val preferences: Ap
         val requestBody = apiJson.encodeToString(feature.toSaveFeatureRequest())
         val response = httpClient.put("$baseUrl/api/update/$featureId") {
             authHeaders().forEach { (k, v) -> headers.append(k, v) }
+            contentType(ContentType.Application.Json)
             setBody(requestBody)
         }
         if (!response.status.isSuccess()) {

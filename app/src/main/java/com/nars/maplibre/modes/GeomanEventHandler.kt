@@ -156,10 +156,9 @@ class GeomanEventHandler(
             NarsLogger.e(TAG, "Failed to extract geometry during edit — skipping update")
             return
         }
-        editingFeature?.let { original ->
-            val updated = original.copy(geometry = geometry)
-            onFeatureUpdated(updated)
-        }
+        val original = getEditingFeature() ?: return
+        val updated = original.copy(geometry = geometry)
+        onFeatureUpdated(updated)
     }
 
     internal fun handleDeleted() {

@@ -66,8 +66,8 @@ class FeatureDisplayManager(
         val toAdd = filtered.filter { it.id !in displayedFeatureIds }
         toAdd.forEach { addFeature(it) }
 
-        displayedFeatureIds.clear()
-        displayedFeatureIds.addAll(newIds)
+        displayedFeatureIds.retainAll(newIds)
+        displayedFeatureIds.addAll(newIds.filterNot { it in displayedFeatureIds })
 
         if (currentPhaseKey == Phases.ROADS_KEY) {
             featureRenderer.labelAndMarkerManager.addRoadEndpointMarkers(allFeatures)

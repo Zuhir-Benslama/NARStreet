@@ -253,7 +253,6 @@ class PhaseNavigatorTest {
         store.setCurrentPhase(Phases.ALL[1])
         val result = navigator.goBack()
         assertEquals(Phases.ALL[0], result)
-        assertEquals(Phases.ALL[0], store.currentPhase.value)
     }
 
     // ── goNext ────────────────────────────────────────────────────────────
@@ -282,7 +281,6 @@ class PhaseNavigatorTest {
         store.setCurrentPhase(Phases.ALL[0])
         val result = navigator.goNext()
         assertEquals(Phases.ALL[1], result)
-        assertEquals(Phases.ALL[1], store.currentPhase.value)
     }
 
     // ── hasAnyRoads ─────────────────────────────────────────────────────

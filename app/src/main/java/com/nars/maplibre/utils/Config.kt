@@ -37,11 +37,11 @@ object Config {
         }
     val TILE_LIGHT: String =
         BuildConfig.TILE_LIGHT.ifBlank {
-            "https://basemaps.cartocdn.com/light_all/{z}/{x}/{y}{ratio}.png"
+            "https://basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png"
         }
     val TILE_DARK: String =
         BuildConfig.TILE_DARK.ifBlank {
-            "https://basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{ratio}.png"
+            "https://basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png"
         }
 
     const val GLYPHS = "https://fonts.openmaptiles.org/{fontstack}/{range}.pbf"

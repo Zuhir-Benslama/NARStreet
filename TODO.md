@@ -1,1 +1,88 @@
 # TODO
+
+## nars-android Code Quality Audit
+
+### High
+
+- [ ] **Math bug in `SnappingEngine.interpolateBearing`** — `lat2 = sin(...)` is missing `asin()`. The spherical formula result is in [-1,1] assigned directly to lat2, then sin(lat2) is called. Must be `asin(...)`. (`SnappingEngine.kt:174`)
+- [ ] **Deadlock risk between `FeatureStore` and `UndoManager`** — `FeatureStore.lock` -> `undoManager.*` and `UndoManager.lock` -> `featureStore.*` creates lock-ordering inversion. (`FeatureStore.kt:32-57` + `UndoManager.kt:24-43`)
+- [ ] **`FeatureStore.withPhaseMap` lost-update race** — Reads and mutates `_featuresByPhase.value` outside any lock. Concurrent calls lose updates. (`FeatureStore.kt:32-36`)
+- [ ] **`FeatureStore` inconsistent synchronization** — Read methods don't acquire `lock`, write methods do. Readers see partially-updated state. (`FeatureStore.kt:102-108`)
+- [ ] **`SharedPreferenceChangeListener` subject to GC** — Anonymous listener not held by strong ref. Android stores in WeakReference, silently stopping theme flow updates. (`AppPreferences.kt:27-31`)
+- [ ] **Double state mutation in phase navigation** — `PhaseNavigator.goNext()` calls `featureStore.setCurrentPhase()`, then `MapViewModel.goToNextPhase()` calls it again. (`PhaseNavigator.kt:87-103` + `MapViewModel.kt:85-97`)
+- [ ] **Unsanitized request body logging** — `logNetworkRequest` logs full body without `sanitizeMessage`. Auth tokens and PII leak to Logcat. (`NarsLogger.kt:114`)
+- [ ] **Local state deleted before API confirmation** — `deleteFeature` modifies local state before API call completes. No rollback on failure. (`MapScreenHandlers.kt:177-184`)
+- [ ] **`MapView` lifecycle mismanagement** — `rememberSaveable { Bundle() }` won't survive process death. DisposableEffect can call onCreate again without onDestroy. (`NarsMap.kt:59-76`)
+- [ ] **`MultiPolygon` drops all rings except first** — GeometryConverter extracts only first ring of first polygon. (`GeometryConverter.kt:51-53`)
+- [ ] **Data race on `editingFeature`** — Not @Volatile, read without editingLock at line 159, written under lock at line 45. (`GeomanEventHandler.kt:33,159`)
+- [ ] **Double-destroy race condition** — `destroy()` uses @Volatile but check-then-act is not atomic. (`NarsGeoman.kt:209-216`)
+- [ ] **TOCTOU race in `FeatureDisplayManager`** — `clear()` + `addAll()` creates empty-set window. (`FeatureDisplayManager.kt:69-70`)
+- [ ] **Endpoint markers never cleaned up** — `addRoadEndpointMarkers` called on every update with ALL features. Old markers leak. (`LabelAndMarkerManager.kt:69-95`)
+- [ ] **`PolygonGeometry.coordinates` type is wrong** — Typed as `List<Double>` but polygons need `List<List<Double>>`. (`NarsFeature.kt:40-53`)
+- [ ] **`ConflictError` is retryable by default** — 409 conflicts are deterministic. `isNonRetryable()` doesn't check it. (`ApiErrors.kt:13,127`)
+- [ ] **Regex compiled on every call** — `Regex("access_token=...")` recompiled per HTTP response. (`ApiService.kt:45`)
+- [ ] **Overly broad ProGuard keep rules** — Blanket keeps for model and Compose packages disable R8 optimizations. (`proguard-rules.pro:38-39,78`)
+- [ ] **`{ratio}` placeholder never substituted** — Tile URL templates produce literal `{ratio}` in requests, causing 404s. (`Config.kt:40,44`)
+- [ ] **Double update on feature save** — Both ViewModel and handlers updateFeature called. Duplicate success messages. (`MapScreen.kt:204-216`)
+- [ ] **`isLoading` managed in composable scope** — If composition disposes mid-flight, loading state leaks. (`LoginScreen.kt:80-96`)
+- [ ] **Unguarded array index access** — `coordinates[2]` without bounds check. (`MapScreenHandlers.kt:231` + `FeatureRenderer.kt:116`)
+
+### Medium
+
+- [ ] **Untyped positional `get()` in Koin DI** — Fragile to reordering. Use typed `get<T>()`. (`AppModule.kt:86-91`)
+- [ ] **Duplicated validation classes** — `HouseEntranceValidation` and `NamingPanelValidation` are near-identical. (`Validation.kt:32-48,131-187`)
+- [ ] **Duplicated color hex strings and phase keys** — Hardcoded in 4+ places instead of referencing constants. (`NarsFeature.kt` + `ApiModels.kt`)
+- [ ] **`User.role` uses magic strings** — Should be enum or sealed class. (`User.kt:15,33,57`)
+- [ ] **Stale KDoc on `FeatureStoreInterface`** — References `undoManager` not in interface. (`FeatureStoreInterface.kt:10`)
+- [ ] **`UndoManager` uses `removeAt(0)`** — O(n) on MutableList. Use ArrayDeque. (`UndoManager.kt:14-15`)
+- [ ] **`ApiService` throws raw `Exception()`** — Should use NarsError hierarchy. (`ApiService.kt:94,128,146,183,208,225`)
+- [ ] **`SessionManager` stores same value in authToken and sessionCookie** — Unclear if intentional. (`SessionManager.kt:15-31`)
+- [ ] **`ApiService.login()` incomplete exception handling** — Only catches subset of exceptions. (`ApiService.kt:75-119`)
+- [ ] **`loadFeatures` double-parses response** — Unnecessary intermediate String + JsonElement. (`ApiService.kt:150-152`)
+- [ ] **Missing `Content-Type` on save/update/delete** — Only login sets it. (`ApiService.kt:175-199`)
+- [ ] **`LoginScreen` error handling too narrow** — Only catches IOException. (`LoginScreen.kt:89`)
+- [ ] **`MapScreenHandlers` race on `@Volatile narsGeoman`** — Check-then-act not atomic. (`MapScreenHandlers.kt:39`)
+- [ ] **`ProfileMenu` DropdownMenu `expanded` hardcoded to `true`** — Defeats animation API. (`ProfileMenu.kt:81`)
+- [ ] **`FeatureModal` validation errors never cleared** — Old errors persist after fix. (`FeatureModal.kt:97-103`)
+- [ ] **`ContextMenuManager` magic integer IDs** — Hardcoded 1, 2, 3. (`ContextMenuManager.kt:19-21`)
+- [ ] **`ValidationFields` hardcoded English strings** — Not localized. (`ValidationFields.kt:31-42`)
+- [ ] **`NarsNavHost` fragile `popUpTo(0)`** — Use findStartDestination().id. (`NarsNavHost.kt:36`)
+- [ ] **`VerticalPhaseNav` debug logging on every tap** — Excessive production logs. (`VerticalPhaseNav.kt:149-154`)
+- [ ] **Fully qualified `FontWeight.Bold`** — Should import in PhaseBar.kt and InfoPanel.kt.
+- [ ] **`FeatureRenderer` mutable factory lambdas** — `internal var` should be `val`. (`FeatureRenderer.kt:23-31`)
+- [ ] **`LabelAndMarkerManager` magic colors and numbers** — Hardcoded instead of constants. (`LabelAndMarkerManager.kt:130,170,178`)
+- [ ] **`SnappingEngine` snaps to circle center** — Should snap to perimeter. (`SnappingEngine.kt:53-56`)
+- [ ] **`SnappingEngine` redundant vertex snapping loop** — Segment loop handles vertices. (`SnappingEngine.kt:114-121`)
+- [ ] **`GeometryConverter` should be `object`** — All methods stateless. (`GeometryConverter.kt`)
+- [ ] **`GeometryConverter.geometryToJsonElement` throws for unsupported types** — (`GeometryConverter.kt:174-178`)
+- [ ] **`GeomanEventHandler` defaults unknown phases to ROAD** — Masks bugs. (`GeomanEventHandler.kt:212-217`)
+- [ ] **`ProGuard` dead Mapbox keep rule** — No Mapbox dependency. (`proguard-rules.pro:62-63`)
+- [ ] **Duplicate ViewModel keep rules** — Lines 100-101 subsume 102-104. (`proguard-rules.pro:100-104`)
+- [ ] **`AndroidManifest.xml` stale `targetApi="31"`** — compileSdk is 37. (`AndroidManifest.xml:24`)
+- [ ] **`ci.yml` unversioned third-party action** — Supply-chain risk. (`.github/workflows/ci.yml:29`)
+- [ ] **`ci.yml` outdated gradle action v3** — Current is v4. (`.github/workflows/ci.yml:19-20`)
+- [ ] **`upgrade.sh` hardcoded path and fragile parsing** — (`upgrade.sh:13-16,97-98`)
+- [ ] **`detekt` on alpha pre-release `2.0.0-alpha.5`** — (`app/build.gradle.kts:16`)
+- [ ] **Test fixtures duplicated across 5+ files** — `createRoad`, `createEntrance`, PhaseDefinition constants.
+- [ ] **Inconsistent mock strictness** — No project-wide convention.
+- [ ] **`ApiServiceTest` MockEngine setup copy-pasted 6 times** — (`ApiServiceTest.kt`)
+
+### Low
+
+- [ ] **Unused import `Phases` in MapViewModel** — (`MapViewModel.kt:10`)
+- [ ] **Unused import `kotlinx.coroutines.cancel` in NarsApplication** — (`NarsApplication.kt:14`)
+- [ ] **Unused import `JsonPrimitive` in GeometryConverter** — (`GeometryConverter.kt:20`)
+- [ ] **Unused import `roundToInt` in SnappingEngine** — (`SnappingEngine.kt:15`)
+- [ ] **`UndoAction.phaseKey` is dead data** — Stored in every subclass but never used. (`UndoAction.kt:9,11,13`)
+- [ ] **`FeatureStore.undoManager` is `public val`** — Leaks internal detail. (`FeatureStore.kt:14`)
+- [ ] **`FeatureStore.updateFeature` iterates all phases** — O(phases x features) even if feature in one phase. (`FeatureStore.kt:70-79`)
+- [ ] **`Math.random()` instead of `kotlin.random.Random.nextDouble()`** — (`ApiErrors.kt:138`)
+- [ ] **`LoginScreen` unnecessary local copies** — `val user` / `val pass` when closure captures variables. (`LoginScreen.kt:78-79`)
+- [ ] **`LabelAndMarkerManager` fully qualified `PropertyFactory`** — Inconsistent imports. (`LabelAndMarkerManager.kt:44-59`)
+- [ ] **`FeatureRenderer` unused style constants** — `STYLE_FILL_OPACITY_NONE` etc. may be dead code. (`FeatureRenderer.kt:41-48`)
+- [ ] **`PhaseNavigatorTest` duplicate tests** — Two identical tests with different names. (`PhaseNavigatorTest.kt:35,81`)
+- [ ] **`MapViewModelTest` verbose full class references** — Repeated 5 times. (`MapViewModelTest.kt:381,400,420,444,462`)
+- [ ] **`LabelAndMarkerManagerTest` low coverage** — Only 5 tests, all null/edge cases. No positive tests.
+- [ ] **`.gitignore` obsolete entries** — Freeline (abandoned 2017) and fastlane boilerplate. (`.gitignore:53-64`)
+- [ ] **`README.md` license link uses relative path** — `../LICENSE` breaks outside GitHub. (`README.md:128`)
+- [ ] **`ci.yml` `~/.gradle/notifications` in cache key** — Unnecessary cache bloat. (`.github/workflows/ci.yml:37`)

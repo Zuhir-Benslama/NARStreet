@@ -12,7 +12,6 @@ import kotlin.math.acos
 import kotlin.math.asin
 import kotlin.math.atan2
 import kotlin.math.cos
-import kotlin.math.roundToInt
 import kotlin.math.sin
 
 class SnappingEngine {
@@ -171,7 +170,7 @@ class SnappingEngine {
         val lng1 = Math.toRadians(from.longitude)
         val brng = Math.toRadians(bearingDeg)
 
-        val lat2 = sin(
+        val lat2 = asin(
             (
                 sin(lat1) * cos(angularDist) +
                     cos(lat1) * sin(angularDist) * cos(brng)
