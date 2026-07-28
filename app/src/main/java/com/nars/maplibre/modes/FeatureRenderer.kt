@@ -113,7 +113,7 @@ class FeatureRenderer(internal val map: MapLibreMap, val labelAndMarkerManager: 
     }
 
     private fun addCircleLayer(layerName: String, sourceName: String, style: FeatureStyle, geom: CircleGeometry) {
-        val radiusMeters = geom.coordinates[2].takeIf { it > 0 } ?: DEFAULT_CIRCLE_RADIUS_METERS
+        val radiusMeters = geom.coordinates.getOrNull(2)?.takeIf { it > 0 } ?: DEFAULT_CIRCLE_RADIUS_METERS
         val circleGeoJson =
             geometryConverterProvider()
                 .buildCircleGeoJson(geom.coordinates[0], geom.coordinates[1], radiusMeters)

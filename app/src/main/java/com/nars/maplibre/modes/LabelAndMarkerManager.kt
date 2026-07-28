@@ -66,7 +66,25 @@ class LabelAndMarkerManager(private val map: MapLibreMap) {
         }
     }
 
+    private val roadMarkerRoadIds: MutableSet<String> = java.util.concurrent.ConcurrentHashMap.newKeySet()
+
+    private fun removeRoadEndpointMarkers() {
+        for (roadId in roadMarkerRoadIds) {
+            val ids = listOf("${roadId}_start", "${roadId}_end", "${roadId}_label")
+            for (id in ids) {
+                try {
+                    map.style?.getLayer("nars_${id}_circle")?.let { map.style?.removeLayer(it) }
+                    map.style?.getLayer(id)?.let { map.style?.removeLayer(it) }
+                    map.style?.getSource("nars_${id}_src")?.let { map.style?.removeSource(it) }
+                } catch (_: IllegalArgumentException) {
+                }
+            }
+        }
+        roadMarkerRoadIds.clear()
+    }
+
     fun addRoadEndpointMarkers(allFeatures: List<NarsFeature>) {
+        removeRoadEndpointMarkers()
         allFeatures
             .filter { it.properties.phase == Phases.ROADS_KEY }
             .mapNotNull { road -> (road.geometry as? LineStringGeometry)?.let { road to it } }
@@ -92,6 +110,7 @@ class LabelAndMarkerManager(private val map: MapLibreMap) {
                     lon = coords[midIdx][0],
                     lat = coords[midIdx][1],
                 )
+                roadMarkerRoadIds.add(road.id)
             }
     }
 

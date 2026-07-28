@@ -132,6 +132,12 @@ class MapViewModel(
         _canUndo.value = featureStore.canUndo
     }
 
+    /** Restore a feature without recording an undo action (used for rollback). */
+    fun restoreFeature(feature: NarsFeature) {
+        featureStore.addFeature(feature, recordUndo = false)
+        _canUndo.value = featureStore.canUndo
+    }
+
     fun addFeatures(features: List<NarsFeature>) {
         featureStore.addFeatures(features)
         _canUndo.value = featureStore.canUndo

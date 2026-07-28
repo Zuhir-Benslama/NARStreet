@@ -175,12 +175,19 @@ class MapScreenHandlers(
     }
 
     fun deleteFeature(featureId: String) {
+        val feature = viewModel.allFeatures.value.find { it.id == featureId }
         viewModel.deleteFeature(featureId)
         narsGeoman?.displayManager?.removeFeature(featureId)
         scope.launch {
             val result = apiService.deleteFeature(featureId)
             result.onSuccess { snackbar(context.getString(R.string.map_feature_deleted)) }
-            result.onFailure { snackbar("${context.getString(R.string.map_delete_failed)}: ${it.message}") }
+            result.onFailure {
+                if (feature != null) {
+                    viewModel.restoreFeature(feature)
+                    narsGeoman?.displayManager?.addFeature(feature)
+                }
+                snackbar("${context.getString(R.string.map_delete_failed)}: ${it.message}")
+            }
         }
     }
 
@@ -228,7 +235,8 @@ class MapScreenHandlers(
 
         is CircleGeometry -> {
             val cp = LatLng(geometry.coordinates[1], geometry.coordinates[0])
-            latLng.distanceTo(cp) < geometry.coordinates[2].coerceAtLeast(MIN_CIRCLE_RADIUS)
+            latLng.distanceTo(cp) <
+                (geometry.coordinates.getOrNull(2) ?: MIN_CIRCLE_RADIUS).coerceAtLeast(MIN_CIRCLE_RADIUS)
         }
 
         is LineStringGeometry -> {
