@@ -1,9 +1,9 @@
 [versions]
 # Android Gradle Plugin - Compatible with Gradle 8.12 + JDK 21
-agp = "9.2.1"
+agp = "9.3.1"
 
 # Kotlin - Compatible with JDK 21
-kotlin = "2.4.0"
+kotlin = "2.4.10"
 kotlinx-serialization = "1.11.0"
 kotlinx-coroutines = "1.11.0"
 
@@ -23,7 +23,7 @@ compose-bom = "2026.06.01"
 compose-material3 = "1.4.0"
 
 # MapLibre
-maplibre-sdk = "13.3.1"
+maplibre-sdk = "13.4.1"
 
 # Koin (DI)
 koin = "4.2.2"
@@ -41,7 +41,7 @@ detekt = "2.0.0-alpha.5"
 timber = "5.0.1"
 
 # Formatting
-spotless = "8.8.0"
+spotless = "8.9.0"
 
 # Material
 material = "1.14.0"
