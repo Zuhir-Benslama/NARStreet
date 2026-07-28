@@ -6,19 +6,19 @@ class UndoManager(private val featureStore: FeatureStoreInterface) {
     }
 
     private val lock = Any()
-    private val undoStack = mutableListOf<UndoAction>()
+    private val undoStack = ArrayDeque<UndoAction>()
     val canUndo: Boolean get() = synchronized(lock) { undoStack.isNotEmpty() }
 
     fun addUndoAction(action: UndoAction) = synchronized(lock) {
-        undoStack.add(action)
+        undoStack.addLast(action)
         if (undoStack.size > MAX_UNDO_SIZE) {
-            undoStack.removeAt(0)
+            undoStack.removeFirst()
         }
     }
 
     fun popUndoAction(): UndoAction? = synchronized(lock) {
         if (undoStack.isEmpty()) return@synchronized null
-        undoStack.removeAt(undoStack.lastIndex)
+        undoStack.removeLast()
     }
 
     fun executeUndo(): UndoAction? {
