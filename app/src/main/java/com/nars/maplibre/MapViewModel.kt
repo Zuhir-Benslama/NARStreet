@@ -138,6 +138,16 @@ class MapViewModel(
         _canUndo.value = featureStore.canUndo
     }
 
+    /**
+     * Updates an existing store entry without recording an undo action.
+     * Used when a newly drawn feature is persisted to the backend — the Create
+     * undo action recorded at draw time already covers the feature's removal.
+     */
+    fun updateFeatureInPlace(feature: NarsFeature) {
+        featureStore.updateFeature(feature.id, feature)
+        _canUndo.value = featureStore.canUndo
+    }
+
     fun addFeatures(features: List<NarsFeature>) {
         featureStore.addFeatures(features)
         _canUndo.value = featureStore.canUndo

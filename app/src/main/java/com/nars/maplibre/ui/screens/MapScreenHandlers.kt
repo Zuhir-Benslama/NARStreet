@@ -77,6 +77,7 @@ class MapScreenHandlers(
 
     fun handleFeatureCreated(feature: NarsFeature) {
         NarsLogger.d(TAG, "Feature created: ${feature.id}, phase=${feature.properties.phase}")
+        viewModel.addFeature(feature)
         narsGeoman?.displayManager?.addFeature(feature)
     }
 
@@ -151,14 +152,8 @@ class MapScreenHandlers(
         scope.launch {
             val result = apiService.saveFeature(feature)
             result.onSuccess { savedId ->
-                val updatedFeature =
-                    if (savedId != feature.id) {
-                        feature.copy(dbId = savedId, id = savedId)
-                    } else {
-                        feature.copy(dbId = savedId)
-                    }
-                viewModel.addFeature(updatedFeature)
-                narsGeoman?.displayManager?.updateFeatureId(feature.id, updatedFeature.id)
+                val updatedFeature = feature.copy(dbId = savedId)
+                viewModel.updateFeatureInPlace(updatedFeature)
                 narsGeoman?.displayManager?.updateFeatureOnMap(updatedFeature)
                 snackbar(context.getString(R.string.map_feature_saved))
             }
@@ -168,7 +163,8 @@ class MapScreenHandlers(
 
     fun updateFeature(feature: NarsFeature) {
         scope.launch {
-            val result = apiService.updateFeature(feature.id, feature)
+            val apiId = feature.dbId ?: feature.id
+            val result = apiService.updateFeature(apiId, feature)
             result.onSuccess { snackbar(context.getString(R.string.map_feature_updated)) }
             result.onFailure { snackbar("${context.getString(R.string.map_update_failed)}: ${it.message}") }
         }
@@ -179,7 +175,8 @@ class MapScreenHandlers(
         viewModel.deleteFeature(featureId)
         narsGeoman?.displayManager?.removeFeature(featureId)
         scope.launch {
-            val result = apiService.deleteFeature(featureId)
+            val apiId = feature?.dbId ?: featureId
+            val result = apiService.deleteFeature(apiId)
             result.onSuccess { snackbar(context.getString(R.string.map_feature_deleted)) }
             result.onFailure {
                 if (feature != null) {

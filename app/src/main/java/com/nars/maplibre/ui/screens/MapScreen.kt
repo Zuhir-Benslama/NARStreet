@@ -148,6 +148,10 @@ private fun MapScreenEffects(
         handlers.narsGeoman?.let { handlers.loadFeaturesOnMapReady() }
     }
 
+    LaunchedEffect(allFeatures) {
+        handlers.narsGeoman?.displayManager?.updateDisplayedFeatures(allFeatures)
+    }
+
     LaunchedEffect(currentPhase) {
         currentPhase?.let { phase ->
             NarsLogger.d("MapScreen", "Phase changed: ${phase.label}")
@@ -204,10 +208,16 @@ private fun MapScreenScaffold(
         onSaveFeature = { feature ->
             val existing = editingFeature
             if (existing != null && existing.dbId != null) {
-                callbacks.viewModel.updateFeature(feature)
-                callbacks.handlers.narsGeoman?.commitEdits()
-                callbacks.handlers.narsGeoman?.displayManager?.updateFeatureOnMap(feature)
-                callbacks.handlers.updateFeature(feature)
+                val committed = callbacks.handlers.narsGeoman?.commitEdits(notify = false)
+                val finalFeature =
+                    if (committed != null) {
+                        committed.copy(properties = feature.properties)
+                    } else {
+                        feature
+                    }
+                callbacks.viewModel.updateFeature(finalFeature)
+                callbacks.handlers.narsGeoman?.displayManager?.updateFeatureOnMap(finalFeature)
+                callbacks.handlers.updateFeature(finalFeature)
             } else if (existing != null) {
                 callbacks.handlers.saveFeature(feature)
             }

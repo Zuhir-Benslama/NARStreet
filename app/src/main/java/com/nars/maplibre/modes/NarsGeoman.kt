@@ -144,8 +144,8 @@ class NarsGeoman internal constructor(
         geoman.disableAllModes()
     }
 
-    fun commitEdits() {
-        val originalFeature = eventHandler.getEditingFeature() ?: return
+    fun commitEdits(notify: Boolean = true): NarsFeature? {
+        val originalFeature = eventHandler.getEditingFeature() ?: return null
 
         var updatedGeometry: com.nars.maplibre.data.model.Geometry? = null
         for (sourceName in GEOMAN_SOURCE_NAMES) {
@@ -162,10 +162,11 @@ class NarsGeoman internal constructor(
             } else {
                 NarsLogger.w("NarsGeoman", "No updated geometry for ${originalFeature.id}, skipping commit")
                 stopEditing()
-                return
+                return null
             }
-        callbacks.onUpdated(updated)
+        if (notify) callbacks.onUpdated(updated)
         stopEditing()
+        return updated
     }
 
     fun cancelEdits() {

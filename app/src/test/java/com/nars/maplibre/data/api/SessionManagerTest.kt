@@ -33,8 +33,10 @@ class SessionManagerTest {
 
         coEvery { apiService.login("testuser", "pass123") } returns Result.success(loginResponse)
         coEvery { apiService.getSessionToken() } returns "cookie123"
+        coEvery { apiService.getRefreshToken() } returns "refresh123"
         every { appPreferences.authToken = any() } just runs
         every { appPreferences.sessionCookie = any() } just runs
+        every { appPreferences.refreshToken = any() } just runs
         every { appPreferences.user = any() } just runs
         every { appPreferences.municipalityName = any() } just runs
 
@@ -43,6 +45,7 @@ class SessionManagerTest {
         assertTrue(result.isSuccess)
         verify { appPreferences.authToken = "cookie123" }
         verify { appPreferences.sessionCookie = "cookie123" }
+        verify { appPreferences.refreshToken = "refresh123" }
         verify { appPreferences.user = user.copy(username = "testuser", name = "Test User") }
     }
 
@@ -61,17 +64,21 @@ class SessionManagerTest {
         coEvery { apiService.logout() } returns Result.success(Unit)
         every { appPreferences.authToken = null } just runs
         every { appPreferences.sessionCookie = null } just runs
+        every { appPreferences.refreshToken = null } just runs
         every { appPreferences.user = null } just runs
         every { appPreferences.municipalityName = null } just runs
         every { apiService.setSessionToken(null) } just runs
+        every { apiService.setRefreshToken(null) } just runs
 
         sessionManager.logout()
 
         verify { appPreferences.authToken = null }
         verify { appPreferences.sessionCookie = null }
+        verify { appPreferences.refreshToken = null }
         verify { appPreferences.user = null }
         verify { appPreferences.municipalityName = null }
         verify { apiService.setSessionToken(null) }
+        verify { apiService.setRefreshToken(null) }
     }
 
     @Test

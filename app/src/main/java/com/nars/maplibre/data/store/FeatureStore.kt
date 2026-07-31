@@ -59,12 +59,14 @@ class FeatureStore : FeatureStoreInterface {
     }
 
     override fun addFeatures(features: List<NarsFeature>) = lock.withLock {
+        val existingIds = _allFeatures.value.mapTo(mutableSetOf()) { it.id }
+        val fresh = features.filter { it.id !in existingIds }
         withPhaseMap { map ->
-            features.forEach { feature ->
+            fresh.forEach { feature ->
                 map[feature.properties.phase] = map.getOrDefault(feature.properties.phase, emptyList()) + feature
             }
         }
-        _allFeatures.value = _allFeatures.value + features
+        _allFeatures.value = _allFeatures.value + fresh
     }
 
     override fun updateFeature(featureId: String, updatedFeature: NarsFeature) = lock.withLock {

@@ -76,6 +76,16 @@ class AppPreferences(context: Context) {
             }
         }
 
+    var refreshToken: String?
+        get() = securePrefs.getRefreshToken()
+        set(value) {
+            if (value != null) {
+                securePrefs.saveRefreshToken(value)
+            } else {
+                securePrefs.clearRefreshToken()
+            }
+        }
+
     var user: User?
         get() = securePrefs.getUser()
         set(value) {

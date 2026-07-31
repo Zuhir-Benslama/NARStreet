@@ -56,6 +56,9 @@ class NarsApplication :
                     apiService.setSessionToken(token)
                     NarsLogger.d("NarsApplication", "User session found on startup")
                 }
+                prefs.refreshToken?.let { token ->
+                    apiService.setRefreshToken(token)
+                }
             } catch (e: IllegalStateException) {
                 NarsLogger.w("NarsApplication", "Session check skipped: Koin not ready", e)
             }
@@ -70,6 +73,7 @@ class NarsApplication :
                 try {
                     val apiService: ApiService = get()
                     apiService.setSessionToken(null)
+                    apiService.setRefreshToken(null)
                     NarsLogger.d("NarsApplication", "In-memory tokens cleared (app backgrounded)")
                 } catch (e: IllegalStateException) {
                     NarsLogger.w("NarsApplication", "Token clearing skipped: Koin not ready", e)
@@ -81,6 +85,9 @@ class NarsApplication :
                     prefs.authToken?.let { token ->
                         apiService.setSessionToken(token)
                         NarsLogger.d("NarsApplication", "In-memory tokens restored (app foregrounded)")
+                    }
+                    prefs.refreshToken?.let { token ->
+                        apiService.setRefreshToken(token)
                     }
                 } catch (e: IllegalStateException) {
                     NarsLogger.w("NarsApplication", "Token restore skipped: Koin not ready", e)

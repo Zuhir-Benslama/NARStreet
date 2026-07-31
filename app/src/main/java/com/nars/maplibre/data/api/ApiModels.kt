@@ -1,12 +1,28 @@
 package com.nars.maplibre.data.api
 
+import com.nars.maplibre.data.model.CircleGeometry
 import com.nars.maplibre.data.model.FeatureProperties
+import com.nars.maplibre.data.model.Geometry
+import com.nars.maplibre.data.model.LineStringGeometry
 import com.nars.maplibre.data.model.NarsFeature
 import com.nars.maplibre.data.model.NarsFeatureType
 import com.nars.maplibre.data.model.Phases
+import com.nars.maplibre.data.model.PointGeometry
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonObjectBuilder
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.add
+import kotlinx.serialization.json.buildJsonArray
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.doubleOrNull
+import kotlinx.serialization.json.put
+import kotlinx.serialization.json.putJsonArray
+import java.util.GregorianCalendar
+import java.util.TimeZone
 
 val apiJson =
     Json {
@@ -17,230 +33,245 @@ val apiJson =
 @Serializable
 data class LoginRequest(val username: String, val password: String)
 
-@Serializable
-data class ApiFeatureListResponse(
-    val features: List<ApiFeatureResponse>? = null,
-    val success: Boolean = true,
-    val message: String? = null,
-)
+// ─── Feature API contract (mirrors NARS backend /api/features) ────────────────
 
+/**
+ * Request body for creating a new feature.
+ * `data` is an opaque JSON blob (GeoJSON-like) matching the web frontend format:
+ * `{ type, label, coordinates: [{lat,lng}], lat, lng, radius, roadTypeKey, ... }`.
+ */
 @Serializable
-data class ApiFeatureResponse(
+data class ApiSaveFeatureRequest(val type: String, val layer: String, val label: String, val data: JsonElement)
+
+/** Request body for updating an existing feature. Both fields are optional. */
+@Serializable
+data class ApiUpdateFeatureRequest(val label: String? = null, val data: JsonElement? = null)
+
+/** A single feature row returned by the backend. */
+@Serializable
+data class ApiFeatureResult(
     val id: String,
-    @SerialName("db_id") val dbId: String? = null,
     val type: String,
-    val geometry: ApiGeometryResponse,
-    val properties: ApiPropertiesResponse,
-    @SerialName("created_at") val createdAt: Long = System.currentTimeMillis(),
-    @SerialName("updated_at") val updatedAt: Long = System.currentTimeMillis(),
+    val layer: String? = null,
+    val label: String? = null,
+    val data: JsonElement = JsonObject(emptyMap()),
+    val createdAt: String? = null,
 ) {
     fun toNarsFeature(): NarsFeature? {
-        val featureType = NarsFeatureType.fromValue(type)
-        val modelGeometry = geometry.toModelGeometry() ?: return null
+        val featureType = when (type) {
+            "road" -> NarsFeatureType.ROAD
+            "house_entrance" -> NarsFeatureType.HOUSE_ENTRANCE
+            "naming_panel" -> NarsFeatureType.NAMING_PANEL
+            else -> return null
+        }
+        val dataObject = data as? JsonObject ?: JsonObject(emptyMap())
+        val geometry = parseGeometry(dataObject) ?: return null
         return NarsFeature(
             id = id,
-            dbId = dbId,
+            dbId = id,
             type = featureType,
-            geometry = modelGeometry,
-            properties = properties.toFeatureProperties(featureType),
-            createdAt = createdAt,
-            updatedAt = updatedAt,
+            geometry = geometry,
+            properties = parseProperties(dataObject, featureType, label, layer),
+            createdAt = createdAt.toEpochMillis(),
         )
     }
-}
 
-@Serializable
-data class ApiGeometryResponse(val type: String, val coordinates: List<Double>) {
-    fun toModelGeometry() = when (type) {
-        "Point" -> {
-            com.nars.maplibre.data.model
-                .PointGeometry(type, coordinates)
+    private companion object {
+        fun parseGeometry(data: JsonObject): Geometry? {
+            val lat = data.str("lat")?.toDoubleOrNull()
+            val lng = data.str("lng")?.toDoubleOrNull()
+            val radius = data.str("radius")?.toDoubleOrNull()
+            val coords =
+                (data["coordinates"] as? kotlinx.serialization.json.JsonArray)?.mapNotNull { element ->
+                    val obj = element as? JsonObject ?: return@mapNotNull null
+                    val clat = obj.str("lat")?.toDoubleOrNull() ?: return@mapNotNull null
+                    val clng = obj.str("lng")?.toDoubleOrNull() ?: return@mapNotNull null
+                    listOf(clng, clat)
+                }?.flatten()
+
+            return when {
+                radius != null && lat != null && lng != null ->
+                    CircleGeometry(coordinates = listOf(lng, lat, radius))
+
+                lat != null && lng != null ->
+                    PointGeometry(coordinates = listOf(lng, lat))
+
+                coords != null && coords.size >= 4 ->
+                    LineStringGeometry(coordinates = coords)
+
+                coords != null && coords.size == 2 ->
+                    PointGeometry(coordinates = coords)
+
+                else -> null
+            }
         }
 
-        "LineString" -> {
-            com.nars.maplibre.data.model
-                .LineStringGeometry(type, coordinates)
+        fun parseProperties(
+            data: JsonObject,
+            featureType: NarsFeatureType,
+            topLabel: String?,
+            topLayer: String?,
+        ): FeatureProperties {
+            val name = data.str("label") ?: topLabel
+            return when (featureType) {
+                NarsFeatureType.ROAD -> {
+                    FeatureProperties.RoadProperties(
+                        name = name,
+                        phase = Phases.ROADS_KEY,
+                        color = "#3498db",
+                        roadTypeKey = data.str("roadTypeKey") ?: topLayer,
+                    )
+                }
+
+                NarsFeatureType.HOUSE_ENTRANCE -> {
+                    FeatureProperties.HouseEntranceProperties(
+                        name = name,
+                        phase = Phases.HOUSE_ENTRANCES_KEY,
+                        color = "#27ae60",
+                        entranceTypeKey = data.str("entranceTypeKey") ?: topLayer,
+                        roadDbId = data.str("roadDbId"),
+                        side = data.str("side"),
+                    )
+                }
+
+                NarsFeatureType.NAMING_PANEL -> {
+                    FeatureProperties.NamingPanelProperties(
+                        name = name,
+                        phase = Phases.NAMING_PANELS_KEY,
+                        color = "#9b59b6",
+                    )
+                }
+            }
         }
 
-        "Polygon" -> {
-            com.nars.maplibre.data.model
-                .PolygonGeometry(type, coordinates)
+        private fun JsonObject.str(key: String): String? = when (val value = this[key]) {
+            is kotlinx.serialization.json.JsonNull -> null
+            is JsonPrimitive -> value.content
+            else -> null
         }
+        private const val MILLIS_PER_HOUR = 3_600_000L
+        private const val MILLIS_PER_MINUTE = 60_000L
 
-        "Circle" -> {
-            com.nars.maplibre.data.model
-                .CircleGeometry(type, coordinates)
+        private val ISO_8601_REGEX =
+            Regex(
+                """(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2}):(\d{2})(?:\.\d+)?(?:([+-])(\d{2}):(\d{2})|Z)?""",
+            )
+
+        /**
+         * Parses the backend's ISO-8601 round-trip timestamps into epoch millis.
+         * Implemented with [GregorianCalendar] instead of `java.time` because the
+         * app targets API 24 (min) without core library desugaring.
+         */
+        @Suppress("MagicNumber")
+        private fun String?.toEpochMillis(): Long {
+            val raw = this ?: return System.currentTimeMillis()
+            val match = ISO_8601_REGEX.matchEntire(raw) ?: return System.currentTimeMillis()
+            val parts = match.groupValues
+            val calendar = GregorianCalendar(TimeZone.getTimeZone("UTC"))
+            calendar.isLenient = false
+            calendar.clear()
+            calendar.set(
+                parts[1].toInt(),
+                parts[2].toInt() - 1,
+                parts[3].toInt(),
+                parts[4].toInt(),
+                parts[5].toInt(),
+                parts[6].toInt(),
+            )
+            var millis = calendar.timeInMillis
+            val sign = parts[7]
+            if (sign == "+" || sign == "-") {
+                val delta = parts[8].toInt() * MILLIS_PER_HOUR + parts[9].toInt() * MILLIS_PER_MINUTE
+                millis -= if (sign == "+") delta else -delta
+            }
+            return millis
         }
-
-        else -> null
     }
 }
 
+/** Wrapper returned by GET /api/features (pagination envelope). */
 @Serializable
-data class ApiPropertiesResponse(
-    val name: String? = null,
-    val phase: String? = null,
-    val color: String? = null,
-    @SerialName("road_type_key") val roadTypeKey: String? = null,
-    @SerialName("road_traffic") val roadTraffic: String? = null,
-    @SerialName("trad_activity") val tradActivity: String? = null,
-    @SerialName("num_lanes") val numLanes: Int? = null,
-    @SerialName("has_median") val hasMedian: Boolean? = null,
-    @SerialName("has_vegetation") val hasVegetation: Boolean? = null,
-    @SerialName("is_dead_end") val isDeadEnd: Boolean? = null,
-    @SerialName("has_sidewalk") val hasSidewalk: Boolean? = null,
-    @SerialName("entrance_type_key") val entranceTypeKey: String? = null,
-    @SerialName("road_db_id") val roadDbId: String? = null,
-    val side: String? = null,
-    @SerialName("has_entrance") val hasEntrance: Boolean? = null,
-    @SerialName("has_numbering_panel") val hasNumberingPanel: Boolean? = null,
-    @SerialName("numbering_panel_correct") val numberingPanelCorrect: Boolean? = null,
-    @SerialName("numbering_panel_position_correct") val numberingPanelPositionCorrect: Boolean? = null,
-    @SerialName("has_naming_panel_location") val hasNamingPanelLocation: Boolean? = null,
-    @SerialName("has_naming_panel") val hasNamingPanel: Boolean? = null,
-    @SerialName("naming_correct") val namingCorrect: Boolean? = null,
-    @SerialName("naming_panel_position_correct") val namingPanelPositionCorrect: Boolean? = null,
-) {
-    fun toFeatureProperties(featureType: NarsFeatureType): FeatureProperties = when (featureType) {
-        NarsFeatureType.ROAD -> {
-            FeatureProperties.RoadProperties(
-                name = name,
-                phase = phase ?: Phases.ROADS_KEY,
-                color = color ?: "#3498db",
-                roadTypeKey = roadTypeKey,
-                roadTraffic = roadTraffic,
-                tradActivity = tradActivity,
-                numLanes = numLanes,
-                hasMedian = hasMedian,
-                hasVegetation = hasVegetation,
-                isDeadEnd = isDeadEnd,
-                hasSidewalk = hasSidewalk,
-            )
-        }
+data class ApiLoadFeaturesResponse(
+    val features: List<ApiFeatureResult> = emptyList(),
+    val count: Int = 0,
+    val skip: Int = 0,
+    val take: Int = 0,
+)
 
-        NarsFeatureType.HOUSE_ENTRANCE -> {
-            FeatureProperties.HouseEntranceProperties(
-                name = name,
-                phase = phase ?: "houseEntrances",
-                color = color ?: "#27ae60",
-                entranceTypeKey = entranceTypeKey,
-                roadDbId = roadDbId,
-                side = side,
-                hasEntrance = hasEntrance,
-                hasNumberingPanel = hasNumberingPanel,
-                numberingPanelCorrect = numberingPanelCorrect,
-                numberingPanelPositionCorrect = numberingPanelPositionCorrect,
-            )
-        }
+@Serializable
+data class ApiSaveFeatureResponse(val success: Boolean = true, val id: String? = null, val message: String? = null)
 
-        NarsFeatureType.NAMING_PANEL -> {
-            FeatureProperties.NamingPanelProperties(
-                name = name,
-                phase = phase ?: "namingPanels",
-                color = color ?: "#9b59b6",
-                hasNamingPanelLocation = hasNamingPanelLocation,
-                hasNamingPanel = hasNamingPanel,
-                namingCorrect = namingCorrect,
-                namingPanelPositionCorrect = namingPanelPositionCorrect,
-            )
+@Serializable
+data class ApiUpdateFeatureResponse(val success: Boolean = true, val id: String? = null, val updatedAt: String? = null)
+
+// ─── Feature ↔ API DTO conversion ─────────────────────────────────────────────
+
+/**
+ * Builds the `data` JSON blob persisted by the backend. The format matches the
+ * web frontend so features authored in either app remain interchangeable.
+ */
+fun NarsFeature.toApiData(): JsonObject = buildJsonObject {
+    put("type", properties.phase)
+    properties.name?.let { put("label", it) }
+    addGeometryPayload(geometry)
+    addPropertyKeys(properties)
+}
+
+private fun JsonObjectBuilder.addGeometryPayload(geometry: Geometry) {
+    putJsonArray("coordinates") {
+        geometry.coordinates.chunked(2).forEach { pair ->
+            if (pair.size == 2) {
+                add(
+                    buildJsonObject {
+                        put("lat", pair[1])
+                        put("lng", pair[0])
+                    },
+                )
+            }
         }
+    }
+    if (geometry is PointGeometry || geometry is CircleGeometry) {
+        geometry.coordinates.getOrNull(1)?.let { put("lat", it) }
+        geometry.coordinates.getOrNull(0)?.let { put("lng", it) }
+    }
+    if (geometry is CircleGeometry) {
+        geometry.coordinates.getOrNull(2)?.let { put("radius", it) }
     }
 }
 
-@Serializable
-data class SaveFeatureRequest(
-    val id: String? = null,
-    val type: String,
-    val geometry: ApiGeometryRequest,
-    val properties: ApiPropertiesRequest,
-)
+private fun JsonObjectBuilder.addPropertyKeys(properties: FeatureProperties) {
+    when (properties) {
+        is FeatureProperties.RoadProperties -> properties.roadTypeKey?.let { put("roadTypeKey", it) }
 
-@Serializable
-data class ApiGeometryRequest(val type: String, val coordinates: List<Double>)
-
-@Serializable
-data class ApiPropertiesRequest(
-    val name: String? = null,
-    val phase: String? = null,
-    val color: String? = null,
-    @SerialName("road_type_key") val roadTypeKey: String? = null,
-    @SerialName("road_traffic") val roadTraffic: String? = null,
-    @SerialName("trad_activity") val tradActivity: String? = null,
-    @SerialName("num_lanes") val numLanes: Int? = null,
-    @SerialName("has_median") val hasMedian: Boolean? = null,
-    @SerialName("has_vegetation") val hasVegetation: Boolean? = null,
-    @SerialName("is_dead_end") val isDeadEnd: Boolean? = null,
-    @SerialName("has_sidewalk") val hasSidewalk: Boolean? = null,
-    @SerialName("entrance_type_key") val entranceTypeKey: String? = null,
-    @SerialName("road_db_id") val roadDbId: String? = null,
-    val side: String? = null,
-    @SerialName("has_entrance") val hasEntrance: Boolean? = null,
-    @SerialName("has_numbering_panel") val hasNumberingPanel: Boolean? = null,
-    @SerialName("numbering_panel_correct") val numberingPanelCorrect: Boolean? = null,
-    @SerialName("numbering_panel_position_correct") val numberingPanelPositionCorrect: Boolean? = null,
-    @SerialName("has_naming_panel_location") val hasNamingPanelLocation: Boolean? = null,
-    @SerialName("has_naming_panel") val hasNamingPanel: Boolean? = null,
-    @SerialName("naming_correct") val namingCorrect: Boolean? = null,
-    @SerialName("naming_panel_position_correct") val namingPanelPositionCorrect: Boolean? = null,
-)
-
-@Serializable
-data class SaveFeatureResponse(val id: String? = null, val success: Boolean = true)
-
-@Serializable
-data class CreateEntranceResponse(val id: String? = null, val success: Boolean = true)
-
-@Suppress("LongMethod")
-fun NarsFeature.toSaveFeatureRequest(): SaveFeatureRequest {
-    val props =
-        when (val p = properties) {
-            is FeatureProperties.RoadProperties -> {
-                ApiPropertiesRequest(
-                    name = p.name,
-                    phase = p.phase,
-                    color = p.color,
-                    roadTypeKey = p.roadTypeKey,
-                    roadTraffic = p.roadTraffic,
-                    tradActivity = p.tradActivity,
-                    numLanes = p.numLanes,
-                    hasMedian = p.hasMedian,
-                    hasVegetation = p.hasVegetation,
-                    isDeadEnd = p.isDeadEnd,
-                    hasSidewalk = p.hasSidewalk,
-                )
-            }
-
-            is FeatureProperties.HouseEntranceProperties -> {
-                ApiPropertiesRequest(
-                    name = p.name,
-                    phase = p.phase,
-                    color = p.color,
-                    entranceTypeKey = p.entranceTypeKey,
-                    roadDbId = p.roadDbId,
-                    side = p.side,
-                    hasEntrance = p.hasEntrance,
-                    hasNumberingPanel = p.hasNumberingPanel,
-                    numberingPanelCorrect = p.numberingPanelCorrect,
-                    numberingPanelPositionCorrect = p.numberingPanelPositionCorrect,
-                )
-            }
-
-            is FeatureProperties.NamingPanelProperties -> {
-                ApiPropertiesRequest(
-                    name = p.name,
-                    phase = p.phase,
-                    color = p.color,
-                    hasNamingPanelLocation = p.hasNamingPanelLocation,
-                    hasNamingPanel = p.hasNamingPanel,
-                    namingCorrect = p.namingCorrect,
-                    namingPanelPositionCorrect = p.namingPanelPositionCorrect,
-                )
-            }
+        is FeatureProperties.HouseEntranceProperties -> {
+            properties.entranceTypeKey?.let { put("entranceTypeKey", it) }
+            properties.roadDbId?.let { put("roadDbId", it) }
+            properties.side?.let { put("side", it) }
         }
-    return SaveFeatureRequest(
-        id = dbId,
-        type = type.value,
-        geometry = ApiGeometryRequest(type = geometry.type, coordinates = geometry.coordinates),
-        properties = props,
+
+        is FeatureProperties.NamingPanelProperties -> Unit
+    }
+}
+
+fun NarsFeature.toApiSaveRequest(): ApiSaveFeatureRequest {
+    val (apiType, apiLayer) =
+        when (val props = properties) {
+            is FeatureProperties.RoadProperties -> "road" to (props.roadTypeKey ?: "street")
+
+            is FeatureProperties.HouseEntranceProperties ->
+                "house_entrance" to (props.entranceTypeKey ?: "main_entrance")
+
+            is FeatureProperties.NamingPanelProperties -> "naming_panel" to "naming_panel"
+        }
+    return ApiSaveFeatureRequest(
+        type = apiType,
+        layer = apiLayer,
+        label = properties.name ?: "",
+        data = toApiData(),
     )
 }
+
+fun NarsFeature.toApiUpdateRequest(): ApiUpdateFeatureRequest = ApiUpdateFeatureRequest(
+    label = properties.name,
+    data = toApiData(),
+)

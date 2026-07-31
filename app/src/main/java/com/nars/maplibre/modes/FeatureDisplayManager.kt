@@ -74,13 +74,6 @@ class FeatureDisplayManager(
         }
     }
 
-    fun updateFeatureId(oldId: String, newId: String) {
-        if (oldId == newId) return
-        displayedFeatureIds.remove(oldId)
-        displayedFeatureIds.add(newId)
-        featureRenderer.removeFromTracking(oldId)
-    }
-
     fun updateFeatureOnMap(feature: NarsFeature) {
         val safeId = feature.id.replace(SAFE_ID_REGEX, "_")
         val sourceName = "nars_$safeId"

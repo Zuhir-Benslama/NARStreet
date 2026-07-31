@@ -276,14 +276,6 @@ class NarsGeomanTest {
         verify { displayManager.updateDisplayedFeatures(features) }
     }
 
-    // --- displayManager.updateFeatureId ---
-
-    @Test
-    fun `displayManager updateFeatureId delegates correctly`() {
-        narsGeoman.displayManager.updateFeatureId("old", "new")
-        verify { displayManager.updateFeatureId("old", "new") }
-    }
-
     // --- displayManager.updateFeatureOnMap ---
 
     @Test

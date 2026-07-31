@@ -19,6 +19,9 @@ class SessionManager(private val apiService: ApiService, private val appPreferen
                 appPreferences.authToken = token
                 appPreferences.sessionCookie = token
             }
+            apiService.getRefreshToken()?.let { token ->
+                appPreferences.refreshToken = token
+            }
             appPreferences.user =
                 response.user.copy(
                     username = username,
@@ -40,9 +43,11 @@ class SessionManager(private val apiService: ApiService, private val appPreferen
         }
         appPreferences.authToken = null
         appPreferences.sessionCookie = null
+        appPreferences.refreshToken = null
         appPreferences.user = null
         appPreferences.municipalityName = null
         apiService.setSessionToken(null)
+        apiService.setRefreshToken(null)
     }
 
     fun getUser() = appPreferences.user

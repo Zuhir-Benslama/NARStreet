@@ -10,6 +10,7 @@ import com.nars.maplibre.utils.NarsLogger
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 
+@Suppress("TooManyFunctions")
 class SecurePreferences(context: Context) {
     @Suppress("DEPRECATION")
     private val masterKey: MasterKey by lazy {
@@ -70,6 +71,22 @@ class SecurePreferences(context: Context) {
         }
     }
 
+    fun saveRefreshToken(token: String) = synchronized(lock) {
+        encryptedPrefs.edit {
+            putString(KEY_REFRESH_TOKEN, token)
+        }
+    }
+
+    fun getRefreshToken(): String? = synchronized(lock) {
+        encryptedPrefs.getString(KEY_REFRESH_TOKEN, null)
+    }
+
+    fun clearRefreshToken() = synchronized(lock) {
+        encryptedPrefs.edit {
+            remove(KEY_REFRESH_TOKEN)
+        }
+    }
+
     fun saveUser(user: User) = synchronized(lock) {
         val userJson = json.encodeToString(user)
         encryptedPrefs.edit {
@@ -117,6 +134,7 @@ class SecurePreferences(context: Context) {
         encryptedPrefs.edit {
             remove(KEY_AUTH_TOKEN)
             remove(KEY_COOKIE)
+            remove(KEY_REFRESH_TOKEN)
             remove(KEY_USER)
             remove(KEY_MUNICIPALITY)
         }
@@ -127,6 +145,7 @@ class SecurePreferences(context: Context) {
 
         private const val KEY_AUTH_TOKEN = "auth_token"
         private const val KEY_COOKIE = "session_cookie"
+        private const val KEY_REFRESH_TOKEN = "refresh_token"
         private const val KEY_USER = "user"
         private const val KEY_MUNICIPALITY = "municipality"
     }

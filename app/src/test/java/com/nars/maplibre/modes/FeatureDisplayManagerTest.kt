@@ -152,23 +152,6 @@ class FeatureDisplayManagerTest {
     }
 
     @Test
-    fun `updateFeatureId ignores same id`() {
-        displayManager.addFeature(createRoad("same"))
-        displayManager.updateFeatureId("same", "same")
-
-        verify(exactly = 0) { featureRenderer.removeFromTracking(any()) }
-    }
-
-    @Test
-    fun `updateFeatureId updates tracking`() {
-        displayManager.addFeature(createRoad("old"))
-
-        displayManager.updateFeatureId("old", "new")
-
-        verify { featureRenderer.removeFromTracking("old") }
-    }
-
-    @Test
     fun `removeFeature removes from geoman and renderer`() {
         val featureData = mockk<FeatureData>(relaxed = true)
         every { geoman.features.getFeature(any(), "r1") } returns featureData

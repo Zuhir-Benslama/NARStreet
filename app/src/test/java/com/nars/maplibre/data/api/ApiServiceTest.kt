@@ -37,7 +37,11 @@ class ApiServiceTest {
                 respond(
                     content = """{"success": true, "user": {"id": "1", "username": "test", "name": "Test"}}""",
                     status = HttpStatusCode.OK,
-                    headers = io.ktor.http.headersOf("Set-Cookie", "access_token=test123"),
+                    headers =
+                    io.ktor.http.headersOf(
+                        "Set-Cookie",
+                        "access_token=test123; refresh_token=refresh456",
+                    ),
                 )
             }
         val client =
@@ -68,6 +72,15 @@ class ApiServiceTest {
     }
 
     @Test
+    fun `login extracts cookies from response headers`() = runTest {
+        val result = apiService.login("testuser", "password")
+
+        assertTrue(result.isSuccess)
+        assertEquals("test123", apiService.getSessionToken())
+        assertEquals("refresh456", apiService.getRefreshToken())
+    }
+
+    @Test
     fun `login handles failure response`() = runTest {
         engine =
             MockEngine { _ ->
@@ -92,14 +105,6 @@ class ApiServiceTest {
         val result = apiService.login("testuser", "wrong")
 
         assertTrue(result.isFailure)
-    }
-
-    @Test
-    fun `login extracts cookie from response headers`() = runTest {
-        val result = apiService.login("testuser", "password")
-
-        assertTrue(result.isSuccess)
-        assertEquals("test123", apiService.getSessionToken())
     }
 
     @Test
@@ -137,13 +142,16 @@ class ApiServiceTest {
     }
 
     @Test
-    fun `loadFeatures parses feature array from response`() = runTest {
+    fun `loadFeatures parses road feature from envelope`() = runTest {
         engine =
             MockEngine { _ ->
                 respond(
-                    content = """[
-                    {"id": "1", "type": "road", "geometry": {"type": "Point", "coordinates": [3.0, 36.0]}, "properties": {"name": "Test Road"}}
-                ]""",
+                    content =
+                    """{"features": [
+                        {"id": "1", "type": "road", "layer": "street", "label": "Test Road", "data": {"type": "roads", "label": "Test Road", "coordinates": [{"lat": 36.0, "lng": 3.0}, {"lat": 36.1, "lng": 3.1}]}},
+                        {"id": "2", "type": "house_entrance", "layer": "main_entrance", "data": {"type": "houseEntrances", "coordinates": [{"lat": 36.2, "lng": 3.2}], "roadTypeKey": "main"}},
+                        {"id": "3", "type": "naming_panel", "data": {"type": "namingPanels", "lat": 36.3, "lng": 3.3}}
+                    ], "count": 3, "skip": 0, "take": 100}""",
                     status = HttpStatusCode.OK,
                 )
             }
@@ -164,18 +172,20 @@ class ApiServiceTest {
 
         assertTrue(result.isSuccess)
         val features = result.getOrNull()
-        assertEquals(1, features?.size)
+        assertEquals(3, features?.size)
         assertEquals("1", features?.get(0)?.id)
+        assertEquals(NarsFeatureType.ROAD, features?.get(0)?.type)
+        assertEquals(NarsFeatureType.HOUSE_ENTRANCE, features?.get(1)?.type)
+        assertEquals(NarsFeatureType.NAMING_PANEL, features?.get(2)?.type)
+        assertEquals("Test Road", features?.get(0)?.properties?.name)
     }
 
     @Test
-    fun `loadFeatures parses features object from response`() = runTest {
+    fun `loadFeatures parses empty envelope`() = runTest {
         engine =
             MockEngine { _ ->
                 respond(
-                    content = """{"features": [
-                    {"id": "2", "type": "house_entrance", "geometry": {"type": "Point", "coordinates": [3.0, 36.0]}, "properties": {"name": "Test Entrance"}}
-                ]}""",
+                    content = """{"features": [], "count": 0, "skip": 0, "take": 100}""",
                     status = HttpStatusCode.OK,
                 )
             }
@@ -195,9 +205,87 @@ class ApiServiceTest {
         val result = apiService.loadFeatures()
 
         assertTrue(result.isSuccess)
-        val features = result.getOrNull()
-        assertEquals(1, features?.size)
-        assertEquals("2", features?.get(0)?.id)
+        assertTrue(result.getOrNull()?.isEmpty() == true)
+    }
+
+    @Test
+    fun `loadFeatures refreshes access token on 401 and retries`() = runTest {
+        var callCount = 0
+        engine =
+            MockEngine { request ->
+                callCount++
+                when {
+                    request.url.encodedPath == "/api/refresh" ->
+                        respond(
+                            content = """{"success": true}""",
+                            status = HttpStatusCode.OK,
+                            headers =
+                            io.ktor.http.headersOf(
+                                "Set-Cookie",
+                                "access_token=new-access; refresh_token=new-refresh",
+                            ),
+                        )
+
+                    callCount == 1 ->
+                        respond(
+                            content = "",
+                            status = HttpStatusCode.Unauthorized,
+                        )
+
+                    else ->
+                        respond(
+                            content = """{"features": [], "count": 0, "skip": 0, "take": 100}""",
+                            status = HttpStatusCode.OK,
+                        )
+                }
+            }
+        val client =
+            HttpClient(engine) {
+                install(ContentNegotiation) {
+                    json(
+                        Json {
+                            ignoreUnknownKeys = true
+                            isLenient = true
+                        },
+                    )
+                }
+            }
+        apiService = ApiService(client, appPreferences)
+        apiService.setRefreshToken("refresh-123")
+
+        val result = apiService.loadFeatures()
+
+        assertTrue(result.isSuccess)
+        assertEquals(3, callCount)
+        assertEquals("new-access", apiService.getSessionToken())
+        assertEquals("new-refresh", apiService.getRefreshToken())
+    }
+
+    @Test
+    fun `loadFeatures fails on 401 when no refresh token is available`() = runTest {
+        engine =
+            MockEngine { _ ->
+                respond(
+                    content = "",
+                    status = HttpStatusCode.Unauthorized,
+                )
+            }
+        val client =
+            HttpClient(engine) {
+                install(ContentNegotiation) {
+                    json(
+                        Json {
+                            ignoreUnknownKeys = true
+                            isLenient = true
+                        },
+                    )
+                }
+            }
+        apiService = ApiService(client, appPreferences)
+
+        val result = apiService.loadFeatures()
+
+        assertTrue(result.isFailure)
     }
 
     @Test

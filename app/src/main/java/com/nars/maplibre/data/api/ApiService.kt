@@ -8,31 +8,33 @@ import com.nars.maplibre.data.model.NarsFeature
 import com.nars.maplibre.data.model.User
 import com.nars.maplibre.utils.NarsLogger
 import io.ktor.client.HttpClient
-import io.ktor.client.call.body
-import io.ktor.client.plugins.HttpRequestTimeoutException
 import io.ktor.client.request.delete
 import io.ktor.client.request.get
+import io.ktor.client.request.header
 import io.ktor.client.request.post
 import io.ktor.client.request.put
 import io.ktor.client.request.setBody
+import io.ktor.client.statement.HttpResponse
 import io.ktor.client.statement.bodyAsText
 import io.ktor.http.ContentType
 import io.ktor.http.HttpHeaders
+import io.ktor.http.HttpStatusCode
 import io.ktor.http.contentType
 import io.ktor.http.isSuccess
 import kotlinx.coroutines.CancellationException
-import kotlinx.serialization.builtins.ListSerializer
-import kotlinx.serialization.json.JsonObject
 
 class ApiService(private val httpClient: HttpClient, private val preferences: AppPreferences) {
     companion object {
         private const val TAG = "ApiService"
         private val COOKIE_ACCESS_TOKEN_REGEX = Regex("access_token=([^;]+)")
+        private val COOKIE_REFRESH_TOKEN_REGEX = Regex("refresh_token=([^;]+)")
     }
 
     private val baseUrl: String = BuildConfig.API_BASE_URL.trimEnd('/')
 
     @Volatile private var sessionToken: String? = null
+
+    @Volatile private var refreshToken: String? = null
 
     fun setSessionToken(token: String?) {
         sessionToken = token
@@ -40,12 +42,23 @@ class ApiService(private val httpClient: HttpClient, private val preferences: Ap
 
     fun getSessionToken(): String? = sessionToken
 
-    private fun extractAndSetCookie(response: io.ktor.client.statement.HttpResponse) {
-        val cookieHeader = response.headers[HttpHeaders.SetCookie]
-        cookieHeader?.let { rawCookie ->
-            val tokenMatch = COOKIE_ACCESS_TOKEN_REGEX.find(rawCookie)
-            tokenMatch?.let { match ->
+    fun setRefreshToken(token: String?) {
+        refreshToken = token
+    }
+
+    fun getRefreshToken(): String? = refreshToken
+
+    /**
+     * Extracts the access + refresh token cookies issued by the backend.
+     * The backend sets both cookies on signin and on every /api/refresh.
+     */
+    private fun extractAndSetCookies(response: io.ktor.client.statement.HttpResponse) {
+        response.headers.getAll(HttpHeaders.SetCookie)?.forEach { rawCookie ->
+            COOKIE_ACCESS_TOKEN_REGEX.find(rawCookie)?.let { match ->
                 sessionToken = match.groupValues[1]
+            }
+            COOKIE_REFRESH_TOKEN_REGEX.find(rawCookie)?.let { match ->
+                refreshToken = match.groupValues[1]
             }
         }
     }
@@ -70,6 +83,43 @@ class ApiService(private val httpClient: HttpClient, private val preferences: Ap
     }
 
     /**
+     * Executes an authenticated request, transparently refreshing the access
+     * token once when the server responds 401 (access token expiry).
+     */
+    private suspend fun authenticatedRequest(block: suspend () -> HttpResponse): HttpResponse {
+        var response = block()
+        if (response.status == HttpStatusCode.Unauthorized && tryRefreshToken()) {
+            response = block()
+        }
+        return response
+    }
+
+    /**
+     * Attempts to rotate the refresh token via POST /api/refresh.
+     * Returns true when a fresh access token was issued.
+     */
+    private suspend fun tryRefreshToken(): Boolean {
+        val token = refreshToken ?: return false
+        return try {
+            val response =
+                httpClient.post("$baseUrl/api/refresh") {
+                    header(HttpHeaders.Cookie, "refresh_token=$token")
+                }
+            if (!response.status.isSuccess()) {
+                refreshToken = null
+                return false
+            }
+            extractAndSetCookies(response)
+            sessionToken != null
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: java.io.IOException) {
+            NarsLogger.w(TAG, "Token refresh failed", e)
+            false
+        }
+    }
+
+    /**
      * Authenticate with the NARS API.
      * Extracts session cookie and bearer token from the response on success.
      */
@@ -81,7 +131,7 @@ class ApiService(private val httpClient: HttpClient, private val preferences: Ap
                     setBody(LoginRequest(username, password))
                 }
 
-            extractAndSetCookie(response)
+            extractAndSetCookies(response)
 
             if (!response.status.isSuccess()) {
                 val body = response.bodyAsText()
@@ -140,8 +190,10 @@ class ApiService(private val httpClient: HttpClient, private val preferences: Ap
     suspend fun loadFeatures(): Result<List<NarsFeature>> {
         return try {
             val response =
-                httpClient.get("$baseUrl/api/load") {
-                    authHeaders().forEach { (k, v) -> headers.append(k, v) }
+                authenticatedRequest {
+                    httpClient.get("$baseUrl/api/features") {
+                        authHeaders().forEach { (k, v) -> headers.append(k, v) }
+                    }
                 }
             if (!response.status.isSuccess()) {
                 val error = Exception("Load failed: HTTP ${response.status.value}")
@@ -150,18 +202,8 @@ class ApiService(private val httpClient: HttpClient, private val preferences: Ap
             }
             val body = response.bodyAsText()
             if (body.isBlank()) return Result.success(emptyList())
-            val jsonElement = apiJson.parseToJsonElement(body)
-            val items =
-                if (jsonElement is JsonObject) {
-                    val apiResponse = apiJson.decodeFromJsonElement(ApiFeatureListResponse.serializer(), jsonElement)
-                    apiResponse.features ?: emptyList()
-                } else {
-                    apiJson.decodeFromJsonElement(
-                        kotlinx.serialization.builtins.ListSerializer(ApiFeatureResponse.serializer()),
-                        jsonElement,
-                    )
-                }
-            Result.success(items.mapNotNull { it.toNarsFeature() })
+            val apiResponse = apiJson.decodeFromString<ApiLoadFeaturesResponse>(body)
+            Result.success(apiResponse.features.mapNotNull { it.toNarsFeature() })
         } catch (e: CancellationException) {
             throw e
         } catch (e: kotlinx.serialization.SerializationException) {
@@ -174,12 +216,14 @@ class ApiService(private val httpClient: HttpClient, private val preferences: Ap
     }
 
     suspend fun saveFeature(feature: NarsFeature): Result<String> = try {
-        val requestBody = apiJson.encodeToString(feature.toSaveFeatureRequest())
+        val requestBody = apiJson.encodeToString(feature.toApiSaveRequest())
         val response =
-            httpClient.post("$baseUrl/api/save") {
-                authHeaders().forEach { (k, v) -> headers.append(k, v) }
-                contentType(ContentType.Application.Json)
-                setBody(requestBody)
+            authenticatedRequest {
+                httpClient.post("$baseUrl/api/features") {
+                    authHeaders().forEach { (k, v) -> headers.append(k, v) }
+                    contentType(ContentType.Application.Json)
+                    setBody(requestBody)
+                }
             }
         if (!response.status.isSuccess()) {
             val error = Exception("Save failed: HTTP ${response.status.value}")
@@ -187,7 +231,7 @@ class ApiService(private val httpClient: HttpClient, private val preferences: Ap
             return Result.failure(error)
         }
         val id =
-            apiJson.decodeFromString<SaveFeatureResponse>(response.bodyAsText()).id
+            apiJson.decodeFromString<ApiSaveFeatureResponse>(response.bodyAsText()).id
                 ?: feature.id
         Result.success(id)
     } catch (e: CancellationException) {
@@ -201,12 +245,15 @@ class ApiService(private val httpClient: HttpClient, private val preferences: Ap
     }
 
     suspend fun updateFeature(featureId: String, feature: NarsFeature): Result<Unit> = try {
-        val requestBody = apiJson.encodeToString(feature.toSaveFeatureRequest())
-        val response = httpClient.put("$baseUrl/api/update/$featureId") {
-            authHeaders().forEach { (k, v) -> headers.append(k, v) }
-            contentType(ContentType.Application.Json)
-            setBody(requestBody)
-        }
+        val requestBody = apiJson.encodeToString(feature.toApiUpdateRequest())
+        val response =
+            authenticatedRequest {
+                httpClient.put("$baseUrl/api/features/$featureId") {
+                    authHeaders().forEach { (k, v) -> headers.append(k, v) }
+                    contentType(ContentType.Application.Json)
+                    setBody(requestBody)
+                }
+            }
         if (!response.status.isSuccess()) {
             val error = Exception("Update failed: HTTP ${response.status.value}")
             NarsLogger.e(TAG, "updateFeature failed", error)
@@ -221,9 +268,12 @@ class ApiService(private val httpClient: HttpClient, private val preferences: Ap
     }
 
     suspend fun deleteFeature(featureId: String): Result<Unit> = try {
-        val response = httpClient.delete("$baseUrl/api/delete/$featureId") {
-            authHeaders().forEach { (k, v) -> headers.append(k, v) }
-        }
+        val response =
+            authenticatedRequest {
+                httpClient.delete("$baseUrl/api/features/$featureId") {
+                    authHeaders().forEach { (k, v) -> headers.append(k, v) }
+                }
+            }
         if (!response.status.isSuccess()) {
             val error = Exception("Delete failed: HTTP ${response.status.value}")
             NarsLogger.e(TAG, "deleteFeature failed", error)
