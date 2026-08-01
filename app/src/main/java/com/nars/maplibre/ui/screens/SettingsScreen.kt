@@ -278,7 +278,7 @@ private fun SettingsItem(icon: ImageVector, title: String, subtitle: String, sel
         if (selected) {
             Icon(
                 imageVector = Icons.AutoMirrored.Filled.Label,
-                contentDescription = "Selected",
+                contentDescription = stringResource(R.string.map_selected),
                 tint = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.size(24.dp),
             )

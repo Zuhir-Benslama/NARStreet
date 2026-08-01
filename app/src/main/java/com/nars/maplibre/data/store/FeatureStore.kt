@@ -117,6 +117,8 @@ class FeatureStore : FeatureStoreInterface {
         _featuresByPhase.value = emptyMap()
         _allFeatures.value = emptyList()
         _selectedFeature.value = null
+        _currentPhase.value = Phases.ALL.first()
+        _referenceRoadDbId.value = null
     }
 
     override fun clearPhase(phaseKey: String) = lock.withLock {

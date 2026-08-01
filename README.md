@@ -6,7 +6,7 @@ Android client for the NARS mapping system. Built with Jetpack Compose, MapLibre
 
 - 3-phase field mapping pipeline (roads, house entrances, naming panels)
 - Drawing, editing, and validation of geographic features
-- Offline-capable feature store with server sync
+- Session-based feature store with server sync (features live in memory)
 - Phase-based workflow with validation gates
 - mTLS support for secure API communication
 - Encrypted credential storage via Android Keystore
@@ -71,13 +71,12 @@ The app communicates with the NARS backend via these endpoints:
 | Method | Path | Auth | Purpose |
 |--------|------|------|---------|
 | POST | `/api/signin` | No | Login |
-| POST | `/api/refresh` | Cookie | Refresh JWT |
+| POST | `/api/refresh` | Cookie | Rotate JWT |
 | POST | `/api/logout` | Bearer | Logout |
-| GET | `/api/current_user` | Bearer | Get user profile |
-| GET | `/api/load` | Bearer | Load all features |
-| POST | `/api/save` | Bearer | Save new feature |
-| PUT | `/api/update/{id}` | Bearer | Update feature |
-| DELETE | `/api/delete/{id}` | Bearer | Delete feature |
+| GET | `/api/features` | Bearer | Load features (paginated) |
+| POST | `/api/features` | Bearer | Save new feature |
+| PUT | `/api/features/{id}` | Bearer | Update feature |
+| DELETE | `/api/features/{id}` | Bearer | Delete feature |
 
 ## mTLS Configuration
 
@@ -121,8 +120,6 @@ For deployments behind mTLS, provide the CA certificate and client PKCS12:
 - **Jetpack Compose** — UI framework
 - **Kotlinx Serialization** — JSON parsing
 - **AndroidX Security Crypto** — Encrypted prefs
-- **Coil** — Image loading
-- **DataStore Preferences** — Theme/settings storage
 
 ## License
 

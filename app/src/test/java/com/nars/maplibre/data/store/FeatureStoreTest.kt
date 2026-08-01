@@ -121,6 +121,18 @@ class FeatureStoreTest {
     }
 
     @Test
+    fun `clearAll resets current phase and reference road`() {
+        val store = FeatureStore()
+        store.setCurrentPhase(Phases.ALL[1])
+        store.setReferenceRoad("road-db-42")
+
+        store.clearAll()
+
+        assertEquals(Phases.ROADS_KEY, store.currentPhase.value?.key)
+        assertNull(store.referenceRoadDbId.value)
+    }
+
+    @Test
     fun `clearPhase removes only features of that phase`() {
         val store = FeatureStore()
         store.addFeatures(listOf(createRoad("r1"), createEntrance("e1")))

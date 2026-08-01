@@ -14,7 +14,7 @@ enum class NarsFeatureType(val value: String) {
     ;
 
     companion object {
-        fun fromValue(value: String): NarsFeatureType = entries.find { it.value == value } ?: ROAD
+        fun fromValue(value: String): NarsFeatureType? = entries.find { it.value == value }
     }
 }
 

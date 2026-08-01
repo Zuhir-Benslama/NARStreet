@@ -52,6 +52,4 @@ object Config {
     const val ATTR_ESRI = "Source: Esri, Maxar, Earthstar Geographics, and the GIS User Community"
     const val ATTR_OSM = "© OpenStreetMap contributors"
     const val ATTR_CARTO = "© OpenStreetMap contributors, © CARTO"
-
-    const val TOAST_DURATION_MS = 3500
 }

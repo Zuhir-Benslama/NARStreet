@@ -23,23 +23,16 @@ class AppPreferences(context: Context) {
     private val _themeModeFlow = MutableStateFlow(themeMode)
     val themeModeFlow: StateFlow<ThemeMode> = _themeModeFlow.asStateFlow()
 
-    private val themeChangeListener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
-        if (key == KEY_THEME) {
-            _themeModeFlow.value = themeMode
-        }
-    }
-
-    init {
-        prefs.registerOnSharedPreferenceChangeListener(themeChangeListener)
-    }
-
     var themeMode: ThemeMode
         get() = try {
             ThemeMode.valueOf(prefs.getString(KEY_THEME, ThemeMode.AUTO.name) ?: ThemeMode.AUTO.name)
         } catch (_: IllegalArgumentException) {
             ThemeMode.AUTO
         }
-        set(value) = prefs.edit { putString(KEY_THEME, value.name) }
+        set(value) {
+            prefs.edit { putString(KEY_THEME, value.name) }
+            _themeModeFlow.value = value
+        }
 
     var baseLayer: BaseLayerType
         get() = try {

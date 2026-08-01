@@ -133,14 +133,8 @@ dependencies {
     // Navigation
     implementation(libs.androidx.navigation.compose)
 
-    // DataStore for preferences
-    implementation(libs.androidx.datastore.preferences)
-
     // Security - EncryptedSharedPreferences
     implementation(libs.androidx.security.crypto.ktx)
-
-    // Coil for image loading
-    implementation(libs.coil.compose)
 
     // Koin DI
     implementation(libs.koin.core)
