@@ -15,7 +15,9 @@ import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.contentType
 import io.ktor.serialization.kotlinx.json.json
+import io.mockk.Runs
 import io.mockk.every
+import io.mockk.just
 import io.mockk.mockk
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.Json
@@ -57,6 +59,9 @@ class ApiServiceTest {
             }
         every { appPreferences.authToken } returns null
         every { appPreferences.isLoggedIn } returns false
+        every { appPreferences.authToken = any() } just Runs
+        every { appPreferences.sessionCookie = any() } just Runs
+        every { appPreferences.refreshToken = any() } just Runs
         apiService = ApiService(client, appPreferences)
     }
 

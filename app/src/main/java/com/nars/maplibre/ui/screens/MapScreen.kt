@@ -31,6 +31,7 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.collectAsState
@@ -91,6 +92,12 @@ fun MapScreen(onNavigateToSettings: () -> Unit, onLogout: () -> Unit) {
     val handlers = remember {
         MapScreenHandlers(viewModel, apiService, sessionManager, context.applicationContext, scope) { msg ->
             scope.launch { snackbarHostState.showSnackbar(msg) }
+        }
+    }
+
+    DisposableEffect(Unit) {
+        onDispose {
+            handlers.narsGeoman?.destroy()
         }
     }
 
@@ -515,6 +522,9 @@ private fun MapScreenMapOverlay(
     NarsMap(
         viewModel = viewModel,
         onMapReady = { mv, map -> handlers.initializeNarsGeoman(mv, map) },
+        onStyleLoaded = {
+            handlers.narsGeoman?.displayManager?.onStyleReloaded(viewModel.allFeatures.value)
+        },
         onMapClick = { latLng -> handlers.handleMapClick(latLng, drawingEnabled, editModeEnabled) },
         onMapLongClick = { latLng ->
             val clicked = handlers.handleMapLongClick(latLng)

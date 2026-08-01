@@ -44,6 +44,7 @@ fun NarsMap(
     onMapClick: ((LatLng) -> Unit)? = null,
     onMapLongClick: ((LatLng) -> Unit)? = null,
     shouldHandleClick: (() -> Boolean)? = null,
+    onStyleLoaded: (() -> Unit)? = null,
 ) {
     val context = LocalContext.current
     val baseLayer = viewModel.baseLayer.collectAsState()
@@ -77,7 +78,7 @@ fun NarsMap(
 
     // Base layer change
     LaunchedEffect(baseLayer.value) {
-        updateBaseLayer(mapView, baseLayer.value)
+        updateBaseLayer(mapView, baseLayer.value, onStyleLoaded)
     }
 
     AndroidView(
@@ -166,9 +167,13 @@ private fun initializeBaseLayer(map: MapLibreMap, initialLayer: BaseLayerType) {
 /**
  * Update base layer style
  */
-private fun updateBaseLayer(mapView: MapView, layer: BaseLayerType) {
+private fun updateBaseLayer(mapView: MapView, layer: BaseLayerType, onStyleLoaded: (() -> Unit)? = null) {
     mapView.getMapAsync { map ->
-        map.setStyle(Style.Builder().fromJson(getStyleJson(layer)))
+        map.setStyle(Style.Builder().fromJson(getStyleJson(layer))) {
+            // Style swap destroys all sources/layers added to the previous style;
+            // notify the caller so features can be re-rendered on the new style.
+            onStyleLoaded?.invoke()
+        }
     }
 }
 

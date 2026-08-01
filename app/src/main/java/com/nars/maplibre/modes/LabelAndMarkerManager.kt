@@ -88,13 +88,15 @@ class LabelAndMarkerManager(private val map: MapLibreMap) {
         allFeatures
             .filter { it.properties.phase == Phases.ROADS_KEY }
             .mapNotNull { road -> (road.geometry as? LineStringGeometry)?.let { road to it } }
-            .filter { (_, geometry) -> geometry.coordinates.chunked(2).size >= 2 }
-            .forEach { (road, geometry) ->
-                val coords = geometry.coordinates.chunked(2)
+            .mapNotNull { (road, geometry) ->
+                val coords = geometry.coordinates.chunked(2).filter { it.size == 2 }
+                if (coords.size >= 2) road to coords else null
+            }
+            .forEach { (road, coords) ->
                 addEndpointMarker(
                     id = "${road.id}_start",
-                    lon = coords[0][0],
-                    lat = coords[0][1],
+                    lon = coords.first()[0],
+                    lat = coords.first()[1],
                     isStart = true,
                 )
                 addEndpointMarker(
@@ -211,11 +213,11 @@ class LabelAndMarkerManager(private val map: MapLibreMap) {
         val coordinates =
             when (feature.geometry) {
                 is LineStringGeometry -> {
-                    feature.geometry.coordinates.chunked(2).map { doubleArrayOf(it[0], it[1]) }
+                    feature.geometry.coordinates.chunked(2).filter { it.size == 2 }.map { doubleArrayOf(it[0], it[1]) }
                 }
 
                 is PolygonGeometry -> {
-                    feature.geometry.coordinates.chunked(2).map { doubleArrayOf(it[0], it[1]) }
+                    feature.geometry.coordinates.chunked(2).filter { it.size == 2 }.map { doubleArrayOf(it[0], it[1]) }
                 }
 
                 else -> {

@@ -89,6 +89,19 @@ class FeatureDisplayManager(
         }
     }
 
+    /**
+     * Re-renders every feature after the map style has been replaced.
+     * A base-layer switch replaces the style, which destroys all sources and
+     * layers that were added to the previous style, so tracking sets are reset
+     * and everything is re-added to the new style.
+     */
+    fun onStyleReloaded(allFeatures: List<NarsFeature>) {
+        displayedFeatureIds.clear()
+        featureRenderer.clearTracking()
+        geoman.onStyleReloaded()
+        updateDisplayedFeatures(allFeatures)
+    }
+
     fun removeFeature(featureId: String) {
         displayedFeatureIds.remove(featureId)
         for (sourceName in GEOMAN_SOURCE_NAMES) {

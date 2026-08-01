@@ -87,7 +87,7 @@ class GeometryConverter {
      */
     fun convertGeometryToGeoJson(geometry: com.nars.maplibre.data.model.Geometry): Geometry = when (geometry) {
         is PointGeometry -> {
-            Point.fromLngLat(LngLat(geometry.coordinates[0], geometry.coordinates[1]))
+            Point.fromLngLat(LngLat(geometry.coordinates.getOrNull(0) ?: 0.0, geometry.coordinates.getOrNull(1) ?: 0.0))
         }
 
         is LineStringGeometry -> {
@@ -102,7 +102,7 @@ class GeometryConverter {
 
         is CircleGeometry -> {
             // Circle becomes Point for Geoman; radius preserved in NarsFeature.geometry.coordinates[2]
-            Point.fromLngLat(LngLat(geometry.coordinates[0], geometry.coordinates[1]))
+            Point.fromLngLat(LngLat(geometry.coordinates.getOrNull(0) ?: 0.0, geometry.coordinates.getOrNull(1) ?: 0.0))
         }
     }
 

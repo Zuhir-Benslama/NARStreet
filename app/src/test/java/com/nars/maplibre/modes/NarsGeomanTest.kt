@@ -167,7 +167,7 @@ class NarsGeomanTest {
 
         verify { geoman.disableAllModes() }
         verify { eventHandler.setEditingFeature(feature.id, feature) }
-        verify { geoman.addGeoJsonFeature(geoJsonFeature) }
+        verify { geoman.addGeoJsonFeature(geoJsonFeature, any()) }
         verify { geoman.enableEdit(EditModeName.CHANGE) }
         verify { geoman.startEditingFeature(featureData) }
         assertTrue(narsGeoman.isEditing.value)

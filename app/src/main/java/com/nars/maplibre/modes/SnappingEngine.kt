@@ -72,7 +72,9 @@ class SnappingEngine {
         currentClosest: LatLng,
         currentMinDist: Double,
     ): Pair<LatLng, Double> {
-        val fp = LatLng(geometry.coordinates[1], geometry.coordinates[0])
+        val lon = geometry.coordinates.getOrNull(0) ?: return currentClosest to currentMinDist
+        val lat = geometry.coordinates.getOrNull(1) ?: return currentClosest to currentMinDist
+        val fp = LatLng(lat, lon)
         val d = point.distanceTo(fp)
         return if (d < currentMinDist) fp to d else currentClosest to currentMinDist
     }
@@ -127,7 +129,9 @@ class SnappingEngine {
         currentClosest: LatLng,
         currentMinDist: Double,
     ): Pair<LatLng, Double> {
-        val cp = LatLng(geometry.coordinates[1], geometry.coordinates[0])
+        val lon = geometry.coordinates.getOrNull(0) ?: return currentClosest to currentMinDist
+        val lat = geometry.coordinates.getOrNull(1) ?: return currentClosest to currentMinDist
+        val cp = LatLng(lat, lon)
         val d = point.distanceTo(cp)
         return if (d < currentMinDist) cp to d else currentClosest to currentMinDist
     }

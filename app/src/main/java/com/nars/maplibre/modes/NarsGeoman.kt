@@ -132,7 +132,10 @@ class NarsGeoman internal constructor(
         _isEditing.value = true
 
         val geoJsonFeature = geometryConverter.convertToGeoJson(feature)
-        geoman.addGeoJsonFeature(geoJsonFeature)
+        geoman.addGeoJsonFeature(
+            geoJsonFeature,
+            geometryConverter.getSourceNameForGeometry(feature.geometry),
+        )
 
         geoman.enableEdit(EditModeName.CHANGE)
         geoman.startEditingFeature(geometryConverter.convertToGeomanFeatureData(feature))

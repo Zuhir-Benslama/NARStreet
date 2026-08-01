@@ -226,14 +226,16 @@ class MapScreenHandlers(
         threshold: Double = NEAR_FEATURE_DISTANCE_THRESHOLD,
     ): Boolean = when (val geometry = feature.geometry) {
         is PointGeometry -> {
-            val fp = LatLng(geometry.coordinates[1], geometry.coordinates[0])
-            latLng.distanceTo(fp) < threshold
+            val lon = geometry.coordinates.getOrNull(0) ?: return false
+            val lat = geometry.coordinates.getOrNull(1) ?: return false
+            latLng.distanceTo(LatLng(lat, lon)) < threshold
         }
 
         is CircleGeometry -> {
-            val cp = LatLng(geometry.coordinates[1], geometry.coordinates[0])
-            latLng.distanceTo(cp) <
-                (geometry.coordinates.getOrNull(2) ?: MIN_CIRCLE_RADIUS).coerceAtLeast(MIN_CIRCLE_RADIUS)
+            val lon = geometry.coordinates.getOrNull(0) ?: return false
+            val lat = geometry.coordinates.getOrNull(1) ?: return false
+            val radius = (geometry.coordinates.getOrNull(2) ?: MIN_CIRCLE_RADIUS).coerceAtLeast(MIN_CIRCLE_RADIUS)
+            latLng.distanceTo(LatLng(lat, lon)) < radius
         }
 
         is LineStringGeometry -> {

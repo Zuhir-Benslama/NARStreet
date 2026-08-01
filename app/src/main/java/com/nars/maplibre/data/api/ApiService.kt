@@ -110,6 +110,13 @@ class ApiService(private val httpClient: HttpClient, private val preferences: Ap
                 return false
             }
             extractAndSetCookies(response)
+            // Persist rotated tokens so the session survives process death. The
+            // backend issues new cookies on every /api/refresh and may invalidate
+            // the previous refresh token, so the in-memory values alone are not
+            // enough to restore the session on the next app start.
+            preferences.authToken = sessionToken
+            preferences.sessionCookie = sessionToken
+            preferences.refreshToken = refreshToken
             sessionToken != null
         } catch (e: CancellationException) {
             throw e
