@@ -55,22 +55,6 @@ class SecurePreferences(context: Context) {
         }
     }
 
-    fun saveCookie(cookie: String) = synchronized(lock) {
-        encryptedPrefs.edit {
-            putString(KEY_COOKIE, cookie)
-        }
-    }
-
-    fun getCookie(): String? = synchronized(lock) {
-        encryptedPrefs.getString(KEY_COOKIE, null)
-    }
-
-    fun clearCookie() = synchronized(lock) {
-        encryptedPrefs.edit {
-            remove(KEY_COOKIE)
-        }
-    }
-
     fun saveRefreshToken(token: String) = synchronized(lock) {
         encryptedPrefs.edit {
             putString(KEY_REFRESH_TOKEN, token)
@@ -133,7 +117,6 @@ class SecurePreferences(context: Context) {
     fun clearAll() = synchronized(lock) {
         encryptedPrefs.edit {
             remove(KEY_AUTH_TOKEN)
-            remove(KEY_COOKIE)
             remove(KEY_REFRESH_TOKEN)
             remove(KEY_USER)
             remove(KEY_MUNICIPALITY)
@@ -144,7 +127,6 @@ class SecurePreferences(context: Context) {
         private const val PREFS_NAME = "nars_secure_prefs"
 
         private const val KEY_AUTH_TOKEN = "auth_token"
-        private const val KEY_COOKIE = "session_cookie"
         private const val KEY_REFRESH_TOKEN = "refresh_token"
         private const val KEY_USER = "user"
         private const val KEY_MUNICIPALITY = "municipality"

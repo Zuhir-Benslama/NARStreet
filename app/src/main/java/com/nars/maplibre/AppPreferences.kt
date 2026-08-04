@@ -59,16 +59,6 @@ class AppPreferences(context: Context) {
             }
         }
 
-    var sessionCookie: String?
-        get() = securePrefs.getCookie()
-        set(value) {
-            if (value != null) {
-                securePrefs.saveCookie(value)
-            } else {
-                securePrefs.clearCookie()
-            }
-        }
-
     var refreshToken: String?
         get() = securePrefs.getRefreshToken()
         set(value) {

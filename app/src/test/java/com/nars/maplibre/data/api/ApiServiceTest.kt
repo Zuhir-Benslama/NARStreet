@@ -19,6 +19,7 @@ import io.mockk.Runs
 import io.mockk.every
 import io.mockk.just
 import io.mockk.mockk
+import io.mockk.verify
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.Json
 import org.junit.Assert.assertEquals
@@ -60,7 +61,6 @@ class ApiServiceTest {
         every { appPreferences.authToken } returns null
         every { appPreferences.isLoggedIn } returns false
         every { appPreferences.authToken = any() } just Runs
-        every { appPreferences.sessionCookie = any() } just Runs
         every { appPreferences.refreshToken = any() } just Runs
         apiService = ApiService(client, appPreferences)
     }
@@ -83,6 +83,15 @@ class ApiServiceTest {
         assertTrue(result.isSuccess)
         assertEquals("test123", apiService.getSessionToken())
         assertEquals("refresh456", apiService.getRefreshToken())
+    }
+
+    @Test
+    fun `login persists tokens to preferences`() = runTest {
+        val result = apiService.login("testuser", "password")
+
+        assertTrue(result.isSuccess)
+        verify { appPreferences.authToken = "test123" }
+        verify { appPreferences.refreshToken = "refresh456" }
     }
 
     @Test

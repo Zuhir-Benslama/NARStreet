@@ -23,6 +23,7 @@ import io.ktor.http.contentType
 import io.ktor.http.isSuccess
 import kotlinx.coroutines.CancellationException
 
+@Suppress("TooManyFunctions")
 class ApiService(private val httpClient: HttpClient, private val preferences: AppPreferences) {
     companion object {
         private const val TAG = "ApiService"
@@ -61,6 +62,16 @@ class ApiService(private val httpClient: HttpClient, private val preferences: Ap
                 refreshToken = match.groupValues[1]
             }
         }
+    }
+
+    /**
+     * Persists the current in-memory session tokens so the session survives
+     * process death. Called from both login and token refresh, keeping the
+     * transport layer as the single owner of token persistence.
+     */
+    private fun persistTokens() {
+        preferences.authToken = sessionToken
+        preferences.refreshToken = refreshToken
     }
 
     private fun buildUserFromResponse(apiResponse: LoginApiResponse): User {
@@ -110,13 +121,7 @@ class ApiService(private val httpClient: HttpClient, private val preferences: Ap
                 return false
             }
             extractAndSetCookies(response)
-            // Persist rotated tokens so the session survives process death. The
-            // backend issues new cookies on every /api/refresh and may invalidate
-            // the previous refresh token, so the in-memory values alone are not
-            // enough to restore the session on the next app start.
-            preferences.authToken = sessionToken
-            preferences.sessionCookie = sessionToken
-            preferences.refreshToken = refreshToken
+            persistTokens()
             sessionToken != null
         } catch (e: CancellationException) {
             throw e
@@ -162,6 +167,8 @@ class ApiService(private val httpClient: HttpClient, private val preferences: Ap
 
             val token = apiResponse.token ?: apiResponse.accessToken
             token?.let { sessionToken = it }
+
+            persistTokens()
 
             val user = buildUserFromResponse(apiResponse)
             NarsLogger.logAuthEvent(TAG, "Login successful", username)

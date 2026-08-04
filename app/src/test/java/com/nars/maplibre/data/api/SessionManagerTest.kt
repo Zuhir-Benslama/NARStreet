@@ -27,43 +27,35 @@ class SessionManagerTest {
     }
 
     @Test
-    fun `login saves user and token on success`() = runTest {
+    fun `login saves user on success`() = runTest {
         val user = User(username = "testuser", name = "Test User")
         val loginResponse = LoginResponse(user = user, token = "token123")
 
         coEvery { apiService.login("testuser", "pass123") } returns Result.success(loginResponse)
-        coEvery { apiService.getSessionToken() } returns "cookie123"
-        coEvery { apiService.getRefreshToken() } returns "refresh123"
-        every { appPreferences.authToken = any() } just runs
-        every { appPreferences.sessionCookie = any() } just runs
-        every { appPreferences.refreshToken = any() } just runs
         every { appPreferences.user = any() } just runs
         every { appPreferences.municipalityName = any() } just runs
 
         val result = sessionManager.login("testuser", "pass123")
 
         assertTrue(result.isSuccess)
-        verify { appPreferences.authToken = "cookie123" }
-        verify { appPreferences.sessionCookie = "cookie123" }
-        verify { appPreferences.refreshToken = "refresh123" }
         verify { appPreferences.user = user.copy(username = "testuser", name = "Test User") }
+        verify { appPreferences.municipalityName = loginResponse.municipalityName }
     }
 
     @Test
-    fun `login does not save preferences on failure`() = runTest {
+    fun `login does not save user on failure`() = runTest {
         coEvery { apiService.login(any(), any()) } returns Result.failure(Exception("Auth failed"))
 
         val result = sessionManager.login("x", "y")
 
         assertTrue(result.isFailure)
-        verify(exactly = 0) { appPreferences.authToken = any() }
+        verify(exactly = 0) { appPreferences.user = any() }
     }
 
     @Test
     fun `logout clears all preferences`() = runTest {
         coEvery { apiService.logout() } returns Result.success(Unit)
         every { appPreferences.authToken = null } just runs
-        every { appPreferences.sessionCookie = null } just runs
         every { appPreferences.refreshToken = null } just runs
         every { appPreferences.user = null } just runs
         every { appPreferences.municipalityName = null } just runs
@@ -73,7 +65,6 @@ class SessionManagerTest {
         sessionManager.logout()
 
         verify { appPreferences.authToken = null }
-        verify { appPreferences.sessionCookie = null }
         verify { appPreferences.refreshToken = null }
         verify { appPreferences.user = null }
         verify { appPreferences.municipalityName = null }

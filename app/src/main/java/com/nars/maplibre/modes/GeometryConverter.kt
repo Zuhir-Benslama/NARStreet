@@ -32,13 +32,20 @@ class GeometryConverter {
         private const val TAG = "GeometryConverter"
         private const val CIRCLE_APPROXIMATION_SEGMENTS = 32
         private const val DEGREES_IN_CIRCLE = 360.0
+        private const val MIN_COS_LATITUDE = 1e-9
 
         fun extractGeometryFromGeoJson(
             geometry: com.geoman.maplibre.geoman.types.geojson.Geometry?,
         ): com.nars.maplibre.data.model.Geometry? {
             if (geometry == null) return null
             return when (geometry) {
-                is Point -> PointGeometry(coordinates = listOf(geometry.coordinates[0], geometry.coordinates[1]))
+                is Point ->
+                    PointGeometry(
+                        coordinates = listOf(
+                            geometry.coordinates.getOrNull(0) ?: 0.0,
+                            geometry.coordinates.getOrNull(1) ?: 0.0,
+                        ),
+                    )
 
                 is LineString -> LineStringGeometry(coordinates = geometry.coordinates.flatMap { listOf(it[0], it[1]) })
 
@@ -138,8 +145,8 @@ class GeometryConverter {
                 is Point -> {
                     put("type", "Point")
                     putJsonArray("coordinates") {
-                        add(geometry.coordinates[0])
-                        add(geometry.coordinates[1])
+                        add(geometry.coordinates.getOrNull(0) ?: 0.0)
+                        add(geometry.coordinates.getOrNull(1) ?: 0.0)
                     }
                 }
 
@@ -234,7 +241,8 @@ class GeometryConverter {
         val ring =
             (0..segments).map { i ->
                 val angle = Math.toRadians(i * DEGREES_IN_CIRCLE / segments)
-                val lng = centerLng + radiusDegrees * Math.cos(angle) / Math.cos(Math.toRadians(centerLat))
+                val cosLat = Math.cos(Math.toRadians(centerLat)).coerceAtLeast(MIN_COS_LATITUDE)
+                val lng = centerLng + radiusDegrees * Math.cos(angle) / cosLat
                 val lat = centerLat + radiusDegrees * Math.sin(angle)
                 lng to lat
             }
