@@ -28,7 +28,6 @@ import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
-import java.util.concurrent.atomic.AtomicInteger
 
 class ApiServiceTest {
     private val appPreferences: AppPreferences = mockk()
@@ -305,14 +304,16 @@ class ApiServiceTest {
     }
 
     @Test
-    fun `concurrent 401s trigger a single refresh and both requests succeed`() = runTest {
-        val refreshCalls = AtomicInteger(0)
-        var featuresCalls = 0
+    fun `concurrent 401s never present a consumed refresh token and both requests succeed`() = runTest {
+        val refreshTokensPresented = java.util.concurrent.ConcurrentLinkedQueue<String>()
         engine =
             MockEngine { request ->
                 when {
                     request.url.encodedPath == "/api/refresh" -> {
-                        refreshCalls.incrementAndGet()
+                        val cookie = request.headers[HttpHeaders.Cookie].orEmpty()
+                        val token =
+                            Regex("refresh_token=([^;]+)").find(cookie)?.groupValues?.get(1).orEmpty()
+                        refreshTokensPresented.add(token)
                         respond(
                             content = """{"success": true}""",
                             status = HttpStatusCode.OK,
@@ -324,20 +325,17 @@ class ApiServiceTest {
                         )
                     }
 
-                    else -> {
-                        featuresCalls++
-                        if (featuresCalls <= 2) {
-                            respond(
-                                content = "",
-                                status = HttpStatusCode.Unauthorized,
-                            )
-                        } else {
-                            respond(
-                                content = """{"features": [], "count": 0, "skip": 0, "take": 100}""",
-                                status = HttpStatusCode.OK,
-                            )
-                        }
-                    }
+                    request.headers[HttpHeaders.Authorization] == "Bearer old-access" ->
+                        respond(
+                            content = "",
+                            status = HttpStatusCode.Unauthorized,
+                        )
+
+                    else ->
+                        respond(
+                            content = """{"features": [], "count": 0, "skip": 0, "take": 100}""",
+                            status = HttpStatusCode.OK,
+                        )
                 }
             }
         val client =
@@ -352,6 +350,7 @@ class ApiServiceTest {
                 }
             }
         apiService = ApiService(client, appPreferences)
+        apiService.setSessionToken("old-access")
         apiService.setRefreshToken("refresh-123")
 
         val first = async { apiService.loadFeatures() }
@@ -359,7 +358,10 @@ class ApiServiceTest {
         val results = listOf(first.await(), second.await())
 
         assertTrue(results.all { it.isSuccess })
-        assertEquals(1, refreshCalls.get())
+        // The backend consumes a refresh token the moment it is rotated. A
+        // concurrent 401 storm must never present the original token a second
+        // time — doing so would be rejected and kill the session.
+        assertEquals(1, refreshTokensPresented.count { it == "refresh-123" })
     }
 
     @Test
