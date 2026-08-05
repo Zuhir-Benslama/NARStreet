@@ -20,6 +20,7 @@ import io.mockk.every
 import io.mockk.just
 import io.mockk.mockk
 import io.mockk.verify
+import kotlinx.coroutines.async
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.Json
 import org.junit.Assert.assertEquals
@@ -27,6 +28,7 @@ import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
+import java.util.concurrent.atomic.AtomicInteger
 
 class ApiServiceTest {
     private val appPreferences: AppPreferences = mockk()
@@ -300,6 +302,64 @@ class ApiServiceTest {
         val result = apiService.loadFeatures()
 
         assertTrue(result.isFailure)
+    }
+
+    @Test
+    fun `concurrent 401s trigger a single refresh and both requests succeed`() = runTest {
+        val refreshCalls = AtomicInteger(0)
+        var featuresCalls = 0
+        engine =
+            MockEngine { request ->
+                when {
+                    request.url.encodedPath == "/api/refresh" -> {
+                        refreshCalls.incrementAndGet()
+                        respond(
+                            content = """{"success": true}""",
+                            status = HttpStatusCode.OK,
+                            headers =
+                            io.ktor.http.headersOf(
+                                "Set-Cookie",
+                                "access_token=new-access; refresh_token=new-refresh",
+                            ),
+                        )
+                    }
+
+                    else -> {
+                        featuresCalls++
+                        if (featuresCalls <= 2) {
+                            respond(
+                                content = "",
+                                status = HttpStatusCode.Unauthorized,
+                            )
+                        } else {
+                            respond(
+                                content = """{"features": [], "count": 0, "skip": 0, "take": 100}""",
+                                status = HttpStatusCode.OK,
+                            )
+                        }
+                    }
+                }
+            }
+        val client =
+            HttpClient(engine) {
+                install(ContentNegotiation) {
+                    json(
+                        Json {
+                            ignoreUnknownKeys = true
+                            isLenient = true
+                        },
+                    )
+                }
+            }
+        apiService = ApiService(client, appPreferences)
+        apiService.setRefreshToken("refresh-123")
+
+        val first = async { apiService.loadFeatures() }
+        val second = async { apiService.loadFeatures() }
+        val results = listOf(first.await(), second.await())
+
+        assertTrue(results.all { it.isSuccess })
+        assertEquals(1, refreshCalls.get())
     }
 
     @Test

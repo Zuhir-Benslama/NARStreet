@@ -3,7 +3,7 @@
 agp = "9.3.1"
 
 # Kotlin - Compatible with JDK 21
-kotlin = "2.4.0"
+kotlin = "2.4.10"
 kotlinx-serialization = "1.11.0"
 kotlinx-coroutines = "1.11.0"
 
@@ -28,10 +28,10 @@ maplibre-sdk = "13.4.1"
 koin = "4.2.2"
 
 # Ktor (HTTP Client)
-ktor = "3.5.1"
+ktor = "3.5.2"
 
 # Detekt
-detekt = "2.0.0-alpha.5"
+detekt = "2.0.0-alpha.6"
 
 # Logging
 timber = "5.0.1"

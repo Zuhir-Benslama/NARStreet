@@ -22,6 +22,8 @@ import io.ktor.http.HttpStatusCode
 import io.ktor.http.contentType
 import io.ktor.http.isSuccess
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
 @Suppress("TooManyFunctions")
 class ApiService(private val httpClient: HttpClient, private val preferences: AppPreferences) {
@@ -36,6 +38,14 @@ class ApiService(private val httpClient: HttpClient, private val preferences: Ap
     @Volatile private var sessionToken: String? = null
 
     @Volatile private var refreshToken: String? = null
+
+    /**
+     * Serializes token refresh so concurrent 401s trigger a single rotation.
+     * The backend rotates refresh tokens on every refresh; without this lock two
+     * in-flight requests could each refresh with the same (now stale) token,
+     * silently invalidating the session.
+     */
+    private val refreshMutex = Mutex()
 
     fun setSessionToken(token: String?) {
         sessionToken = token
@@ -99,8 +109,21 @@ class ApiService(private val httpClient: HttpClient, private val preferences: Ap
      */
     private suspend fun authenticatedRequest(block: suspend () -> HttpResponse): HttpResponse {
         var response = block()
-        if (response.status == HttpStatusCode.Unauthorized && tryRefreshToken()) {
-            response = block()
+        if (response.status == HttpStatusCode.Unauthorized) {
+            val refreshTokenBeforeLock = refreshToken
+            val refreshed =
+                refreshMutex.withLock {
+                    if (refreshToken != refreshTokenBeforeLock) {
+                        // Another coroutine already rotated the tokens while we
+                        // waited — no need to refresh again.
+                        true
+                    } else {
+                        tryRefreshToken()
+                    }
+                }
+            if (refreshed) {
+                response = block()
+            }
         }
         return response
     }

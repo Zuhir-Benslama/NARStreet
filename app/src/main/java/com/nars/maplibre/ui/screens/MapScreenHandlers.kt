@@ -5,13 +5,11 @@ import com.nars.maplibre.MapViewModel
 import com.nars.maplibre.R
 import com.nars.maplibre.data.api.ApiService
 import com.nars.maplibre.data.api.SessionManager
-import com.nars.maplibre.data.model.CircleGeometry
-import com.nars.maplibre.data.model.LineStringGeometry
 import com.nars.maplibre.data.model.NarsFeature
-import com.nars.maplibre.data.model.PointGeometry
-import com.nars.maplibre.data.model.PolygonGeometry
 import com.nars.maplibre.modes.NarsGeoman
 import com.nars.maplibre.utils.NarsLogger
+import com.nars.maplibre.utils.isPointNearFeature
+import com.nars.maplibre.utils.retryOnTransientFailure
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import org.maplibre.android.camera.CameraUpdateFactory
@@ -29,11 +27,9 @@ class MapScreenHandlers(
 ) {
     companion object {
         private const val TAG = "MapScreenHandlers"
-        private const val MIN_CIRCLE_RADIUS = 10.0
         private const val ANIM_DURATION_MS = 1500
         private const val MAP_ZOOM = 14.0
         private const val LONG_CLICK_DISTANCE_THRESHOLD = 50.0
-        private const val NEAR_FEATURE_DISTANCE_THRESHOLD = 20.0
     }
 
     @Volatile var narsGeoman: NarsGeoman? = null
@@ -116,7 +112,9 @@ class MapScreenHandlers(
     fun handleMapLongClick(latLng: LatLng): NarsFeature? {
         val clickedFeature =
             currentPhaseFeatures()
-                .firstOrNull { feature -> isPointNearFeature(latLng, feature, LONG_CLICK_DISTANCE_THRESHOLD) }
+                .firstOrNull { feature ->
+                    isPointNearFeature(latLng, feature, LONG_CLICK_DISTANCE_THRESHOLD)
+                }
 
         if (clickedFeature != null) viewModel.selectFeature(clickedFeature)
         return clickedFeature
@@ -188,6 +186,9 @@ class MapScreenHandlers(
         }
     }
 
+    private suspend fun loadFeaturesWithRetry(): Result<List<NarsFeature>> =
+        retryOnTransientFailure { apiService.loadFeatures() }
+
     fun logout(onLogout: () -> Unit) {
         scope.launch {
             sessionManager.logout()
@@ -199,7 +200,7 @@ class MapScreenHandlers(
         scope.launch {
             NarsLogger.d(TAG, "Loading features from backend...")
             viewModel.updateUiState(isLoading = true)
-            val result = apiService.loadFeatures()
+            val result = loadFeaturesWithRetry()
             result.onSuccess { features ->
                 viewModel.addFeatures(features)
                 narsGeoman?.displayManager?.updateDisplayedFeatures(features)
@@ -217,39 +218,6 @@ class MapScreenHandlers(
             }
             result.onFailure { snackbar("${context.getString(R.string.map_load_failed)}: ${it.message}") }
             viewModel.updateUiState(isLoading = false)
-        }
-    }
-
-    private fun isPointNearFeature(
-        latLng: LatLng,
-        feature: NarsFeature,
-        threshold: Double = NEAR_FEATURE_DISTANCE_THRESHOLD,
-    ): Boolean = when (val geometry = feature.geometry) {
-        is PointGeometry -> {
-            val lon = geometry.coordinates.getOrNull(0) ?: return false
-            val lat = geometry.coordinates.getOrNull(1) ?: return false
-            latLng.distanceTo(LatLng(lat, lon)) < threshold
-        }
-
-        is CircleGeometry -> {
-            val lon = geometry.coordinates.getOrNull(0) ?: return false
-            val lat = geometry.coordinates.getOrNull(1) ?: return false
-            val radius = (geometry.coordinates.getOrNull(2) ?: MIN_CIRCLE_RADIUS).coerceAtLeast(MIN_CIRCLE_RADIUS)
-            latLng.distanceTo(LatLng(lat, lon)) < radius
-        }
-
-        is LineStringGeometry -> {
-            geometry.coordinates.chunked(2).filter { it.size == 2 }.any { coord ->
-                val lp = LatLng(coord[1], coord[0])
-                latLng.distanceTo(lp) < threshold
-            }
-        }
-
-        is PolygonGeometry -> {
-            geometry.coordinates.chunked(2).filter { it.size == 2 }.any { coord ->
-                val pp = LatLng(coord[1], coord[0])
-                latLng.distanceTo(pp) < threshold
-            }
         }
     }
 }
