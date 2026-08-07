@@ -124,21 +124,7 @@ jobs:
           arch: x86_64
           disable-animations: true
           emulator-boot-timeout: 900
-          script: |
-            adb wait-for-device
-            echo "Waiting for package manager service..."
-            timeout 300 bash -c 'until adb shell service check package 2>/dev/null | grep -q found; do sleep 5; done'
-            for attempt in 1 2 3; do
-              echo "=== Connected test attempt $attempt ==="
-              if ./gradlew connectedDebugAndroidTest; then
-                echo "Connected tests passed."
-                exit 0
-              fi
-              echo "Attempt $attempt failed; waiting 30s before retry..."
-              sleep 30
-            done
-            echo "All connected test attempts failed."
-            exit 1
+          script: adb wait-for-device && timeout 300 bash -c 'until adb shell service check package 2>/dev/null | grep -q found; do sleep 5; done'; for attempt in 1 2 3; do if ./gradlew connectedDebugAndroidTest; then echo "Connected tests passed."; exit 0; fi; echo "Attempt $attempt failed; waiting 30s before retry..."; sleep 30; done; echo "All connected test attempts failed."; exit 1
 
       - name: Upload connected test report
         if: always()
