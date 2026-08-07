@@ -78,32 +78,13 @@ The app communicates with the NARS backend via these endpoints:
 | PUT | `/api/features/{id}` | Bearer | Update feature |
 | DELETE | `/api/features/{id}` | Bearer | Delete feature |
 
-## mTLS Configuration
-
-For deployments behind mTLS, provide the CA certificate and client PKCS12:
-
-1. Place cert files in `app/src/main/assets/`:
-
-   - `nars-ca.crt` — CA certificate (PEM)
-   - `nars-client.p12` — Client certificate + key (PKCS12)
-
-2. Enable mTLS in `local.properties`:
-
-   ```properties
-   MTLS_ENABLED=true
-   CA_CERT_ASSET=nars-ca.crt
-   CLIENT_P12_ASSET=nars-client.p12
-   CLIENT_P12_PASSWORD=changeme
-   ```
-
-   The custom `SSLSocketFactory` is automatically applied to all API calls when `MTLS_ENABLED=true`.
-
 ## Security
 
 - Auth tokens stored in `EncryptedSharedPreferences` backed by Android Keystore (AES-256 GCM)
 - `android:allowBackup="false"` prevents credential extraction via ADB backup
 - Release variant network security config disables cleartext HTTP
-- JWT token auto-refresh on app startup via `/api/refresh`
+- Optional TLS certificate pinning via the `SSL_CERT_HASHES` build config (disabled when blank)
+- JWT access tokens are transparently refreshed on HTTP 401 via `/api/refresh` (refresh is lazy, not performed at app startup)
 - No API keys, secrets, or credentials committed to version control
 
 ## Build Variants

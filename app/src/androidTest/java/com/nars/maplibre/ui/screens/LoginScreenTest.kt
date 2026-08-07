@@ -14,6 +14,7 @@ import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.mockk
 import org.junit.After
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -129,7 +130,7 @@ class LoginScreenTest {
             ).performClick()
 
         composeTestRule.waitForIdle()
-        assert(loginSucceeded) { "Login should have succeeded" }
+        assertTrue("Login should have succeeded", loginSucceeded)
         coVerify { mockSessionManager.login("testuser", "testpass") }
     }
 

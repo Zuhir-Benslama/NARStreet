@@ -87,7 +87,7 @@ fun InfoPanel(
                     val phaseColor = phase.parsedColor
 
                     PhaseCountRow(
-                        phaseName = phase.label,
+                        phaseName = Phases.getDisplayLabel(phase, LocalContext.current),
                         count = count,
                         phaseColor = phaseColor,
                         isHighlighted = isCurrentPhase,

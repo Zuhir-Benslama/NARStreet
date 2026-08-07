@@ -71,12 +71,12 @@ class LabelAndMarkerManager(private val map: MapLibreMap) {
 
     private fun removeRoadEndpointMarkers() {
         for (roadId in roadMarkerRoadIds) {
-            val ids = listOf("${roadId}_start", "${roadId}_end", "${roadId}_label")
-            for (id in ids) {
+            val parts = listOf("${roadId}_start", "${roadId}_end", "${roadId}_label")
+            for (part in parts) {
                 try {
-                    map.style?.getLayer("nars_${id}_circle")?.let { map.style?.removeLayer(it) }
-                    map.style?.getLayer(id)?.let { map.style?.removeLayer(it) }
-                    map.style?.getSource("nars_${id}_src")?.let { map.style?.removeSource(it) }
+                    map.style?.getLayer("nars_${part}_circle")?.let { map.style?.removeLayer(it) }
+                    map.style?.getLayer("nars_$part")?.let { map.style?.removeLayer(it) }
+                    map.style?.getSource("nars_${part}_src")?.let { map.style?.removeSource(it) }
                 } catch (_: IllegalArgumentException) {
                 }
             }
@@ -94,26 +94,27 @@ class LabelAndMarkerManager(private val map: MapLibreMap) {
                 if (coords.size >= 2) road to coords else null
             }
             .forEach { (road, coords) ->
+                val safeRoadId = FeatureLayerNames.safeId(road.id)
                 addEndpointMarker(
-                    id = "${road.id}_start",
+                    id = "${safeRoadId}_start",
                     lon = coords.first()[0],
                     lat = coords.first()[1],
                     isStart = true,
                 )
                 addEndpointMarker(
-                    id = "${road.id}_end",
+                    id = "${safeRoadId}_end",
                     lon = coords.last()[0],
                     lat = coords.last()[1],
                     isStart = false,
                 )
                 val midIdx = coords.size / 2
                 addLabelAt(
-                    layerName = "${road.id}_label",
+                    layerName = "nars_${safeRoadId}_label",
                     labelText = road.properties.name,
                     lon = coords[midIdx][0],
                     lat = coords[midIdx][1],
                 )
-                roadMarkerRoadIds.add(road.id)
+                roadMarkerRoadIds.add(safeRoadId)
             }
     }
 

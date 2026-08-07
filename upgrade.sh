@@ -101,8 +101,17 @@ fi
 
 # --- 6. Verify ---
 echo ""
-echo "Syncing project..."
+echo "Building project..."
 ./gradlew --stop 2>/dev/null || true
 
+# Run a real build and the unit tests so a broken upgrade fails loudly.
+if ! ./gradlew :app:assembleDebug :app:testDebugUnitTest; then
+    echo ""
+    echo "✖ Build or tests failed after upgrade. Restore with:"
+    echo "    rm -rf app/build maplibre-geoman-android/app/build"
+    echo "    cp -r $BACKUP_DIR/* ."
+    exit 1
+fi
+
 echo ""
-echo "Done! If the build fails, restore from $BACKUP_DIR/"
+echo "Done! Build and unit tests passed after upgrade."

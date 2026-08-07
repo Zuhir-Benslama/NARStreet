@@ -235,35 +235,3 @@ private fun getStyleJson(layer: BaseLayerType): String {
         }
     }.toString()
 }
-
-/**
- * Animate camera to location
- */
-fun animateCameraTo(mapView: MapView, latLng: LatLng, zoom: Double = 15.0, duration: Int = 1000) {
-    mapView.getMapAsync { map ->
-        val cameraPosition = CameraPosition.Builder()
-            .target(latLng)
-            .zoom(zoom)
-            .build()
-        map.animateCamera(
-            org.maplibre.android.camera.CameraUpdateFactory.newCameraPosition(cameraPosition),
-            duration,
-        )
-    }
-}
-
-/**
- * Fly camera to location
- */
-fun flyCameraTo(mapView: MapView, latLng: LatLng, zoom: Double = 15.0, duration: Int = 2000) {
-    mapView.getMapAsync { map ->
-        val cameraPosition = CameraPosition.Builder()
-            .target(latLng)
-            .zoom(zoom)
-            .build()
-        map.easeCamera(
-            org.maplibre.android.camera.CameraUpdateFactory.newCameraPosition(cameraPosition),
-            duration,
-        )
-    }
-}

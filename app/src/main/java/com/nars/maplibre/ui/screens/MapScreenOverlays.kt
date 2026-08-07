@@ -20,6 +20,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.nars.maplibre.MapViewModel
@@ -153,7 +154,10 @@ private fun MapScreenMapOverlay(
 ) {
     NarsMap(
         viewModel = viewModel,
-        onMapReady = { mv, map -> handlers.initializeNarsGeoman(mv, map) },
+        onMapReady = { mv, map ->
+            handlers.initializeNarsGeoman(mv, map)
+            handlers.loadFeaturesOnMapReady()
+        },
         onStyleLoaded = {
             handlers.narsGeoman?.displayManager?.onStyleReloaded(viewModel.allFeatures.value)
         },
@@ -222,6 +226,7 @@ private fun MapScreenSidePanel(
     snackbarHostState: SnackbarHostState,
 ) {
     val scope = rememberCoroutineScope()
+    val context = LocalContext.current
     val phaseChangedText = stringResource(R.string.map_phase_changed)
     val cannotAdvanceText = stringResource(R.string.map_cannot_advance)
     Column(
@@ -235,7 +240,8 @@ private fun MapScreenSidePanel(
             phaseCounts = featureCounts,
             onPhaseSelected = { phase ->
                 viewModel.setCurrentPhase(phase)?.let {
-                    scope.launch { snackbarHostState.showSnackbar("$phaseChangedText: ${phase.label}") }
+                    val phaseLabel = Phases.getDisplayLabel(phase, context)
+                    scope.launch { snackbarHostState.showSnackbar("$phaseChangedText: $phaseLabel") }
                 } ?: scope.launch { snackbarHostState.showSnackbar(cannotAdvanceText) }
             },
             modifier = Modifier.width(40.dp),

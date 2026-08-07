@@ -152,12 +152,24 @@ private fun FeatureModalCoordinateInfo(feature: NarsFeature) {
     val coords = when (val geom = feature.geometry) {
         is LineStringGeometry -> {
             val c = geom.coordinates.chunked(2).filter { it.size == 2 }
-            if (c.isNotEmpty()) "Lat: ${c[0][1].formatDecimal(6)}, Lng: ${c[0][0].formatDecimal(6)}" else null
+            if (c.isNotEmpty()) {
+                stringResource(
+                    R.string.feature_coordinate_lat_lng,
+                    c[0][1].formatDecimal(6),
+                    c[0][0].formatDecimal(6),
+                )
+            } else {
+                null
+            }
         }
 
         is PointGeometry -> {
             if (geom.coordinates.size >= 2) {
-                "Lat: ${geom.coordinates[1].formatDecimal(6)}, Lng: ${geom.coordinates[0].formatDecimal(6)}"
+                stringResource(
+                    R.string.feature_coordinate_lat_lng,
+                    geom.coordinates[1].formatDecimal(6),
+                    geom.coordinates[0].formatDecimal(6),
+                )
             } else {
                 null
             }

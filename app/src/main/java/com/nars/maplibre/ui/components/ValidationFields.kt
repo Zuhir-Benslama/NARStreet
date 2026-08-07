@@ -146,6 +146,14 @@ fun NamingPanelValidationFields(
 }
 
 @Composable
+private fun String.displayLabel(): String = when (this) {
+    "high" -> stringResource(R.string.level_high)
+    "medium" -> stringResource(R.string.level_medium)
+    "low" -> stringResource(R.string.level_low)
+    else -> replaceFirstChar { it.uppercase() }
+}
+
+@Composable
 fun ValidationRadioGroup(
     label: String,
     options: List<String>,
@@ -164,7 +172,7 @@ fun ValidationRadioGroup(
                         selected = selectedValue == option,
                         onClick = { onValueChanged(option) },
                     )
-                    Text(text = option.replaceFirstChar { it.uppercase() }, fontSize = 12.sp)
+                    Text(text = option.displayLabel(), fontSize = 12.sp)
                 }
             }
         }

@@ -16,15 +16,21 @@
     <string name="theme_dark">Dark</string>
     <string name="theme_auto">Auto</string>
 
-    <!-- Context Menu -->
-    <string name="menu_edit_geometry">Edit Geometry</string>
-    <string name="menu_edit_info">Edit Info</string>
-    <string name="menu_delete">Delete</string>
-
     <!-- Phase hints -->
     <string name="phase_roads_hint">Update road attributes (traffic, lanes, etc.)</string>
     <string name="phase_house_entrances_hint">Verify entrances and numbering panels</string>
     <string name="phase_naming_panels_hint">Verify naming panel locations</string>
+
+    <!-- Validation levels -->
+    <string name="level_high">High</string>
+    <string name="level_medium">Medium</string>
+    <string name="level_low">Low</string>
+
+    <!-- Feature modal -->
+    <string name="feature_coordinate_lat_lng">Lat: %1$s, Lng: %2$s</string>
+
+    <!-- Profile -->
+    <string name="profile_avatar_fallback">U</string>
 
     <!-- Field Mode - Roads -->
     <string name="road_traffic">Road Traffic</string>
@@ -91,6 +97,10 @@
     <string name="map_phase_changed">Phase</string>
     <string name="map_cannot_advance">Cannot advance: requirements not met</string>
     <string name="map_phase_badge_label">Phase %1$s</string>
+    <string name="alert_at_least_one_road">At least one road is required before advancing</string>
+    <string name="alert_at_least_one_entrance">At least one house entrance is required before advancing</string>
+    <string name="alert_no_phase">No active phase</string>
+    <string name="alert_invalid_phase">Invalid phase</string>
     <string name="map_nothing_undo">Nothing to undo</string>
     <string name="map_edit_hint">Drag vertices to edit. Tap Save when done.</string>
     <string name="map_select_feature_hint">Please select a feature to edit first</string>

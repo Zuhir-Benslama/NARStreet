@@ -33,13 +33,14 @@ class SessionManager(private val apiService: ApiService, private val appPreferen
             throw e
         } catch (e: java.io.IOException) {
             NarsLogger.w(TAG, "Logout API call failed", e)
+        } finally {
+            appPreferences.authToken = null
+            appPreferences.refreshToken = null
+            appPreferences.user = null
+            appPreferences.municipalityName = null
+            apiService.setSessionToken(null)
+            apiService.setRefreshToken(null)
         }
-        appPreferences.authToken = null
-        appPreferences.refreshToken = null
-        appPreferences.user = null
-        appPreferences.municipalityName = null
-        apiService.setSessionToken(null)
-        apiService.setRefreshToken(null)
     }
 
     fun getUser() = appPreferences.user

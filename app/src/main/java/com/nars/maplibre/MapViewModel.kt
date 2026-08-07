@@ -67,8 +67,9 @@ class MapViewModel(
         if (phase.index > currentIndex) {
             val result = phaseNavigator.canAdvance(phase.index)
             if (result is PhaseNavigationResult.Blocked) {
-                updateUiState(errorMessage = result.message)
-                NarsLogger.d("MapViewModel", "Phase validation failed: ${result.message}")
+                val message = getApplication<Application>().getString(result.messageResId)
+                updateUiState(errorMessage = message)
+                NarsLogger.d("MapViewModel", "Phase validation failed: $message")
                 return null
             }
         }
@@ -87,7 +88,9 @@ class MapViewModel(
         }
         val currentIndex = featureStore.currentPhase.value?.index ?: 0
         val result = phaseNavigator.canAdvance(currentIndex + 1)
-        if (result is PhaseNavigationResult.Blocked) updateUiState(errorMessage = result.message)
+        if (result is PhaseNavigationResult.Blocked) {
+            updateUiState(errorMessage = getApplication<Application>().getString(result.messageResId))
+        }
         return null
     }
 

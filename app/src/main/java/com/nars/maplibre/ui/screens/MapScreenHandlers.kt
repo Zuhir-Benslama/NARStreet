@@ -45,11 +45,11 @@ class MapScreenHandlers(
                     onFeatureCreated = { feature -> handleFeatureCreated(feature) },
                     onFeatureUpdated = { feature ->
                         viewModel.updateFeature(feature)
+                        narsGeoman?.displayManager?.updateFeatureOnMap(feature)
                         snackbar(context.getString(R.string.map_feature_updated))
                     },
                     onFeatureDeleted = { featureId ->
-                        viewModel.deleteFeature(featureId)
-                        snackbar(context.getString(R.string.map_feature_deleted))
+                        deleteFeature(featureId)
                     },
                 )
             narsGeoman = geoman

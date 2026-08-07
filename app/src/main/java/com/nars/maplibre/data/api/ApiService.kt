@@ -108,14 +108,14 @@ class ApiService(private val httpClient: HttpClient, private val preferences: Ap
      * token once when the server responds 401 (access token expiry).
      */
     private suspend fun authenticatedRequest(block: suspend () -> HttpResponse): HttpResponse {
+        val accessTokenBeforeRequest = sessionToken
         var response = block()
         if (response.status == HttpStatusCode.Unauthorized) {
-            val refreshTokenBeforeLock = refreshToken
             val refreshed =
                 refreshMutex.withLock {
-                    if (refreshToken != refreshTokenBeforeLock) {
-                        // Another coroutine already rotated the tokens while we
-                        // waited — no need to refresh again.
+                    if (sessionToken != accessTokenBeforeRequest) {
+                        // Another coroutine already rotated the access token that
+                        // this request used — reuse it instead of refreshing again.
                         true
                     } else {
                         tryRefreshToken()
@@ -130,10 +130,11 @@ class ApiService(private val httpClient: HttpClient, private val preferences: Ap
 
     /**
      * Attempts to rotate the refresh token via POST /api/refresh.
-     * Returns true when a fresh access token was issued.
+     * Returns true only when a fresh access token was actually issued.
      */
     private suspend fun tryRefreshToken(): Boolean {
         val token = refreshToken ?: return false
+        val accessBefore = sessionToken
         return try {
             val response =
                 httpClient.post("$baseUrl/api/refresh") {
@@ -145,7 +146,7 @@ class ApiService(private val httpClient: HttpClient, private val preferences: Ap
             }
             extractAndSetCookies(response)
             persistTokens()
-            sessionToken != null
+            sessionToken != null && sessionToken != accessBefore
         } catch (e: CancellationException) {
             throw e
         } catch (e: java.io.IOException) {
@@ -166,8 +167,6 @@ class ApiService(private val httpClient: HttpClient, private val preferences: Ap
                     setBody(LoginRequest(username, password))
                 }
 
-            extractAndSetCookies(response)
-
             if (!response.status.isSuccess()) {
                 val body = response.bodyAsText()
                 val errorResponse =
@@ -180,6 +179,8 @@ class ApiService(private val httpClient: HttpClient, private val preferences: Ap
                     Exception(errorResponse?.message ?: "Login failed: HTTP ${response.status.value}"),
                 )
             }
+
+            extractAndSetCookies(response)
 
             val body = response.bodyAsText()
             val apiResponse = apiJson.decodeFromString<LoginApiResponse>(body)

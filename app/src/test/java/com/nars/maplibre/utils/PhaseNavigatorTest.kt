@@ -1,5 +1,6 @@
 package com.nars.maplibre.utils
 
+import com.nars.maplibre.R
 import com.nars.maplibre.data.model.FeatureProperties
 import com.nars.maplibre.data.model.LineStringGeometry
 import com.nars.maplibre.data.model.NarsFeature
@@ -47,7 +48,7 @@ class PhaseNavigatorTest {
         val navigator = PhaseNavigator(store)
         store.setCurrentPhase(Phases.ALL[0])
         val result = navigator.canAdvance(99)
-        assertEquals(PhaseNavigationResult.Blocked("alert_invalid_phase"), result)
+        assertEquals(PhaseNavigationResult.Blocked(R.string.alert_invalid_phase), result)
     }
 
     @Test
@@ -74,7 +75,7 @@ class PhaseNavigatorTest {
         val navigator = PhaseNavigator(store)
         store.setCurrentPhase(Phases.ALL[0])
         val result = navigator.canAdvance(1)
-        assertEquals(PhaseNavigationResult.Blocked("alert_at_least_one_road"), result)
+        assertEquals(PhaseNavigationResult.Blocked(R.string.alert_at_least_one_road), result)
     }
 
     @Test
@@ -94,7 +95,7 @@ class PhaseNavigatorTest {
         store.addFeature(createRoad("r1"))
         store.setCurrentPhase(Phases.ALL[1])
         val result = navigator.canAdvance(2)
-        assertEquals(PhaseNavigationResult.Blocked("alert_at_least_one_entrance"), result)
+        assertEquals(PhaseNavigationResult.Blocked(R.string.alert_at_least_one_entrance), result)
     }
 
     @Test
@@ -114,6 +115,27 @@ class PhaseNavigatorTest {
         val navigator = PhaseNavigator(store)
         store.setCurrentPhase(Phases.ALL[2])
         val result = navigator.canAdvance(1)
+        assertTrue(result is PhaseNavigationResult.Allowed)
+    }
+
+    @Test
+    fun `canAdvance blocks skipping houseEntrances when jumping roads to namingPanels`() {
+        val store = FeatureStore()
+        val navigator = PhaseNavigator(store)
+        store.addFeature(createRoad("r1"))
+        store.setCurrentPhase(Phases.ALL[0])
+        val result = navigator.canAdvance(2)
+        assertEquals(PhaseNavigationResult.Blocked(R.string.alert_at_least_one_entrance), result)
+    }
+
+    @Test
+    fun `canAdvance allows jumping roads to namingPanels when all prerequisites exist`() {
+        val store = FeatureStore()
+        val navigator = PhaseNavigator(store)
+        store.addFeature(createRoad("r1"))
+        store.addFeature(createEntrance("e1"))
+        store.setCurrentPhase(Phases.ALL[0])
+        val result = navigator.canAdvance(2)
         assertTrue(result is PhaseNavigationResult.Allowed)
     }
 

@@ -1,5 +1,7 @@
 package com.nars.maplibre.utils
 
+import androidx.annotation.StringRes
+import com.nars.maplibre.R
 import com.nars.maplibre.data.model.PhaseDefinition
 import com.nars.maplibre.data.model.Phases
 import com.nars.maplibre.data.store.FeatureStoreInterface
@@ -7,7 +9,7 @@ import com.nars.maplibre.data.store.FeatureStoreInterface
 sealed class PhaseNavigationResult {
     data object Allowed : PhaseNavigationResult()
 
-    data class Blocked(val message: String) : PhaseNavigationResult()
+    data class Blocked(@StringRes val messageResId: Int) : PhaseNavigationResult()
 }
 
 /**
@@ -19,20 +21,41 @@ class PhaseNavigator(private val featureStore: FeatureStoreInterface) {
      * Check if user can advance to next phase
      */
     fun canAdvance(targetPhaseIndex: Int): PhaseNavigationResult {
-        fun blocked(msg: String) = PhaseNavigationResult.Blocked(msg)
-        val allowed = PhaseNavigationResult.Allowed
-        val currentPhase = featureStore.currentPhase.value ?: return blocked("alert_no_phase")
-        Phases.getByIndex(targetPhaseIndex) ?: return blocked("alert_invalid_phase")
-
-        if (targetPhaseIndex <= currentPhase.index) return allowed
-
-        val roadsEmpty = featureStore.getFeaturesByPhase(Phases.ROADS_KEY).isEmpty()
-        val entrancesEmpty = featureStore.getFeaturesByPhase(Phases.HOUSE_ENTRANCES_KEY).isEmpty()
-        return when (currentPhase.key) {
-            Phases.ROADS_KEY -> if (roadsEmpty) blocked("alert_at_least_one_road") else allowed
-            Phases.HOUSE_ENTRANCES_KEY -> if (entrancesEmpty) blocked("alert_at_least_one_entrance") else allowed
-            else -> allowed
+        val currentPhase = featureStore.currentPhase.value
+        if (currentPhase == null) return PhaseNavigationResult.Blocked(R.string.alert_no_phase)
+        if (Phases.getByIndex(targetPhaseIndex) == null) {
+            return PhaseNavigationResult.Blocked(R.string.alert_invalid_phase)
         }
+        if (targetPhaseIndex <= currentPhase.index) return PhaseNavigationResult.Allowed
+
+        // Advancing forward means leaving every phase between the current one
+        // and the target (a forward jump must not skip a phase's requirement).
+        val phasesToPass = (currentPhase.index until targetPhaseIndex).mapNotNull(Phases::getByIndex)
+        var result: PhaseNavigationResult = PhaseNavigationResult.Allowed
+        for (phase in phasesToPass) {
+            val blockedRes = when (phase.key) {
+                Phases.ROADS_KEY ->
+                    if (featureStore.getFeaturesByPhase(Phases.ROADS_KEY).isEmpty()) {
+                        R.string.alert_at_least_one_road
+                    } else {
+                        null
+                    }
+
+                Phases.HOUSE_ENTRANCES_KEY ->
+                    if (featureStore.getFeaturesByPhase(Phases.HOUSE_ENTRANCES_KEY).isEmpty()) {
+                        R.string.alert_at_least_one_entrance
+                    } else {
+                        null
+                    }
+
+                else -> null
+            }
+            if (blockedRes != null) {
+                result = PhaseNavigationResult.Blocked(blockedRes)
+                break
+            }
+        }
+        return result
     }
 
     /**

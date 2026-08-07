@@ -45,7 +45,7 @@ import com.nars.maplibre.ui.theme.TextSecondary
 
 @Composable
 fun ProfileAvatar(user: User?, onClick: () -> Unit, modifier: Modifier = Modifier) {
-    val initials = user?.getInitials() ?: "U"
+    val initials = user?.getInitials() ?: stringResource(R.string.profile_avatar_fallback)
 
     Box(
         modifier = modifier

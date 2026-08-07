@@ -41,10 +41,7 @@ class FeatureRenderer(internal val map: MapLibreMap, val labelAndMarkerManager: 
         const val STYLE_LINE_WIDTH_THIN = 2
         const val STYLE_LINE_WIDTH_MEDIUM = 3
         const val STYLE_LINE_WIDTH_THICK = 8
-        const val STYLE_FILL_OPACITY_NONE = 0.0
-        const val STYLE_FILL_OPACITY_LIGHT = 0.20
-        const val STYLE_FILL_OPACITY_MEDIUM = 0.25
-        const val STYLE_FILL_OPACITY_DEFAULT = 0.3
+        const val STYLE_FILL_OPACITY_LIGHT = 0.20f
     }
 
     private val addedFeatureIds: MutableSet<String> = Collections.synchronizedSet(mutableSetOf())
@@ -56,8 +53,8 @@ class FeatureRenderer(internal val map: MapLibreMap, val labelAndMarkerManager: 
         }
 
         val geoJsonFeature = geometryConverterProvider().convertToGeoJson(feature)
-        val sourceName = "nars_${feature.id}"
-        val layerName = "nars_layer_${feature.id}"
+        val sourceName = FeatureLayerNames.sourceName(feature.id)
+        val layerName = FeatureLayerNames.layerName(feature.id)
         val geoJsonString = buildGeoJsonString(geoJsonFeature)
 
         removeExistingSource(sourceName)
@@ -98,6 +95,14 @@ class FeatureRenderer(internal val map: MapLibreMap, val labelAndMarkerManager: 
     }
 
     private fun addPolygonLayer(layerName: String, sourceName: String, style: FeatureStyle, geom: PolygonGeometry) {
+        fillLayerFactory(layerName, sourceName).apply {
+            setProperties(
+                PropertyFactory.fillColor(parseColor(style.lineColor)),
+                PropertyFactory.fillOpacity(STYLE_FILL_OPACITY_LIGHT),
+            )
+            map.style?.addLayer(this)
+        }
+
         val edgeSourceName = "${sourceName}_edges"
         removeExistingSource(edgeSourceName)
         val edgesJson = geometryConverterProvider().buildPolygonEdgesGeoJson(geom.coordinates)

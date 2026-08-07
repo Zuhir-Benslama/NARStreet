@@ -89,6 +89,7 @@ object NarsLogger {
      */
     private val SENSITIVE_PATTERNS = listOf(
         Regex("Bearer\\s+[A-Za-z0-9\\-_]+") to "Bearer [REDACTED]",
+        Regex("(?i)(cookie|set-cookie)[=:]\\s*[^\\s,;]+") to "$1=[REDACTED]",
         Regex("session[_-]?id[=:]\\s*[A-Za-z0-9\\-_]+") to "session_id=[REDACTED]",
         Regex("password[=:]\\s*[^\\s,}]+") to "password=[REDACTED]",
         Regex("api[_-]?key[=:]\\s*[A-Za-z0-9\\-_]+") to "api_key=[REDACTED]",
@@ -96,7 +97,11 @@ object NarsLogger {
         Regex("refresh[_-]?token[=:]\\s*[A-Za-z0-9\\-_]+") to "refresh_token=[REDACTED]",
     )
 
-    private fun sanitizeMessage(message: String): String {
+    /**
+     * Redact sensitive values (tokens, passwords, cookies) from a log message.
+     * Public so non-NarsLogger sinks (e.g. the Ktor client logger) can reuse it.
+     */
+    fun sanitizeMessage(message: String): String {
         var result = message
         for ((pattern, replacement) in SENSITIVE_PATTERNS) {
             result = pattern.replace(result, replacement)

@@ -9,6 +9,7 @@ import com.nars.maplibre.data.api.SessionManager
 import com.nars.maplibre.data.store.FeatureStore
 import com.nars.maplibre.data.store.FeatureStoreInterface
 import com.nars.maplibre.utils.Config
+import com.nars.maplibre.utils.NarsLogger
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.okhttp.OkHttp
 import io.ktor.client.plugins.HttpTimeout
@@ -59,10 +60,10 @@ val appModule =
                     )
                 }
                 install(Logging) {
-                    level = if (BuildConfig.DEBUG) LogLevel.ALL else LogLevel.NONE
+                    level = if (NarsLogger.isEnabled) LogLevel.ALL else LogLevel.NONE
                     logger = object : io.ktor.client.plugins.logging.Logger {
                         override fun log(message: String) {
-                            Timber.d("KtorClient: %s", message)
+                            Timber.d("KtorClient: %s", NarsLogger.sanitizeMessage(message))
                         }
                     }
                 }

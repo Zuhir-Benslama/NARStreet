@@ -20,6 +20,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -135,7 +136,8 @@ private fun PhaseBadge(
     val colors = phaseBadgeColors(isDone, isActive)
     val badgeContent = if (isDone) "✓" else "$badgeIndex"
 
-    val badgeLabel = stringResource(R.string.map_phase_badge_label, phase.label)
+    val phaseLabel = Phases.getDisplayLabel(phase, LocalContext.current)
+    val badgeLabel = stringResource(R.string.map_phase_badge_label, phaseLabel)
 
     Box(
         modifier = Modifier

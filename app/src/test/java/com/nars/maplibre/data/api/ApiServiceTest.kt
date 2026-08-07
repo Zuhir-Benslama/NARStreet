@@ -20,7 +20,9 @@ import io.mockk.every
 import io.mockk.just
 import io.mockk.mockk
 import io.mockk.verify
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.Json
 import org.junit.Assert.assertEquals
@@ -304,8 +306,9 @@ class ApiServiceTest {
     }
 
     @Test
-    fun `concurrent 401s never present a consumed refresh token and both requests succeed`() = runTest {
-        val refreshTokensPresented = java.util.concurrent.ConcurrentLinkedQueue<String>()
+    fun `concurrent 401s never present a consumed refresh token and both requests succeed`() = runBlocking {
+        val presented = java.util.concurrent.ConcurrentLinkedQueue<String>()
+        val bothArrived = java.util.concurrent.CountDownLatch(2)
         engine =
             MockEngine { request ->
                 when {
@@ -313,29 +316,27 @@ class ApiServiceTest {
                         val cookie = request.headers[HttpHeaders.Cookie].orEmpty()
                         val token =
                             Regex("refresh_token=([^;]+)").find(cookie)?.groupValues?.get(1).orEmpty()
-                        refreshTokensPresented.add(token)
+                        presented.add(token)
                         respond(
                             content = """{"success": true}""",
                             status = HttpStatusCode.OK,
-                            headers =
-                            io.ktor.http.headersOf(
+                            headers = io.ktor.http.headersOf(
                                 "Set-Cookie",
                                 "access_token=new-access; refresh_token=new-refresh",
                             ),
                         )
                     }
 
-                    request.headers[HttpHeaders.Authorization] == "Bearer old-access" ->
-                        respond(
-                            content = "",
-                            status = HttpStatusCode.Unauthorized,
-                        )
+                    request.headers[HttpHeaders.Authorization] == "Bearer old-access" -> {
+                        bothArrived.countDown()
+                        bothArrived.await(5, java.util.concurrent.TimeUnit.SECONDS)
+                        respond(content = "", status = HttpStatusCode.Unauthorized)
+                    }
 
-                    else ->
-                        respond(
-                            content = """{"features": [], "count": 0, "skip": 0, "take": 100}""",
-                            status = HttpStatusCode.OK,
-                        )
+                    else -> respond(
+                        content = """{"features": [], "count": 0, "skip": 0, "take": 100}""",
+                        status = HttpStatusCode.OK,
+                    )
                 }
             }
         val client =
@@ -353,15 +354,17 @@ class ApiServiceTest {
         apiService.setSessionToken("old-access")
         apiService.setRefreshToken("refresh-123")
 
-        val first = async { apiService.loadFeatures() }
-        val second = async { apiService.loadFeatures() }
-        val results = listOf(first.await(), second.await())
+        val results =
+            listOf(
+                async(Dispatchers.Default) { apiService.loadFeatures() },
+                async(Dispatchers.Default) { apiService.loadFeatures() },
+            ).map { it.await() }
 
         assertTrue(results.all { it.isSuccess })
         // The backend consumes a refresh token the moment it is rotated. A
         // concurrent 401 storm must never present the original token a second
         // time — doing so would be rejected and kill the session.
-        assertEquals(1, refreshTokensPresented.count { it == "refresh-123" })
+        assertEquals(1, presented.count { it == "refresh-123" })
     }
 
     @Test

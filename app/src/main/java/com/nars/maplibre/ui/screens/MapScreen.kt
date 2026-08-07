@@ -106,10 +106,6 @@ private fun MapScreenEffects(
         }
     }
 
-    LaunchedEffect(handlers.narsGeoman) {
-        handlers.narsGeoman?.let { handlers.loadFeaturesOnMapReady() }
-    }
-
     LaunchedEffect(allFeatures) {
         handlers.narsGeoman?.displayManager?.updateDisplayedFeatures(allFeatures)
     }
