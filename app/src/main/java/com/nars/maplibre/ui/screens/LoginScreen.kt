@@ -115,6 +115,7 @@ fun LoginScreen(onLoginSuccess: () -> Unit, modifier: Modifier = Modifier) {
             },
             isLoading = isLoading,
             errorMessage = errorMessage,
+            canSubmit = username.isNotBlank() && password.isNotBlank(),
             onLogin = { performLogin() },
         )
     }
@@ -128,6 +129,7 @@ private fun LoginForm(
     onPasswordChange: (String) -> Unit,
     isLoading: Boolean,
     errorMessage: String?,
+    canSubmit: Boolean,
     onLogin: () -> Unit,
 ) {
     Column(
@@ -168,7 +170,7 @@ private fun LoginForm(
         }
 
         Spacer(modifier = Modifier.height(24.dp))
-        LoginSignInButton(isLoading = isLoading, onClick = onLogin)
+        LoginSignInButton(isLoading = isLoading, enabled = canSubmit, onClick = onLogin)
     }
 }
 
@@ -238,11 +240,11 @@ private fun LoginCredentialsForm(
 }
 
 @Composable
-private fun LoginSignInButton(isLoading: Boolean, onClick: () -> Unit) {
+private fun LoginSignInButton(isLoading: Boolean, enabled: Boolean, onClick: () -> Unit) {
     Button(
         onClick = onClick,
         modifier = Modifier.fillMaxWidth().height(50.dp),
-        enabled = !isLoading,
+        enabled = !isLoading && enabled,
         colors = ButtonDefaults.buttonColors(
             containerColor = PrimaryColor,
             disabledContainerColor = PrimaryColor.copy(alpha = 0.5f),

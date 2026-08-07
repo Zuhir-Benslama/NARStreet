@@ -32,6 +32,7 @@ class LoginScreenTest {
     @Before
     fun setup() {
         targetContext = InstrumentationRegistry.getInstrumentation().targetContext
+        stopKoin()
         startKoin {
             modules(
                 module {
