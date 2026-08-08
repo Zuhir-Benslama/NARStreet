@@ -52,7 +52,7 @@ echo "  compileSdk:  $TARGET_SDK"
 echo "  Gradle:      ${TARGET_GRADLE:-"(skip)"}"
 echo ""
 
-read -p "Proceed with upgrade? (yes/no): " confirm
+read -r -p "Proceed with upgrade? (yes/no): " confirm
 if [ "$confirm" != "yes" ]; then
     echo "Cancelled."
     exit 0

@@ -11,11 +11,10 @@ plugins {
 
 detekt {
     config.setFrom(rootProject.file("detekt.yml"))
-    baseline = file("detekt-baseline.xml")
     buildUponDefaultConfig = true
     allRules = false
     autoCorrect = false
-    toolVersion = "2.0.0-alpha.5"
+    toolVersion = libs.versions.detekt.get()
 }
 
 // Load local.properties if it exists
