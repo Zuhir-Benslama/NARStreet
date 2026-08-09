@@ -113,13 +113,26 @@ tasks.register<JacocoReport>("jacocoTestReport") {
         xml.required.set(true)
         html.required.set(true)
     }
+    // The unit-test gate only measures code that can run on the JVM. Exclude the
+    // layers that require Android instrumentation (Compose UI, Koin DI wiring,
+    // EncryptedSharedPreferences crypto, framework entry points) so the threshold
+    // reflects testable logic instead of permanently untestable boilerplate.
+    val untestableInJvm = listOf(
+        "**/ui/**",
+        "**/di/**",
+        "**/security/**",
+        "**/MainActivity*",
+        "**/NarsApplication*",
+    )
     classDirectories.setFrom(
         files(
             fileTree("${project.buildDir}/intermediates/javac/debug/compileDebugJavaWithJavac/classes") {
                 exclude("**/R.class", "**/R\$*.class", "**/BuildConfig.*", "**/Manifest*.*")
+                exclude(untestableInJvm)
             },
             fileTree("${project.buildDir}/intermediates/built_in_kotlinc/debug/compileDebugKotlin/classes") {
                 exclude("**/R.class", "**/R\$*.class", "**/BuildConfig.*", "**/Manifest*.*")
+                exclude(untestableInJvm)
             },
         ),
     )

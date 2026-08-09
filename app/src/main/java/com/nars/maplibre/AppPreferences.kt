@@ -11,14 +11,17 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
-class AppPreferences(context: Context) {
-    private val prefs: SharedPreferences =
+class AppPreferences internal constructor(
+    private val prefs: SharedPreferences,
+    private val securePrefs: SecurePreferences,
+) {
+    constructor(context: Context) : this(
         context.getSharedPreferences(
             PREFS_NAME,
             Context.MODE_PRIVATE,
-        )
-
-    private val securePrefs: SecurePreferences = SecurePreferences(context)
+        ),
+        SecurePreferences(context),
+    )
 
     private val _themeModeFlow = MutableStateFlow(themeMode)
     val themeModeFlow: StateFlow<ThemeMode> = _themeModeFlow.asStateFlow()
