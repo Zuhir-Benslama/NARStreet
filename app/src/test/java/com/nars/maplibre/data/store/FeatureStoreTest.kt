@@ -232,6 +232,43 @@ class FeatureStoreTest {
         assertEquals(1, store.getFeaturesByPhase(Phases.ROADS_KEY).size)
     }
 
+    @Test
+    fun `removeMostRecentActionForFeature removes the most recent matching action`() {
+        val store = FeatureStore()
+        val feature = createRoad("r1")
+        store.undoManager.addUndoAction(UndoAction.Create(feature, Phases.ROADS_KEY))
+        store.undoManager.addUndoAction(UndoAction.Delete(feature, Phases.ROADS_KEY))
+
+        val removed = store.undoManager.removeMostRecentActionForFeature("r1")
+        assertTrue(removed is UndoAction.Delete)
+        // the earlier Create action remains untouched
+        assertTrue(store.undoManager.canUndo)
+        assertTrue(store.undoManager.popUndoAction() is UndoAction.Create)
+    }
+
+    @Test
+    fun `removeMostRecentActionForFeature returns null when no action matches`() {
+        val store = FeatureStore()
+        val feature = createRoad("r1")
+        store.undoManager.addUndoAction(UndoAction.Create(feature, Phases.ROADS_KEY))
+
+        assertNull(store.undoManager.removeMostRecentActionForFeature("other-id"))
+        assertTrue(store.undoManager.canUndo)
+    }
+
+    @Test
+    fun `removeMostRecentActionForFeature matches update actions too`() {
+        val store = FeatureStore()
+        val feature = createRoad("r1")
+        store.undoManager.addUndoAction(UndoAction.Create(feature, Phases.ROADS_KEY))
+        store.undoManager.addUndoAction(
+            UndoAction.Update(oldFeature = feature, newFeature = createRoad("r1-updated"), phaseKey = Phases.ROADS_KEY),
+        )
+
+        val removed = store.undoManager.removeMostRecentActionForFeature("r1")
+        assertTrue(removed is UndoAction.Update)
+    }
+
     // ── referenceRoadDbId ─────────────────────────────────────────────────────
 
     @Test

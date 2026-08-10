@@ -87,14 +87,30 @@ object NarsLogger {
      * - Passwords
      * - API keys
      */
+    private const val REDACTED = "[REDACTED]"
+
+    /**
+     * Sensitive key names matched in both `key=value` and JSON `"key":"value"` forms.
+     * Order matters for alternation: longer/variant forms are matched before the
+     * bare `token` so `"accessToken"` is never picked up as `"token"`.
+     */
+    private const val SENSITIVE_KEYS =
+        "(password|passwd|access[_-]?token|refresh[_-]?token|" +
+            "api[_-]?key|apikey|secret|session[_-]?id|cookie|set-cookie|token)"
+
     private val SENSITIVE_PATTERNS = listOf(
-        Regex("Bearer\\s+[A-Za-z0-9\\-_]+") to "Bearer [REDACTED]",
-        Regex("(?i)(cookie|set-cookie)[=:]\\s*[^\\s,;]+") to "$1=[REDACTED]",
-        Regex("session[_-]?id[=:]\\s*[A-Za-z0-9\\-_]+") to "session_id=[REDACTED]",
-        Regex("password[=:]\\s*[^\\s,}]+") to "password=[REDACTED]",
-        Regex("api[_-]?key[=:]\\s*[A-Za-z0-9\\-_]+") to "api_key=[REDACTED]",
-        Regex("access[_-]?token[=:]\\s*[A-Za-z0-9\\-_]+") to "access_token=[REDACTED]",
-        Regex("refresh[_-]?token[=:]\\s*[A-Za-z0-9\\-_]+") to "refresh_token=[REDACTED]",
+        // JWT Bearer tokens (three dot-separated base64url segments) and opaque tokens.
+        Regex("""(?i)Bearer\s+[A-Za-z0-9\-_=.]+\.[A-Za-z0-9\-_=.]+\.[A-Za-z0-9\-_=.]+""") to "Bearer $REDACTED",
+        Regex("""(?i)Bearer\s+[A-Za-z0-9\-_=+/]+""") to "Bearer $REDACTED",
+        // JSON bodies: "password":"value", "accessToken":"value", etc. Handles
+        // escaped quotes inside the value (\") and values containing any chars.
+        Regex(
+            """(?i)"$SENSITIVE_KEYS"\s*:\s*"(?:\\.|[^"\\])*"""",
+        ) to "\"$1\":\"$REDACTED\"",
+        // Header / form / query forms: password=value, session_id: value, Cookie: ...
+        Regex(
+            """(?i)$SENSITIVE_KEYS\s*[=:]\s*[^,\s;}"']+""",
+        ) to "$1=$REDACTED",
     )
 
     /**

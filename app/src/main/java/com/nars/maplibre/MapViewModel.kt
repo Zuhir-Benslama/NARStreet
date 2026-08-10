@@ -187,6 +187,16 @@ class MapViewModel(
         _canUndo.value = featureStore.canUndo
     }
 
+    /**
+     * Removes the most recent undo action that references a feature. Used when a
+     * failed delete is rolled back locally: the Delete action recorded at delete
+     * time would otherwise try to restore a feature that is still present.
+     */
+    fun clearDeleteUndo(featureId: String) {
+        featureStore.removeMostRecentActionForFeature(featureId)
+        _canUndo.value = featureStore.canUndo
+    }
+
     val selectedFeatureId: StateFlow<String?> =
         featureStore.selectedFeature
             .map { it?.id }

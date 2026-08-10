@@ -11,4 +11,10 @@ sealed class UndoAction {
     data class Create(val feature: NarsFeature, val phaseKey: String) : UndoAction()
 
     data class Update(val oldFeature: NarsFeature, val newFeature: NarsFeature, val phaseKey: String) : UndoAction()
+
+    fun references(featureId: String): Boolean = when (this) {
+        is Delete -> feature.id == featureId
+        is Create -> feature.id == featureId
+        is Update -> newFeature.id == featureId || oldFeature.id == featureId
+    }
 }

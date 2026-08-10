@@ -21,6 +21,18 @@ class UndoManager(private val featureStore: FeatureStoreInterface) {
         undoStack.removeLast()
     }
 
+    /**
+     * Removes the most recent undo action referencing a feature from the stack.
+     * Used when an optimistic delete fails and the feature is restored locally:
+     * the Delete action recorded at delete time would otherwise try to restore
+     * a feature that is still present.
+     */
+    fun removeMostRecentActionForFeature(featureId: String): UndoAction? = synchronized(lock) {
+        val index = undoStack.indexOfLast { it.references(featureId) }
+        if (index == -1) return@synchronized null
+        undoStack.removeAt(index)
+    }
+
     fun executeUndo(): UndoAction? {
         val action = synchronized(lock) { popUndoAction() } ?: return null
 

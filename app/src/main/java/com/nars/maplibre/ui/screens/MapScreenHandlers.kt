@@ -179,6 +179,7 @@ class MapScreenHandlers(
             result.onFailure {
                 if (feature != null) {
                     viewModel.restoreFeature(feature)
+                    viewModel.clearDeleteUndo(feature.id)
                     narsGeoman?.displayManager?.addFeature(feature)
                 }
                 snackbar("${context.getString(R.string.map_delete_failed)}: ${it.message}")

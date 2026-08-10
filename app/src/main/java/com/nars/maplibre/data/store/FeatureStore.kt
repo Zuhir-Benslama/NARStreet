@@ -145,4 +145,7 @@ class FeatureStore : FeatureStoreInterface {
     override fun executeUndo(): UndoAction? = undoManager.executeUndo()
 
     override fun addUndoAction(action: UndoAction) = undoManager.addUndoAction(action)
+
+    override fun removeMostRecentActionForFeature(featureId: String): UndoAction? =
+        undoManager.removeMostRecentActionForFeature(featureId)
 }

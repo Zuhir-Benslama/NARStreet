@@ -52,4 +52,6 @@ interface FeatureStoreInterface {
     fun executeUndo(): UndoAction?
 
     fun addUndoAction(action: UndoAction)
+
+    fun removeMostRecentActionForFeature(featureId: String): UndoAction?
 }
