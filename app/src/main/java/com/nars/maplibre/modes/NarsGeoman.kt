@@ -12,6 +12,7 @@ import com.nars.maplibre.data.model.PhaseDefinition
 import com.nars.maplibre.utils.Config
 import com.nars.maplibre.utils.NarsLogger
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -70,9 +71,13 @@ class NarsGeoman internal constructor(
             val featureRenderer = FeatureRenderer(map, labelAndMarkerManager)
             val geometryConverter = GeometryConverter()
             val displayManager = FeatureDisplayManager(geoman, featureRenderer, geometryConverter, map)
+            // NarsGeoman owns a scope of its own (child of the caller's scope)
+            // for the event collector. destroy() cancels only this scope — never
+            // the shared screen scope that network calls are launched on.
+            val internalScope = CoroutineScope(scope.coroutineContext + SupervisorJob())
             val eventHandler =
                 GeomanEventHandler(
-                    scope,
+                    internalScope,
                     geoman,
                     onFeatureCreated,
                     onFeatureUpdated,
@@ -90,7 +95,7 @@ class NarsGeoman internal constructor(
                 geometryConverter = geometryConverter,
                 snappingEngine = SnappingEngine(),
                 callbacks = FeatureCallbacks(onFeatureCreated, onFeatureUpdated, onFeatureDeleted),
-                scope = scope,
+                scope = internalScope,
             )
         }
     }

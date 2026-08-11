@@ -172,16 +172,20 @@ class MapScreenHandlers(
         val feature = viewModel.allFeatures.value.find { it.id == featureId }
         viewModel.deleteFeature(featureId)
         narsGeoman?.displayManager?.removeFeature(featureId)
+        if (feature?.dbId == null) {
+            // Local-only (unsaved) feature — nothing to delete on the backend.
+            // Skipping the API call avoids a doomed DELETE (client UUID) that
+            // fails and restores the feature the user just deleted.
+            snackbar(context.getString(R.string.map_feature_deleted))
+            return
+        }
         scope.launch {
-            val apiId = feature?.dbId ?: featureId
-            val result = apiService.deleteFeature(apiId)
+            val result = apiService.deleteFeature(feature.dbId)
             result.onSuccess { snackbar(context.getString(R.string.map_feature_deleted)) }
             result.onFailure {
-                if (feature != null) {
-                    viewModel.restoreFeature(feature)
-                    viewModel.clearDeleteUndo(feature.id)
-                    narsGeoman?.displayManager?.addFeature(feature)
-                }
+                viewModel.restoreFeature(feature)
+                viewModel.clearDeleteUndo(feature.id)
+                narsGeoman?.displayManager?.addFeature(feature)
                 snackbar("${context.getString(R.string.map_delete_failed)}: ${it.message}")
             }
         }

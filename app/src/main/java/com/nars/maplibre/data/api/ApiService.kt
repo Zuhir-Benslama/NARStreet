@@ -141,7 +141,9 @@ class ApiService(private val httpClient: HttpClient, private val preferences: Ap
                     header(HttpHeaders.Cookie, "refresh_token=$token")
                 }
             if (!response.status.isSuccess()) {
+                sessionToken = null
                 refreshToken = null
+                persistTokens()
                 return false
             }
             extractAndSetCookies(response)

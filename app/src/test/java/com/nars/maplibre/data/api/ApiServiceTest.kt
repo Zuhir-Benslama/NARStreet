@@ -306,6 +306,39 @@ class ApiServiceTest {
     }
 
     @Test
+    fun `refresh failure clears tokens to break stale session loop`() = runTest {
+        engine =
+            MockEngine { _ ->
+                respond(
+                    content = "",
+                    status = HttpStatusCode.Unauthorized,
+                )
+            }
+        val client =
+            HttpClient(engine) {
+                install(ContentNegotiation) {
+                    json(
+                        Json {
+                            ignoreUnknownKeys = true
+                            isLenient = true
+                        },
+                    )
+                }
+            }
+        apiService = ApiService(client, appPreferences)
+        apiService.setSessionToken("stale-access")
+        apiService.setRefreshToken("revoked-refresh")
+
+        val result = apiService.loadFeatures()
+
+        assertTrue(result.isFailure)
+        assertEquals(null, apiService.getSessionToken())
+        assertEquals(null, apiService.getRefreshToken())
+        verify { appPreferences.authToken = null }
+        verify { appPreferences.refreshToken = null }
+    }
+
+    @Test
     fun `concurrent 401s never present a consumed refresh token and both requests succeed`() = runBlocking {
         val presented = java.util.concurrent.ConcurrentLinkedQueue<String>()
         val bothArrived = java.util.concurrent.CountDownLatch(2)
