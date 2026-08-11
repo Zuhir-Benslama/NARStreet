@@ -69,9 +69,7 @@ import org.koin.compose.koinInject
 fun SettingsScreen(onNavigateBack: () -> Unit, onLogout: () -> Unit) {
     val viewModel: SettingsViewModel = koinViewModel()
     val themeMode by viewModel.themeMode.collectAsState()
-    val sessionManager: SessionManager = koinInject()
-    val scope = rememberCoroutineScope()
-    val performLogout: () -> Unit = { scope.launch { sessionManager.logout(); onLogout() } }
+    val performLogout = rememberLogoutHandler(onLogout)
 
     Scaffold(
         topBar = {
@@ -118,6 +116,18 @@ fun SettingsScreen(onNavigateBack: () -> Unit, onLogout: () -> Unit) {
                     SettingsAboutContent(onLogout = performLogout)
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun rememberLogoutHandler(onLogout: () -> Unit): () -> Unit {
+    val sessionManager: SessionManager = koinInject()
+    val scope = rememberCoroutineScope()
+    return {
+        scope.launch {
+            sessionManager.logout()
+            onLogout()
         }
     }
 }
