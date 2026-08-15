@@ -18,10 +18,19 @@ jobs:
       packages: read
       actions: read
       contents: read
+    env:
+      GEOMAN_DIR: ${{ github.workspace }}/maplibre-geoman-android/app
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Checkout maplibre-geoman-android
+        uses: actions/checkout@v4
+        with:
+          repository: Zuhir-Benslama/maplibre-geoman-android
+          ref: main
+          path: maplibre-geoman-android
 
       - name: Set up JDK 21
         uses: actions/setup-java@v4
