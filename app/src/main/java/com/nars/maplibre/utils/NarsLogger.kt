@@ -23,60 +23,95 @@ object NarsLogger {
      * Verbose logging - most detailed, disabled in production
      */
     fun v(tag: String = DEFAULT_TAG, message: String, throwable: Throwable? = null) {
-        if (isEnabled) {
-            if (throwable != null) {
-                Timber.tag(tag).v(throwable, sanitizeMessage(message))
-            } else {
-                Timber.tag(tag).v(sanitizeMessage(message))
-            }
-        }
+        if (isEnabled) log(Level.VERBOSE, tag, message, throwable)
     }
 
     /**
      * Debug logging - for development debugging
      */
     fun d(tag: String = DEFAULT_TAG, message: String, throwable: Throwable? = null) {
-        if (isEnabled) {
-            if (throwable != null) {
-                Timber.tag(tag).d(throwable, sanitizeMessage(message))
-            } else {
-                Timber.tag(tag).d(sanitizeMessage(message))
-            }
-        }
+        if (isEnabled) log(Level.DEBUG, tag, message, throwable)
     }
 
     /**
      * Info logging - for general informational messages
      */
     fun i(tag: String = DEFAULT_TAG, message: String, throwable: Throwable? = null) {
-        if (isEnabled) {
-            if (throwable != null) {
-                Timber.tag(tag).i(throwable, sanitizeMessage(message))
-            } else {
-                Timber.tag(tag).i(sanitizeMessage(message))
-            }
-        }
+        if (isEnabled) log(Level.INFO, tag, message, throwable)
     }
 
     /**
      * Warning logging - for potential issues
      */
     fun w(tag: String = DEFAULT_TAG, message: String, throwable: Throwable? = null) {
-        Timber.tag(tag).w(throwable, sanitizeMessage(message))
+        if (isEnabled) log(Level.WARNING, tag, message, throwable)
     }
 
     /**
      * Error logging - for errors and exceptions
      */
     fun e(tag: String = DEFAULT_TAG, message: String, throwable: Throwable? = null) {
-        Timber.tag(tag).e(throwable, sanitizeMessage(message))
+        if (isEnabled) log(Level.ERROR, tag, message, throwable)
     }
 
     /**
      * What a Terrible Failure - for critical errors
      */
     fun wtf(tag: String = DEFAULT_TAG, message: String, throwable: Throwable? = null) {
-        Timber.tag(tag).wtf(throwable, sanitizeMessage(message))
+        if (isEnabled) log(Level.WTF, tag, message, throwable)
+    }
+
+    private enum class Level {
+        VERBOSE,
+        DEBUG,
+        INFO,
+        WARNING,
+        ERROR,
+        WTF,
+    }
+
+    private fun log(level: Level, tag: String, message: String, throwable: Throwable?) {
+        val safeMessage = sanitizeMessage(message)
+        val safeThrowable = throwable?.let(::sanitizeThrowable)
+        val tree = Timber.tag(tag)
+        when (level) {
+            Level.VERBOSE ->
+                if (safeThrowable != null) tree.v(safeThrowable, safeMessage) else tree.v(safeMessage)
+
+            Level.DEBUG ->
+                if (safeThrowable != null) tree.d(safeThrowable, safeMessage) else tree.d(safeMessage)
+
+            Level.INFO ->
+                if (safeThrowable != null) tree.i(safeThrowable, safeMessage) else tree.i(safeMessage)
+
+            Level.WARNING ->
+                if (safeThrowable != null) tree.w(safeThrowable, safeMessage) else tree.w(safeMessage)
+
+            Level.ERROR ->
+                if (safeThrowable != null) tree.e(safeThrowable, safeMessage) else tree.e(safeMessage)
+
+            Level.WTF ->
+                if (safeThrowable != null) tree.wtf(safeThrowable, safeMessage) else tree.wtf(safeMessage)
+        }
+    }
+
+    /**
+     * Returns the throwable with its message sanitized. When the raw message
+     * contains sensitive data (e.g. a SerializationException embedding a raw
+     * JSON body) a wrapper preserving the original stack trace is returned,
+     * with the original kept as the cause for full diagnostics in a debugger.
+     */
+    private fun sanitizeThrowable(throwable: Throwable): Throwable {
+        val rawMessage = throwable.message ?: return throwable
+        val safeMessage = sanitizeMessage(rawMessage)
+        return if (safeMessage == rawMessage) {
+            throwable
+        } else {
+            RuntimeException(safeMessage).also {
+                it.setStackTrace(throwable.stackTrace)
+                it.initCause(throwable)
+            }
+        }
     }
 
     /**
@@ -95,8 +130,9 @@ object NarsLogger {
      * bare `token` so `"accessToken"` is never picked up as `"token"`.
      */
     private const val SENSITIVE_KEYS =
-        "(password|passwd|access[_-]?token|refresh[_-]?token|" +
-            "api[_-]?key|apikey|secret|session[_-]?id|cookie|set-cookie|token)"
+        "(password|passwd|auth[_-]?token|id[_-]?token|" +
+            "access[_-]?token|refresh[_-]?token|api[_-]?key|apikey|secret|" +
+            "session[_-]?id|credential|auth|jwt|cookie|set-cookie|token)"
 
     private val SENSITIVE_PATTERNS = listOf(
         // JWT Bearer tokens (three dot-separated base64url segments) and opaque tokens.
@@ -123,30 +159,6 @@ object NarsLogger {
             result = pattern.replace(result, replacement)
         }
         return result
-    }
-
-    /**
-     * Log network request without sensitive headers
-     */
-    fun logNetworkRequest(tag: String, method: String, url: String, body: String? = null) {
-        if (isEnabled) {
-            d(tag, "$method $url")
-            body?.let {
-                v(tag, "Request body: ${sanitizeMessage(it)}")
-            }
-        }
-    }
-
-    /**
-     * Log network response without sensitive data
-     */
-    fun logNetworkResponse(tag: String, url: String, responseCode: Int, responseBody: String? = null) {
-        if (isEnabled) {
-            d(tag, "Response from $url: $responseCode")
-            responseBody?.let {
-                v(tag, "Response body: ${sanitizeMessage(it)}")
-            }
-        }
     }
 
     /**

@@ -151,6 +151,23 @@ tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile> {
     }
 }
 
+// Release builds must ship with TLS certificate pinning configured. Pinning is
+// opt-in via local.properties (SSL_CERT_HASHES) because the debug emulator
+// talks to 10.0.2.2 without TLS — but a release APK with an empty pin list
+// would be vulnerable to certificate substitution, so refuse to build one.
+tasks.configureEach {
+    if (name.startsWith("assembleRelease") || name.startsWith("bundleRelease")) {
+        doFirst {
+            if (localProperties.getProperty("SSL_CERT_HASHES", "").isBlank()) {
+                throw GradleException(
+                    "Release build requires SSL_CERT_HASHES in local.properties " +
+                        "(format: hostname=sha256/hash) so the APK ships with TLS certificate pinning.",
+                )
+            }
+        }
+    }
+}
+
 dependencies {
     // MapLibre Android SDK 13.4.1 (see gradle/libs.versions.toml)
     implementation(libs.maplibre.android.sdk)

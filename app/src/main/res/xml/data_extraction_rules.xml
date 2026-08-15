@@ -1,7 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <data-extraction-rules>
     <cloud-backup>
-        <include domain="sharedpref" path="."/>
-        <exclude domain="sharedpref" path="device.xml"/>
+        <!-- Back up only plain preferences (theme, base layer, current phase).
+             The encrypted credential store is not included, so it is never
+             extracted. -->
+        <include domain="sharedpref" path="nars_preferences"/>
     </cloud-backup>
 </data-extraction-rules>

@@ -1,3 +1,5 @@
 package com.nars.maplibre.utils
 
-fun Double.formatDecimal(digits: Int) = "%.${digits}f".format(this)
+import java.util.Locale
+
+fun Double.formatDecimal(digits: Int) = String.format(Locale.US, "%.${digits}f", this)

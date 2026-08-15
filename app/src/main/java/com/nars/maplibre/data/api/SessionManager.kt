@@ -3,7 +3,6 @@ package com.nars.maplibre.data.api
 import com.nars.maplibre.AppPreferences
 import com.nars.maplibre.data.model.LoginResponse
 import com.nars.maplibre.utils.NarsLogger
-import kotlinx.coroutines.CancellationException
 
 class SessionManager(private val apiService: ApiService, private val appPreferences: AppPreferences) {
     companion object {
@@ -26,21 +25,24 @@ class SessionManager(private val apiService: ApiService, private val appPreferen
         return result
     }
 
-    suspend fun logout() {
-        try {
-            apiService.logout()
-        } catch (e: CancellationException) {
-            throw e
-        } catch (e: java.io.IOException) {
-            NarsLogger.w(TAG, "Logout API call failed", e)
-        } finally {
-            appPreferences.authToken = null
-            appPreferences.refreshToken = null
-            appPreferences.user = null
-            appPreferences.municipalityName = null
-            apiService.setSessionToken(null)
-            apiService.setRefreshToken(null)
+    /**
+     * Logs out locally and reports the server-side revocation outcome.
+     * Local state is always cleared (defensive); the returned Result lets
+     * callers distinguish "fully logged out" from "logged out locally but the
+     * server revocation failed".
+     */
+    suspend fun logout(): Result<Unit> {
+        val result = apiService.logout()
+        result.onFailure { e ->
+            NarsLogger.w(TAG, "Server-side logout failed — local session still cleared", e)
         }
+        appPreferences.authToken = null
+        appPreferences.refreshToken = null
+        appPreferences.user = null
+        appPreferences.municipalityName = null
+        apiService.setSessionToken(null)
+        apiService.setRefreshToken(null)
+        return result
     }
 
     fun getUser() = appPreferences.user

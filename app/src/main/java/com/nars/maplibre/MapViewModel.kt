@@ -3,7 +3,6 @@ package com.nars.maplibre
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import com.nars.maplibre.data.api.ApiService
 import com.nars.maplibre.data.model.BaseLayerType
 import com.nars.maplibre.data.model.NarsFeature
 import com.nars.maplibre.data.model.PhaseDefinition
@@ -19,21 +18,17 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
-import kotlinx.coroutines.launch
 
 @Suppress("TooManyFunctions")
 class MapViewModel(
     application: Application,
     private val featureStore: FeatureStoreInterface,
     private val appPreferences: AppPreferences,
-    private val apiService: ApiService,
 ) : AndroidViewModel(application) {
     private val phaseNavigator = PhaseNavigator(featureStore)
 
     val currentPhase: StateFlow<PhaseDefinition?> = featureStore.currentPhase
     val allFeatures: StateFlow<List<NarsFeature>> = featureStore.allFeatures
-    private val _currentPhaseFeatures = MutableStateFlow<List<NarsFeature>>(emptyList())
-    val currentPhaseFeatures: StateFlow<List<NarsFeature>> = _currentPhaseFeatures
     val selectedFeature: StateFlow<NarsFeature?> = featureStore.selectedFeature
 
     private val _uiState = MutableStateFlow(UiState())
@@ -51,16 +46,6 @@ class MapViewModel(
     val referenceRoadDbId: StateFlow<String?> = featureStore.referenceRoadDbId
     private val _canUndo = MutableStateFlow(false)
     val canUndo: StateFlow<Boolean> = _canUndo.asStateFlow()
-
-    init {
-        viewModelScope.launch {
-            featureStore.currentPhase.collect { phase ->
-                phase?.let {
-                    _currentPhaseFeatures.value = featureStore.getFeaturesByPhase(it.key)
-                }
-            }
-        }
-    }
 
     fun setCurrentPhase(phase: PhaseDefinition): PhaseDefinition? {
         val currentIndex = featureStore.currentPhase.value?.index ?: 0
@@ -220,6 +205,12 @@ class MapViewModel(
     }
 
     fun clearSelection() = featureStore.selectFeature(null)
+
+    /** Clears all local feature state (used when a session expires). */
+    fun clearAll() {
+        featureStore.clearAll()
+        _canUndo.value = false
+    }
 
     fun updateUiState(isLoading: Boolean? = null, errorMessage: String? = null, successMessage: String? = null) {
         _uiState.update { current ->

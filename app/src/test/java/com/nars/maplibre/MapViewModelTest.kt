@@ -2,7 +2,6 @@ package com.nars.maplibre
 
 import android.app.Application
 import com.nars.maplibre.R
-import com.nars.maplibre.data.api.ApiService
 import com.nars.maplibre.data.model.BaseLayerType
 import com.nars.maplibre.data.model.FeatureProperties
 import com.nars.maplibre.data.model.LineStringGeometry
@@ -40,7 +39,6 @@ class MapViewModelTest {
     private val application = mockk<Application>(relaxed = true)
     private val featureStore = mockk<FeatureStoreInterface>(relaxed = true)
     private val appPreferences = mockk<AppPreferences>(relaxed = true)
-    private val apiService = mockk<ApiService>(relaxed = true)
 
     private val currentPhaseFlow = MutableStateFlow<PhaseDefinition?>(null)
     private val allFeaturesFlow = MutableStateFlow<List<NarsFeature>>(emptyList())
@@ -75,7 +73,7 @@ class MapViewModelTest {
     }
 
     private fun createViewModel(): MapViewModel {
-        val vm = MapViewModel(application, featureStore, appPreferences, apiService)
+        val vm = MapViewModel(application, featureStore, appPreferences)
         testDispatcher.scheduler.advanceUntilIdle()
         return vm
     }
@@ -155,7 +153,7 @@ class MapViewModelTest {
     @Test
     fun `goToPreviousPhase goes back`() = runTest {
         currentPhaseFlow.value = Phases.ALL[1]
-        val vm = MapViewModel(application, featureStore, appPreferences, apiService)
+        val vm = MapViewModel(application, featureStore, appPreferences)
         advanceUntilIdle()
 
         val result = vm.goToPreviousPhase()

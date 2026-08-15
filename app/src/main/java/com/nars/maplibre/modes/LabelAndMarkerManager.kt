@@ -77,7 +77,8 @@ class LabelAndMarkerManager(private val map: MapLibreMap) {
                     map.style?.getLayer("nars_${part}_circle")?.let { map.style?.removeLayer(it) }
                     map.style?.getLayer("nars_$part")?.let { map.style?.removeLayer(it) }
                     map.style?.getSource("nars_${part}_src")?.let { map.style?.removeSource(it) }
-                } catch (_: IllegalArgumentException) {
+                } catch (e: IllegalArgumentException) {
+                    NarsLogger.w(TAG, "Error removing road endpoint marker layer '$part'", e)
                 }
             }
         }

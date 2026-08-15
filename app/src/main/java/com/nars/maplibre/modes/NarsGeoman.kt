@@ -71,9 +71,9 @@ class NarsGeoman internal constructor(
             val featureRenderer = FeatureRenderer(map, labelAndMarkerManager)
             val geometryConverter = GeometryConverter()
             val displayManager = FeatureDisplayManager(geoman, featureRenderer, geometryConverter, map)
-            // NarsGeoman owns a scope of its own (child of the caller's scope)
-            // for the event collector. destroy() cancels only this scope — never
-            // the shared screen scope that network calls are launched on.
+            // NarsGeoman owns an independent scope (sharing the caller's
+            // dispatcher) for the event collector. destroy() cancels only this
+            // scope — never the shared screen scope that network calls run on.
             val internalScope = CoroutineScope(scope.coroutineContext + SupervisorJob())
             val eventHandler =
                 GeomanEventHandler(

@@ -22,6 +22,9 @@ import io.ktor.http.HttpStatusCode
 import io.ktor.http.contentType
 import io.ktor.http.isSuccess
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
@@ -47,6 +50,15 @@ class ApiService(private val httpClient: HttpClient, private val preferences: Ap
      */
     private val refreshMutex = Mutex()
 
+    /**
+     * Emitted when the backend rejects the refresh token (401/403 on
+     * /api/refresh), meaning the session is permanently invalid. UI layers
+     * observe this to navigate back to login instead of leaving the user on a
+     * dead session.
+     */
+    private val _sessionExpired = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
+    val sessionExpired: SharedFlow<Unit> = _sessionExpired.asSharedFlow()
+
     fun setSessionToken(token: String?) {
         sessionToken = token
     }
@@ -62,16 +74,21 @@ class ApiService(private val httpClient: HttpClient, private val preferences: Ap
     /**
      * Extracts the access + refresh token cookies issued by the backend.
      * The backend sets both cookies on signin and on every /api/refresh.
+     * Returns true when an access-token cookie was present, so callers can
+     * distinguish "a fresh access token was issued" from "nothing changed".
      */
-    private fun extractAndSetCookies(response: io.ktor.client.statement.HttpResponse) {
+    private fun extractAndSetCookies(response: io.ktor.client.statement.HttpResponse): Boolean {
+        var sawAccessToken = false
         response.headers.getAll(HttpHeaders.SetCookie)?.forEach { rawCookie ->
             COOKIE_ACCESS_TOKEN_REGEX.find(rawCookie)?.let { match ->
                 sessionToken = match.groupValues[1]
+                sawAccessToken = true
             }
             COOKIE_REFRESH_TOKEN_REGEX.find(rawCookie)?.let { match ->
                 refreshToken = match.groupValues[1]
             }
         }
+        return sawAccessToken
     }
 
     /**
@@ -82,6 +99,16 @@ class ApiService(private val httpClient: HttpClient, private val preferences: Ap
     private fun persistTokens() {
         preferences.authToken = sessionToken
         preferences.refreshToken = refreshToken
+    }
+
+    /**
+     * Drops the session entirely — used when the backend rejects a refresh
+     * (expired/revoked refresh token) or on logout.
+     */
+    private fun clearTokens() {
+        sessionToken = null
+        refreshToken = null
+        persistTokens()
     }
 
     private fun buildUserFromResponse(apiResponse: LoginApiResponse): User {
@@ -133,22 +160,31 @@ class ApiService(private val httpClient: HttpClient, private val preferences: Ap
      * Returns true only when a fresh access token was actually issued.
      */
     private suspend fun tryRefreshToken(): Boolean {
-        val token = refreshToken ?: return false
-        val accessBefore = sessionToken
+        // Fall back to the persisted token: the app clears the in-memory tokens
+        // while backgrounded (see NarsApplication), so a request that 401s at
+        // that moment must refresh from the encrypted prefs instead of failing.
+        val token = refreshToken ?: preferences.refreshToken ?: return false
         return try {
             val response =
                 httpClient.post("$baseUrl/api/refresh") {
                     header(HttpHeaders.Cookie, "refresh_token=$token")
                 }
-            if (!response.status.isSuccess()) {
-                sessionToken = null
-                refreshToken = null
-                persistTokens()
+            // A rejected refresh token (401/403) means the session is permanently
+            // dead: clear it and let observers navigate to login. Any other
+            // failure is a transient server error — keep the session intact so a
+            // later user action can simply retry.
+            if (response.status == HttpStatusCode.Unauthorized || response.status == HttpStatusCode.Forbidden) {
+                clearTokens()
+                _sessionExpired.tryEmit(Unit)
                 return false
             }
-            extractAndSetCookies(response)
+            if (!response.status.isSuccess()) {
+                NarsLogger.w(TAG, "Token refresh failed (HTTP ${response.status.value}) — keeping session for retry")
+                return false
+            }
+            val accessIssued = extractAndSetCookies(response)
             persistTokens()
-            sessionToken != null && sessionToken != accessBefore
+            accessIssued
         } catch (e: CancellationException) {
             throw e
         } catch (e: java.io.IOException) {
@@ -182,14 +218,17 @@ class ApiService(private val httpClient: HttpClient, private val preferences: Ap
                 )
             }
 
-            extractAndSetCookies(response)
-
             val body = response.bodyAsText()
             val apiResponse = apiJson.decodeFromString<LoginApiResponse>(body)
 
             if (!apiResponse.success) {
                 return Result.failure(Exception(apiResponse.message ?: "Login failed"))
             }
+
+            // Only adopt the session cookies after the response has been fully
+            // validated — otherwise a failed login (bad body or success=false)
+            // would still leave live tokens in memory while reporting failure.
+            extractAndSetCookies(response)
 
             val token = apiResponse.token ?: apiResponse.accessToken
             token?.let { sessionToken = it }

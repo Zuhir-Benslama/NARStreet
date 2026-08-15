@@ -54,6 +54,10 @@ class FeatureStore : FeatureStoreInterface {
         _allFeatures.value = _allFeatures.value + feature
 
         if (recordUndo) {
+            // Lock ordering: store lock -> undo lock. UndoManager.executeUndo()
+            // releases the undo lock BEFORE calling back into the store, so this
+            // nesting can never deadlock — preserve that order if either side
+            // changes.
             undoManager.addUndoAction(UndoAction.Create(feature, feature.properties.phase))
         }
     }

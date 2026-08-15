@@ -1,5 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <full-backup-content>
-    <include domain="sharedpref" path="."/>
-    <exclude domain="sharedpref" path="device.xml"/>
+    <!-- Back up only plain preferences (theme, base layer, current phase).
+         The encrypted credential store (nars_secure_prefs) is intentionally
+         not included, so tokens/credentials are never backed up or restored. -->
+    <include domain="sharedpref" path="nars_preferences"/>
 </full-backup-content>

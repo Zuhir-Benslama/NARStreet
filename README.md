@@ -8,7 +8,7 @@ Android client for the NARS mapping system. Built with Jetpack Compose, MapLibre
 - Drawing, editing, and validation of geographic features
 - Session-based feature store with server sync (features live in memory)
 - Phase-based workflow with validation gates
-- mTLS support for secure API communication
+- TLS certificate pinning (mandatory for release builds)
 - Encrypted credential storage via Android Keystore
 
 ## Prerequisites
@@ -50,18 +50,18 @@ app/src/main/java/com/nars/maplibre/
 ├── data/
 │   ├── api/            # API client, auth, feature CRUD
 │   ├── model/          # NarsFeature, User, Phases, Geometry types
-│   ├── store/          # Offline feature store with undo
-│   └── repository/     # ApiModels, FeatureRepository
+│   └── store/          # Offline feature store with undo
 ├── modes/              # Geoman integration, rendering, snapping
 ├── security/           # EncryptedSharedPreferences wrapper
 ├── ui/
 │   ├── components/     # NarsMap, CompactInfoPanel, FeatureValidationModal
 │   ├── screens/        # LoginScreen, MapScreen, MapScreenHandlers
 │   └── theme/          # Material3 theme, GlassBackground
-├── utils/              # Config, NarsLogger, TlsUtils, Validation
+├── utils/              # Config, NarsLogger, Formatters, Validation
 ├── AppPreferences.kt   # SharedPreferences + encrypted prefs
 ├── NarsApplication.kt  # App entry point, DI
-└── NarsViewModel.kt    # Main ViewModel
+├── MapViewModel.kt     # Main ViewModel
+└── SettingsViewModel.kt
 ```
 
 ## API Endpoints
@@ -83,7 +83,7 @@ The app communicates with the NARS backend via these endpoints:
 - Auth tokens stored in `EncryptedSharedPreferences` backed by Android Keystore (AES-256 GCM)
 - `android:allowBackup="false"` prevents credential extraction via ADB backup
 - Release variant network security config disables cleartext HTTP
-- Optional TLS certificate pinning via the `SSL_CERT_HASHES` build config (disabled when blank)
+- TLS certificate pinning via the `SSL_CERT_HASHES` build config (format: `hostname=sha256/hash`, comma-separated). Debug builds leave it blank (the emulator talks to `10.0.2.2` without TLS); **release builds fail to assemble unless pinning is configured**.
 - JWT access tokens are transparently refreshed on HTTP 401 via `/api/refresh` (refresh is lazy, not performed at app startup)
 - No API keys, secrets, or credentials committed to version control
 
@@ -97,7 +97,7 @@ The app communicates with the NARS backend via these endpoints:
 ## Dependencies
 
 - **MapLibre Android SDK** — Map rendering
-- **Geoman** — Drawing and editing gestures (local module)
+- **Geoman** — Drawing and editing gestures (sibling project dependency, see `geoman.dir` in `settings.gradle.kts`)
 - **Jetpack Compose** — UI framework
 - **Kotlinx Serialization** — JSON parsing
 - **AndroidX Security Crypto** — Encrypted prefs

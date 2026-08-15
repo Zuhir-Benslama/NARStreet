@@ -60,7 +60,7 @@ fun MapScreen(onNavigateToSettings: () -> Unit, onLogout: () -> Unit) {
         allFeatures.groupingBy { it.properties.phase }.eachCount()
     }
 
-    MapScreenEffects(viewModel, handlers, currentPhase, allFeatures, uiState, snackbarHostState)
+    MapScreenEffects(viewModel, handlers, apiService, onLogout, currentPhase, allFeatures, uiState, snackbarHostState)
 
     MapScreenScaffold(
         state = MapScreenViewState(
@@ -88,11 +88,24 @@ fun MapScreen(onNavigateToSettings: () -> Unit, onLogout: () -> Unit) {
 private fun MapScreenEffects(
     viewModel: MapViewModel,
     handlers: MapScreenHandlers,
+    apiService: ApiService,
+    onSessionExpired: () -> Unit,
     currentPhase: PhaseDefinition?,
     allFeatures: List<NarsFeature>,
     uiState: UiState,
     snackbarHostState: SnackbarHostState,
 ) {
+    // A rejected refresh token (401/403 on /api/refresh) means the session is
+    // permanently dead — drop local state and return to the login screen
+    // instead of leaving the user on a map that silently rejects every request.
+    LaunchedEffect(Unit) {
+        apiService.sessionExpired.collect {
+            NarsLogger.w("MapScreen", "Session expired — returning to login")
+            viewModel.clearAll()
+            handlers.narsGeoman?.displayManager?.updateDisplayedFeatures(emptyList())
+            onSessionExpired()
+        }
+    }
     LaunchedEffect(uiState.errorMessage) {
         uiState.errorMessage?.let {
             snackbarHostState.showSnackbar(it)
