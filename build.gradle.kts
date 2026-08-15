@@ -11,7 +11,6 @@ spotless {
     kotlin {
         target(
             project.fileTree(mapOf("dir" to "app", "include" to listOf("src/**/*.kt"))),
-            project.fileTree(mapOf("dir" to "maplibre-geoman-android/app", "include" to listOf("src/**/*.kt"))),
         )
         ktlint().editorConfigOverride(mapOf(
             "ktlint_function_naming_ignore_when_annotated_with" to "Composable",

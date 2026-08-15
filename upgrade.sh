@@ -95,7 +95,7 @@ fi
 # Update compileSdk in app and geoman modules
 if [ "$TARGET_SDK" != "$CURRENT_SDK" ]; then
     sed -i "s/compileSdk = [0-9]*/compileSdk = $TARGET_SDK/" app/build.gradle.kts
-    sed -i "s/compileSdk = [0-9]*/compileSdk = $TARGET_SDK/" maplibre-geoman-android/app/build.gradle.kts
+    sed -i "s/compileSdk = [0-9]*/compileSdk = $TARGET_SDK/" ../maplibre-geoman-android/app/build.gradle.kts
     echo "compileSdk: $CURRENT_SDK → $TARGET_SDK"
 fi
 
@@ -108,7 +108,7 @@ echo "Building project..."
 if ! ./gradlew :app:assembleDebug :app:testDebugUnitTest; then
     echo ""
     echo "✖ Build or tests failed after upgrade. Restore with:"
-    echo "    rm -rf app/build maplibre-geoman-android/app/build"
+    echo "    rm -rf app/build ../maplibre-geoman-android/app/build"
     echo "    cp -r $BACKUP_DIR/* ."
     exit 1
 fi
