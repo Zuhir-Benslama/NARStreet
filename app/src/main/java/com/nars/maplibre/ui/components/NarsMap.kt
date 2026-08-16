@@ -14,6 +14,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.LifecycleOwner
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.nars.maplibre.MapViewModel
 import com.nars.maplibre.data.model.BaseLayerType
 import com.nars.maplibre.data.model.NarsFeature
@@ -47,7 +51,8 @@ fun NarsMap(
     onStyleLoaded: (() -> Unit)? = null,
 ) {
     val context = LocalContext.current
-    val baseLayer = viewModel.baseLayer.collectAsState()
+    val lifecycleOwner = LocalLifecycleOwner.current
+    val baseLayer by viewModel.baseLayer.collectAsState()
 
     var currentOnMapClick by remember { mutableStateOf(onMapClick) }
     var currentOnMapLongClick by remember { mutableStateOf(onMapLongClick) }
@@ -58,28 +63,10 @@ fun NarsMap(
     LaunchedEffect(shouldHandleClick) { currentShouldHandleClick = shouldHandleClick }
 
     val mapViewBundle = rememberSaveable { Bundle() }
-    val mapView = remember {
-        MapView(context)
-    }
+    val mapView = remember { MapView(context) }
 
-    // Handle lifecycle
-    DisposableEffect(Unit) {
-        mapView.onCreate(mapViewBundle)
-        mapView.onStart()
-        mapView.onResume()
-
-        onDispose {
-            mapView.onSaveInstanceState(mapViewBundle)
-            mapView.onStop()
-            mapView.onPause()
-            mapView.onDestroy()
-        }
-    }
-
-    // Base layer change
-    LaunchedEffect(baseLayer.value) {
-        updateBaseLayer(mapView, baseLayer.value, onStyleLoaded)
-    }
+    MapViewLifecycleEffect(lifecycleOwner, mapView, mapViewBundle)
+    BaseLayerSyncEffect(mapView, baseLayer, onStyleLoaded)
 
     AndroidView(
         factory = { ctx ->
@@ -102,7 +89,7 @@ fun NarsMap(
                     mapLibreMap.setCameraPosition(cameraPosition)
 
                     // Initialize base layer
-                    initializeBaseLayer(mapLibreMap, baseLayer.value)
+                    initializeBaseLayer(mapLibreMap, baseLayer)
 
                     // Notify map ready
                     onMapReady(this, mapLibreMap)
@@ -111,6 +98,63 @@ fun NarsMap(
         },
         modifier = modifier.fillMaxSize(),
     )
+}
+
+/**
+ * Drives the MapView's Android lifecycle from the Compose lifecycle owner so
+ * the map is released/recreated in step with the host.
+ */
+@Composable
+private fun MapViewLifecycleEffect(
+    lifecycleOwner: LifecycleOwner,
+    mapView: MapView,
+    mapViewBundle: Bundle,
+) {
+    DisposableEffect(lifecycleOwner, mapView) {
+        val observer =
+            LifecycleEventObserver { _, event ->
+                when (event) {
+                    Lifecycle.Event.ON_CREATE -> mapView.onCreate(mapViewBundle)
+                    Lifecycle.Event.ON_START -> mapView.onStart()
+                    Lifecycle.Event.ON_RESUME -> mapView.onResume()
+                    Lifecycle.Event.ON_PAUSE -> mapView.onPause()
+                    Lifecycle.Event.ON_STOP -> mapView.onStop()
+                    Lifecycle.Event.ON_DESTROY -> {
+                        mapView.onSaveInstanceState(mapViewBundle)
+                        mapView.onDestroy()
+                    }
+
+                    else -> Unit
+                }
+            }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+            mapView.onSaveInstanceState(mapViewBundle)
+            mapView.onStop()
+            mapView.onPause()
+            mapView.onDestroy()
+        }
+    }
+}
+
+/**
+ * Reacts to base-layer changes. The initial layer is applied once in
+ * getMapAsync, so this effect only handles subsequent changes (avoids a
+ * duplicate style load at startup).
+ */
+@Composable
+private fun BaseLayerSyncEffect(
+    mapView: MapView,
+    baseLayer: BaseLayerType,
+    onStyleLoaded: (() -> Unit)?,
+) {
+    var appliedLayer by remember { mutableStateOf(baseLayer) }
+    LaunchedEffect(baseLayer) {
+        if (appliedLayer == baseLayer) return@LaunchedEffect
+        appliedLayer = baseLayer
+        updateBaseLayer(mapView, baseLayer, onStyleLoaded)
+    }
 }
 
 /**

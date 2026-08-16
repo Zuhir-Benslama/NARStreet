@@ -200,7 +200,7 @@ private fun SettingsAboutContent(onLogout: () -> Unit) {
         Text(text = stringResource(R.string.settings_app_description), fontSize = 12.sp, color = TextSecondary)
         Spacer(modifier = Modifier.height(8.dp))
         Text(
-            text = stringResource(R.string.settings_version),
+            text = stringResource(R.string.settings_version_format, com.nars.maplibre.BuildConfig.VERSION_NAME),
             fontSize = 12.sp,
             color = TextSecondary.copy(alpha = 0.5f),
         )

@@ -8,14 +8,20 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Undo
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Snackbar
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -94,7 +100,12 @@ private fun MapScreenBoxContent(
     onCancelEdits: () -> Unit,
 ) {
     Box(
-        modifier = Modifier.fillMaxSize().background(GlassBackground).padding(paddingValues),
+        modifier = Modifier
+            .fillMaxSize()
+            // Use the color scheme's background so light mode isn't a solid dark
+            // screen — the glass panels on top keep their translucent look.
+            .background(MaterialTheme.colorScheme.background)
+            .padding(paddingValues),
     ) {
         MapScreenMapOverlay(
             viewModel = callbacks.viewModel,
@@ -115,6 +126,7 @@ private fun MapScreenBoxContent(
             featureCounts = state.featureCounts,
             baseLayer = state.baseLayer,
             viewModel = callbacks.viewModel,
+            onUndo = { callbacks.handlers.undo() },
             snackbarHostState = snackbarHostState,
         )
         MapScreenCompactInfo(
@@ -204,6 +216,7 @@ private fun MapScreenSidePanelWrapper(
     featureCounts: Map<String, Int>,
     baseLayer: BaseLayerType,
     viewModel: MapViewModel,
+    onUndo: () -> Unit,
     snackbarHostState: SnackbarHostState,
 ) {
     Box(modifier = modifier.padding(end = 12.dp)) {
@@ -212,6 +225,7 @@ private fun MapScreenSidePanelWrapper(
             featureCounts = featureCounts,
             baseLayer = baseLayer,
             viewModel = viewModel,
+            onUndo = onUndo,
             snackbarHostState = snackbarHostState,
         )
     }
@@ -223,12 +237,13 @@ private fun MapScreenSidePanel(
     featureCounts: Map<String, Int>,
     baseLayer: BaseLayerType,
     viewModel: MapViewModel,
+    onUndo: () -> Unit,
     snackbarHostState: SnackbarHostState,
 ) {
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
+    val canUndo by viewModel.canUndo.collectAsState()
     val phaseChangedText = stringResource(R.string.map_phase_changed)
-    val cannotAdvanceText = stringResource(R.string.map_cannot_advance)
     Column(
         modifier = Modifier
             .width(40.dp),
@@ -239,14 +254,26 @@ private fun MapScreenSidePanel(
             currentPhaseIndex = currentPhase?.let { Phases.getIndexByKey(it.key) } ?: 0,
             phaseCounts = featureCounts,
             onPhaseSelected = { phase ->
+                // Blocked transitions surface their (specific) message via
+                // viewModel.errorMessage — do not double-show a generic one.
                 viewModel.setCurrentPhase(phase)?.let {
                     val phaseLabel = Phases.getDisplayLabel(phase, context)
                     scope.launch { snackbarHostState.showSnackbar("$phaseChangedText: $phaseLabel") }
-                } ?: scope.launch { snackbarHostState.showSnackbar(cannotAdvanceText) }
+                }
             },
             modifier = Modifier.width(40.dp),
         )
         TileControl(currentLayer = baseLayer, onLayerSelected = { viewModel.setBaseLayer(it) })
+        IconButton(
+            onClick = onUndo,
+            enabled = canUndo,
+            modifier = Modifier.width(40.dp).background(GlassBackground),
+        ) {
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.Undo,
+                contentDescription = stringResource(R.string.map_undo),
+            )
+        }
     }
 }
 

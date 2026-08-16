@@ -33,7 +33,9 @@ val appModule =
             HttpClient(OkHttp) {
                 engine {
                     config {
-                        retryOnConnectionFailure(true)
+                        // Retry policy lives in utils/Retry.kt (retryOnTransientFailure)
+                        // so callers control when retries happen; OkHttp's implicit
+                        // connection retry would duplicate it opaquely.
                         val hashes = BuildConfig.SSL_CERT_HASHES
                         if (hashes.isNotBlank()) {
                             val pinnerBuilder = CertificatePinner.Builder()

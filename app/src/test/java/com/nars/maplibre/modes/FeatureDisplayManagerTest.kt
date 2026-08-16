@@ -3,6 +3,7 @@ package com.nars.maplibre.modes
 import com.geoman.maplibre.geoman.Geoman
 import com.geoman.maplibre.geoman.core.GeomanCoreConstants
 import com.geoman.maplibre.geoman.core.features.FeatureData
+import com.nars.maplibre.data.model.CircleGeometry
 import com.nars.maplibre.data.model.FeatureProperties
 import com.nars.maplibre.data.model.LineStringGeometry
 import com.nars.maplibre.data.model.NarsFeature
@@ -10,6 +11,7 @@ import com.nars.maplibre.data.model.NarsFeatureType
 import com.nars.maplibre.data.model.PhaseDefinition
 import com.nars.maplibre.data.model.Phases
 import com.nars.maplibre.data.model.PointGeometry
+import com.nars.maplibre.data.model.PolygonGeometry
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.slot
@@ -66,6 +68,13 @@ class FeatureDisplayManagerTest {
         type = NarsFeatureType.ROAD,
         geometry = PointGeometry(coordinates = listOf(3.0, 36.0)),
         properties = FeatureProperties.RoadProperties(),
+    )
+
+    private fun createLineRoad(id: String): NarsFeature = NarsFeature(
+        id = id,
+        type = NarsFeatureType.ROAD,
+        geometry = LineStringGeometry(coordinates = listOf(3.0, 36.0, 3.1, 36.0)),
+        properties = FeatureProperties.RoadProperties(name = "Road $id"),
     )
 
     private fun createEntrance(id: String = "ent-1"): NarsFeature = NarsFeature(
@@ -142,6 +151,75 @@ class FeatureDisplayManagerTest {
         displayManager.updateDisplayedFeatures(features)
 
         verify { labelAndMarkerManager.addRoadEndpointMarkers(features) }
+    }
+
+    @Test
+    fun `updateDisplayedFeatures skips road markers when roads are unchanged`() {
+        displayManager.currentPhase = roadPhase
+        val road = createLineRoad("r1")
+        val features = listOf(road)
+
+        displayManager.updateDisplayedFeatures(features)
+        displayManager.updateDisplayedFeatures(features)
+        displayManager.updateDisplayedFeatures(listOf(road, createLineRoad("r2")))
+
+        verify(exactly = 2) { labelAndMarkerManager.addRoadEndpointMarkers(any()) }
+    }
+
+    @Test
+    fun `updateFeatureOnMap updates in place for a line feature`() {
+        val source = mockk<org.maplibre.android.style.sources.GeoJsonSource>(relaxed = true)
+        val feature = createLineRoad("r1")
+        every { map.style?.getSource("nars_r1") } returns source
+        val geoJsonFeature = mockk<GeoJsonFeature>(relaxed = true)
+        every { geometryConverter.convertToGeoJson(feature) } returns geoJsonFeature
+        every { geometryConverter.buildFeatureGeoJson(geoJsonFeature) } returns "{}"
+
+        displayManager.updateFeatureOnMap(feature)
+
+        verify { geometryConverter.buildFeatureGeoJson(geoJsonFeature) }
+        verify { source.setGeoJson("{}") }
+    }
+
+    @Test
+    fun `updateFeatureOnMap rebuilds circle geometry`() {
+        val source = mockk<org.maplibre.android.style.sources.GeoJsonSource>(relaxed = true)
+        val circle = NarsFeature(
+            id = "c1",
+            type = NarsFeatureType.ROAD,
+            geometry = CircleGeometry(coordinates = listOf(3.0, 36.0, 100.0)),
+            properties = FeatureProperties.RoadProperties(),
+        )
+        every { map.style?.getSource("nars_c1") } returns source
+        every { geometryConverter.buildCircleGeoJson(3.0, 36.0, 100.0) } returns "circle-json"
+
+        displayManager.updateFeatureOnMap(circle)
+
+        verify { geometryConverter.buildCircleGeoJson(3.0, 36.0, 100.0) }
+        verify { source.setGeoJson("circle-json") }
+    }
+
+    @Test
+    fun `updateFeatureOnMap refreshes polygon edges`() {
+        val source = mockk<org.maplibre.android.style.sources.GeoJsonSource>(relaxed = true)
+        val edgesSource = mockk<org.maplibre.android.style.sources.GeoJsonSource>(relaxed = true)
+        val polygon = NarsFeature(
+            id = "p1",
+            type = NarsFeatureType.ROAD,
+            geometry = PolygonGeometry(coordinates = listOf(3.0, 36.0, 3.1, 36.0, 3.05, 36.1, 3.0, 36.0)),
+            properties = FeatureProperties.RoadProperties(),
+        )
+        every { map.style?.getSource("nars_p1") } returns source
+        every { map.style?.getSource("nars_p1_edges") } returns edgesSource
+        val geoJsonFeature = mockk<GeoJsonFeature>(relaxed = true)
+        every { geometryConverter.convertToGeoJson(polygon) } returns geoJsonFeature
+        every { geometryConverter.buildFeatureGeoJson(geoJsonFeature) } returns "poly-json"
+        every { geometryConverter.buildPolygonEdgesGeoJson(any()) } returns "edges-json"
+
+        displayManager.updateFeatureOnMap(polygon)
+
+        verify { edgesSource.setGeoJson("edges-json") }
+        verify { source.setGeoJson("poly-json") }
     }
 
     @Test

@@ -167,24 +167,30 @@ data class ApiFeatureResult(
             val raw = this ?: return System.currentTimeMillis()
             val match = ISO_8601_REGEX.matchEntire(raw) ?: return System.currentTimeMillis()
             val parts = match.groupValues
-            val calendar = GregorianCalendar(TimeZone.getTimeZone("UTC"))
-            calendar.isLenient = false
-            calendar.clear()
-            calendar.set(
-                parts[1].toInt(),
-                parts[2].toInt() - 1,
-                parts[3].toInt(),
-                parts[4].toInt(),
-                parts[5].toInt(),
-                parts[6].toInt(),
-            )
-            var millis = calendar.timeInMillis
-            val sign = parts[7]
-            if (sign == "+" || sign == "-") {
-                val delta = parts[8].toInt() * MILLIS_PER_HOUR + parts[9].toInt() * MILLIS_PER_MINUTE
-                millis -= if (sign == "+") delta else -delta
+            // Malformed calendar fields (e.g. month 00 or day 32) throw here;
+            // fall back to "now" instead of crashing the whole feature load.
+            return try {
+                val calendar = GregorianCalendar(TimeZone.getTimeZone("UTC"))
+                calendar.isLenient = false
+                calendar.clear()
+                calendar.set(
+                    parts[1].toInt(),
+                    parts[2].toInt() - 1,
+                    parts[3].toInt(),
+                    parts[4].toInt(),
+                    parts[5].toInt(),
+                    parts[6].toInt(),
+                )
+                var millis = calendar.timeInMillis
+                val sign = parts[7]
+                if (sign == "+" || sign == "-") {
+                    val delta = parts[8].toInt() * MILLIS_PER_HOUR + parts[9].toInt() * MILLIS_PER_MINUTE
+                    millis -= if (sign == "+") delta else -delta
+                }
+                millis
+            } catch (_: IllegalArgumentException) {
+                System.currentTimeMillis()
             }
-            return millis
         }
     }
 }
@@ -201,8 +207,17 @@ data class ApiLoadFeaturesResponse(
 @Serializable
 data class ApiSaveFeatureResponse(val success: Boolean = true, val id: String? = null, val message: String? = null)
 
+/**
+ * RFC 7807 Problem Details payload returned by the backend on auth failures
+ * (e.g. 401 on /api/signin). Parsed to surface the server's message instead of
+ * a bare HTTP status code.
+ */
 @Serializable
-data class ApiUpdateFeatureResponse(val success: Boolean = true, val id: String? = null, val updatedAt: String? = null)
+data class ApiProblemDetails(
+    val title: String? = null,
+    val status: Int? = null,
+    val detail: String? = null,
+)
 
 // ─── Feature ↔ API DTO conversion ─────────────────────────────────────────────
 
@@ -211,10 +226,17 @@ data class ApiUpdateFeatureResponse(val success: Boolean = true, val id: String?
  * web frontend so features authored in either app remain interchangeable.
  */
 fun NarsFeature.toApiData(): JsonObject = buildJsonObject {
-    put("type", properties.phase)
+    put("type", properties.apiType())
     properties.name?.let { put("label", it) }
     addGeometryPayload(geometry)
     addPropertyKeys(properties)
+}
+
+/** Backend feature-type vocabulary (mirrors `toApiSaveRequest`). */
+private fun FeatureProperties.apiType(): String = when (this) {
+    is FeatureProperties.RoadProperties -> "road"
+    is FeatureProperties.HouseEntranceProperties -> "house_entrance"
+    is FeatureProperties.NamingPanelProperties -> "naming_panel"
 }
 
 private fun JsonObjectBuilder.addGeometryPayload(geometry: Geometry) {
@@ -254,14 +276,14 @@ private fun JsonObjectBuilder.addPropertyKeys(properties: FeatureProperties) {
 }
 
 fun NarsFeature.toApiSaveRequest(): ApiSaveFeatureRequest {
-    val (apiType, apiLayer) =
+    val apiType = properties.apiType()
+    val apiLayer =
         when (val props = properties) {
-            is FeatureProperties.RoadProperties -> "road" to (props.roadTypeKey ?: "street")
+            is FeatureProperties.RoadProperties -> props.roadTypeKey ?: "street"
 
-            is FeatureProperties.HouseEntranceProperties ->
-                "house_entrance" to (props.entranceTypeKey ?: "main_entrance")
+            is FeatureProperties.HouseEntranceProperties -> props.entranceTypeKey ?: "main_entrance"
 
-            is FeatureProperties.NamingPanelProperties -> "naming_panel" to "naming_panel"
+            is FeatureProperties.NamingPanelProperties -> "naming_panel"
         }
     return ApiSaveFeatureRequest(
         type = apiType,

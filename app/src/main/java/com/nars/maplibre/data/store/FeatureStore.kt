@@ -35,6 +35,10 @@ class FeatureStore : FeatureStoreInterface {
         _featuresByPhase.value = currentMap
     }
 
+    private fun rebuildPhaseMap(features: List<NarsFeature>) {
+        _featuresByPhase.value = features.groupBy { it.properties.phase }
+    }
+
     init {
         _currentPhase.value = Phases.ALL.first()
     }
@@ -48,44 +52,48 @@ class FeatureStore : FeatureStoreInterface {
     }
 
     override fun addFeature(feature: NarsFeature, recordUndo: Boolean) = lock.withLock {
+        val all = _allFeatures.value
+        val isDuplicate = all.any { it.id == feature.id || (feature.dbId != null && it.dbId == feature.dbId) }
+        if (isDuplicate) return@withLock
         withPhaseMap { map ->
             map[feature.properties.phase] = map.getOrDefault(feature.properties.phase, emptyList()) + feature
         }
-        _allFeatures.value = _allFeatures.value + feature
+        _allFeatures.value = all + feature
 
         if (recordUndo) {
             // Lock ordering: store lock -> undo lock. UndoManager.executeUndo()
             // releases the undo lock BEFORE calling back into the store, so this
             // nesting can never deadlock — preserve that order if either side
             // changes.
-            undoManager.addUndoAction(UndoAction.Create(feature, feature.properties.phase))
+            undoManager.addUndoAction(UndoAction.Create(feature))
         }
     }
 
     override fun addFeatures(features: List<NarsFeature>) = lock.withLock {
         val existing = _allFeatures.value
-        val existingIds = existing.mapTo(mutableSetOf()) { it.id }
-        val existingDbIds = existing.mapNotNullTo(mutableSetOf()) { it.dbId }
-        val fresh =
-            features.filter { feature ->
-                feature.id !in existingIds &&
-                    (feature.dbId == null || feature.dbId !in existingDbIds)
+
+        // Upsert: existing entries are replaced in place by an incoming feature
+        // with the same id/dbId (so a reload picks up server-side changes), and
+        // genuinely new incoming features are appended.
+        val merged =
+            existing.map { existingFeature ->
+                features.firstOrNull { incoming ->
+                    incoming.id == existingFeature.id ||
+                        (incoming.dbId != null && incoming.dbId == existingFeature.dbId)
+                } ?: existingFeature
+            } + features.filter { incoming ->
+                existing.none { existingFeature ->
+                    existingFeature.id == incoming.id ||
+                        (incoming.dbId != null && incoming.dbId == existingFeature.dbId)
+                }
             }
-        withPhaseMap { map ->
-            fresh.forEach { feature ->
-                map[feature.properties.phase] = map.getOrDefault(feature.properties.phase, emptyList()) + feature
-            }
-        }
-        _allFeatures.value = existing + fresh
+        rebuildPhaseMap(merged)
+        _allFeatures.value = merged
     }
 
     override fun updateFeature(featureId: String, updatedFeature: NarsFeature) = lock.withLock {
-        withPhaseMap { map ->
-            for (phase in map.keys) {
-                map[phase] = map[phase].orEmpty().map { if (it.id == featureId) updatedFeature else it }
-            }
-        }
         _allFeatures.value = _allFeatures.value.map { if (it.id == featureId) updatedFeature else it }
+        rebuildPhaseMap(_allFeatures.value)
         if (_selectedFeature.value?.id == featureId) {
             _selectedFeature.value = updatedFeature
         }
@@ -129,6 +137,7 @@ class FeatureStore : FeatureStoreInterface {
         _selectedFeature.value = null
         _currentPhase.value = Phases.ALL.first()
         _referenceRoadDbId.value = null
+        undoManager.clear()
     }
 
     override fun clearPhase(phaseKey: String) = lock.withLock {
@@ -145,6 +154,8 @@ class FeatureStore : FeatureStoreInterface {
     override fun getAllRoads(): List<NarsFeature> = _featuresByPhase.value[Phases.ROADS_KEY] ?: emptyList()
 
     override val canUndo: Boolean get() = undoManager.canUndo
+
+    override val undoState: StateFlow<Boolean> = undoManager.canUndoState
 
     override fun executeUndo(): UndoAction? = undoManager.executeUndo()
 

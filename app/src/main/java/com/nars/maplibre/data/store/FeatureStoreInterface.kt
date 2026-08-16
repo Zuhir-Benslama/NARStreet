@@ -49,6 +49,8 @@ interface FeatureStoreInterface {
 
     val canUndo: Boolean
 
+    val undoState: StateFlow<Boolean>
+
     fun executeUndo(): UndoAction?
 
     fun addUndoAction(action: UndoAction)

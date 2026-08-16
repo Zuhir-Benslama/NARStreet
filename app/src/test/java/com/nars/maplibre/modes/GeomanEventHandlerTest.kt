@@ -366,6 +366,28 @@ class GeomanEventHandlerTest {
         verify(exactly = 0) { onFeatureUpdated(any()) }
     }
 
+    @Test
+    fun `handleGeometryChanged on a circle preserves CircleGeometry`() {
+        val original =
+            createFeature().copy(
+                geometry = CircleGeometry(coordinates = listOf(1.0, 2.0, 50.0)),
+            )
+        handler.setEditingFeature("f1", original)
+
+        val featureData = mockk<FeatureData>(relaxed = true)
+        every { featureData.properties } returns
+            mutableMapOf(
+                "center" to LngLat(1.5, 2.5),
+                "radius" to 75.0,
+            )
+
+        handler.handleGeometryChanged(featureData)
+
+        val updated = slot<NarsFeature>()
+        verify { onFeatureUpdated(capture(updated)) }
+        assertEquals(CircleGeometry(coordinates = listOf(1.5, 2.5, 75.0)), updated.captured.geometry)
+    }
+
     // --- handleDeleted ---
 
     @Test

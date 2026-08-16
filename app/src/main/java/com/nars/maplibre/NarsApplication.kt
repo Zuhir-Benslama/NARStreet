@@ -79,18 +79,24 @@ class NarsApplication :
                     NarsLogger.w("NarsApplication", "Token clearing skipped: Koin not ready", e)
                 }
             } else if (event == Lifecycle.Event.ON_START) {
-                try {
-                    val apiService: ApiService = get()
-                    val prefs: AppPreferences = get()
-                    prefs.authToken?.let { token ->
-                        apiService.setSessionToken(token)
-                        NarsLogger.d("NarsApplication", "In-memory tokens restored (app foregrounded)")
+                // Restore tokens off the main thread: EncryptedSharedPreferences
+                // decrypts lazily on first access, which can take ~100ms. The
+                // refresh flow falls back to the persisted token anyway, so an
+                // in-flight request before the restore completes is safe.
+                applicationScope.launch {
+                    try {
+                        val apiService: ApiService = get()
+                        val prefs: AppPreferences = get()
+                        prefs.authToken?.let { token ->
+                            apiService.setSessionToken(token)
+                            NarsLogger.d("NarsApplication", "In-memory tokens restored (app foregrounded)")
+                        }
+                        prefs.refreshToken?.let { token ->
+                            apiService.setRefreshToken(token)
+                        }
+                    } catch (e: IllegalStateException) {
+                        NarsLogger.w("NarsApplication", "Token restore skipped: Koin not ready", e)
                     }
-                    prefs.refreshToken?.let { token ->
-                        apiService.setRefreshToken(token)
-                    }
-                } catch (e: IllegalStateException) {
-                    NarsLogger.w("NarsApplication", "Token restore skipped: Koin not ready", e)
                 }
             }
         }

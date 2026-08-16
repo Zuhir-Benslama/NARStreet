@@ -10,6 +10,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import com.nars.maplibre.MapViewModel
@@ -53,6 +54,9 @@ fun MapScreen(onNavigateToSettings: () -> Unit, onLogout: () -> Unit) {
     DisposableEffect(Unit) {
         onDispose {
             handlers.narsGeoman?.destroy()
+            // Drop the reference so the handler can't leak the destroyed Geoman
+            // (its listeners/observers are dead after destroy()).
+            handlers.narsGeoman = null
         }
     }
 
@@ -159,8 +163,12 @@ private fun MapScreenScaffold(
     callbacks: MapScreenCallbacks,
     snackbarHostState: SnackbarHostState,
 ) {
-    var showFeatureModal by remember { mutableStateOf(false) }
-    var editingFeature by remember { mutableStateOf<NarsFeature?>(null) }
+    var showFeatureModal by rememberSaveable { mutableStateOf(false) }
+    var editingFeatureId by rememberSaveable { mutableStateOf<String?>(null) }
+
+    // Re-derive the editing feature from the store by id so the modal survives
+    // configuration changes and never holds a stale snapshot.
+    val editingFeature = editingFeatureId?.let { id -> state.allFeatures.firstOrNull { it.id == id } }
 
     MapScreenBody(
         state = state,
@@ -169,12 +177,12 @@ private fun MapScreenScaffold(
         showFeatureModal = showFeatureModal,
         editingFeature = editingFeature,
         onEditFeature = { feature ->
-            editingFeature = feature
+            editingFeatureId = feature.id
             showFeatureModal = true
         },
         onDismissModal = {
             showFeatureModal = false
-            editingFeature = null
+            editingFeatureId = null
         },
         onSaveFeature = { feature ->
             val existing = editingFeature
@@ -193,17 +201,17 @@ private fun MapScreenScaffold(
                 callbacks.handlers.saveFeature(feature)
             }
             showFeatureModal = false
-            editingFeature = null
+            editingFeatureId = null
         },
         onSaveEdits = {
             callbacks.handlers.narsGeoman?.commitEdits()
             callbacks.viewModel.clearSelection()
-            editingFeature = null
+            editingFeatureId = null
         },
         onCancelEdits = {
             callbacks.handlers.narsGeoman?.cancelEdits()
             callbacks.viewModel.clearSelection()
-            editingFeature = null
+            editingFeatureId = null
         },
     )
 }

@@ -44,8 +44,9 @@ class MapViewModel(
     val editModeEnabled: StateFlow<Boolean> = _editModeEnabled.asStateFlow()
 
     val referenceRoadDbId: StateFlow<String?> = featureStore.referenceRoadDbId
-    private val _canUndo = MutableStateFlow(false)
-    val canUndo: StateFlow<Boolean> = _canUndo.asStateFlow()
+
+    /** Derived from the store's undo stack — no manual mirroring needed. */
+    val canUndo: StateFlow<Boolean> = featureStore.undoState
 
     fun setCurrentPhase(phase: PhaseDefinition): PhaseDefinition? {
         val currentIndex = featureStore.currentPhase.value?.index ?: 0
@@ -60,6 +61,7 @@ class MapViewModel(
         }
         NarsLogger.d("MapViewModel", "Setting current phase to: ${phase.label} (${phase.key})")
         featureStore.setCurrentPhase(phase)
+        featureStore.selectFeature(null)
         appPreferences.currentPhase = phase.key
         _drawingEnabled.value = false
         _editModeEnabled.value = false
@@ -88,13 +90,13 @@ class MapViewModel(
 
     fun setReferenceRoad(dbId: String?) = featureStore.setReferenceRoad(dbId)
 
-    fun undo(): Boolean {
+    /** Executes undo and returns the action that was undone (null if nothing). */
+    fun undo(): UndoAction? {
         val action = featureStore.executeUndo()
-        _canUndo.value = featureStore.canUndo
         val app = getApplication<Application>()
         if (action == null) {
             updateUiState(errorMessage = app.getString(R.string.map_nothing_undo))
-            return false
+            return null
         }
         when (action) {
             is UndoAction.Delete -> {
@@ -112,33 +114,32 @@ class MapViewModel(
                 updateUiState(successMessage = msg)
             }
         }
-        return true
+        return action
     }
 
     fun addFeature(feature: NarsFeature) {
         featureStore.addFeature(feature, recordUndo = true)
-        _canUndo.value = featureStore.canUndo
     }
 
     /** Restore a feature without recording an undo action (used for rollback). */
     fun restoreFeature(feature: NarsFeature) {
         featureStore.addFeature(feature, recordUndo = false)
-        _canUndo.value = featureStore.canUndo
     }
 
     /**
-     * Updates an existing store entry without recording an undo action.
-     * Used when a newly drawn feature is persisted to the backend — the Create
-     * undo action recorded at draw time already covers the feature's removal.
+     * Attaches a backend id to the currently stored feature (matched by client
+     * id) without overwriting any geometry/property edits made while the save
+     * was in flight. Used when a newly drawn feature is persisted to the backend
+     * — the Create undo action recorded at draw time already covers the
+     * feature's removal.
      */
-    fun updateFeatureInPlace(feature: NarsFeature) {
-        featureStore.updateFeature(feature.id, feature)
-        _canUndo.value = featureStore.canUndo
+    fun updateFeatureInPlace(dbId: String, featureId: String) {
+        val current = featureStore.getFeatureById(featureId) ?: return
+        featureStore.updateFeature(featureId, current.copy(dbId = dbId))
     }
 
     fun addFeatures(features: List<NarsFeature>) {
         featureStore.addFeatures(features)
-        _canUndo.value = featureStore.canUndo
     }
 
     fun updateFeature(feature: NarsFeature) {
@@ -150,26 +151,20 @@ class MapViewModel(
                     UndoAction.Update(
                         oldFeature = previous,
                         newFeature = feature,
-                        phaseKey = feature.properties.phase,
                     ),
                 )
             }
         }
-        _canUndo.value = featureStore.canUndo
     }
 
     fun deleteFeature(featureId: String) {
         val feature = featureStore.getFeatureById(featureId)
         feature?.let {
             featureStore.addUndoAction(
-                UndoAction.Delete(
-                    feature = it,
-                    phaseKey = it.properties.phase,
-                ),
+                UndoAction.Delete(feature = it),
             )
         }
         featureStore.removeFeature(featureId)
-        _canUndo.value = featureStore.canUndo
     }
 
     /**
@@ -179,7 +174,6 @@ class MapViewModel(
      */
     fun clearDeleteUndo(featureId: String) {
         featureStore.removeMostRecentActionForFeature(featureId)
-        _canUndo.value = featureStore.canUndo
     }
 
     val selectedFeatureId: StateFlow<String?> =
@@ -209,7 +203,6 @@ class MapViewModel(
     /** Clears all local feature state (used when a session expires). */
     fun clearAll() {
         featureStore.clearAll()
-        _canUndo.value = false
     }
 
     fun updateUiState(isLoading: Boolean? = null, errorMessage: String? = null, successMessage: String? = null) {

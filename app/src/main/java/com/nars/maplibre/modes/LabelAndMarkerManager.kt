@@ -25,10 +25,11 @@ class LabelAndMarkerManager(private val map: MapLibreMap) {
         private const val TAG = "LabelAndMarkerManager"
         private const val LABEL_TEXT_SIZE = 14f
         private const val LABEL_HALO_WIDTH = 2f
+        private const val ROAD_LABEL_HALO_WIDTH = 3f
         private const val VERTEX_CIRCLE_RADIUS = 6f
+        private const val ROAD_MARKER_RADIUS = 14f
+        private const val ROAD_MARKER_STROKE_WIDTH = 3f
     }
-
-    private val vertexMarkerIds: MutableSet<String> = java.util.concurrent.ConcurrentHashMap.newKeySet()
 
     fun addLabelLayer(layerName: String, sourceName: String, labelText: String?) {
         if (labelText.isNullOrBlank()) return
@@ -43,7 +44,7 @@ class LabelAndMarkerManager(private val map: MapLibreMap) {
             SymbolLayer(labelLayerName, sourceName).apply {
                 setProperties(
                     org.maplibre.android.style.layers.PropertyFactory
-                        .textField(Expression.literal(labelText)),
+                        .textField(Expression.get("name")),
                     org.maplibre.android.style.layers.PropertyFactory
                         .textColor(Color.BLACK),
                     org.maplibre.android.style.layers.PropertyFactory
@@ -158,11 +159,11 @@ class LabelAndMarkerManager(private val map: MapLibreMap) {
                     org.maplibre.android.style.layers.PropertyFactory
                         .circleColor(color),
                     org.maplibre.android.style.layers.PropertyFactory
-                        .circleRadius(14f),
+                        .circleRadius(ROAD_MARKER_RADIUS),
                     org.maplibre.android.style.layers.PropertyFactory
                         .circleStrokeColor(Color.WHITE),
                     org.maplibre.android.style.layers.PropertyFactory
-                        .circleStrokeWidth(3f),
+                        .circleStrokeWidth(ROAD_MARKER_STROKE_WIDTH),
                 )
             }
         try {
@@ -191,7 +192,7 @@ class LabelAndMarkerManager(private val map: MapLibreMap) {
                     org.maplibre.android.style.layers.PropertyFactory
                         .textColor(Color.BLACK),
                     org.maplibre.android.style.layers.PropertyFactory
-                        .textSize(14f),
+                        .textSize(LABEL_TEXT_SIZE),
                     org.maplibre.android.style.layers.PropertyFactory
                         .textFont(arrayOf("Noto Sans Regular")),
                     org.maplibre.android.style.layers.PropertyFactory
@@ -199,7 +200,7 @@ class LabelAndMarkerManager(private val map: MapLibreMap) {
                     org.maplibre.android.style.layers.PropertyFactory
                         .textHaloColor(Color.WHITE),
                     org.maplibre.android.style.layers.PropertyFactory
-                        .textHaloWidth(3f),
+                        .textHaloWidth(ROAD_LABEL_HALO_WIDTH),
                 )
             }
         try {
@@ -227,7 +228,6 @@ class LabelAndMarkerManager(private val map: MapLibreMap) {
 
         try {
             map.style?.addLayer(buildVertexCircleLayer(layerName, sourceName))
-            vertexMarkerIds.add(layerName)
         } catch (e: IllegalArgumentException) {
             NarsLogger.w(TAG, "Error adding vertex layer", e)
         }
@@ -284,7 +284,6 @@ class LabelAndMarkerManager(private val map: MapLibreMap) {
             map.style?.getSource(sourceName)?.let {
                 map.style?.removeSource(sourceName)
             }
-            vertexMarkerIds.remove(layerName)
         } catch (e: IllegalArgumentException) {
             NarsLogger.w(TAG, "Failed to remove vertex markers for $featureId", e)
         }

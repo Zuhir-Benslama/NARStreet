@@ -2,9 +2,11 @@ package com.nars.maplibre.modes
 
 import com.geoman.maplibre.geoman.Geoman
 import com.geoman.maplibre.geoman.core.GeomanCoreConstants
+import com.nars.maplibre.data.model.CircleGeometry
 import com.nars.maplibre.data.model.NarsFeature
 import com.nars.maplibre.data.model.PhaseDefinition
 import com.nars.maplibre.data.model.Phases
+import com.nars.maplibre.data.model.PolygonGeometry
 import com.nars.maplibre.utils.NarsLogger
 import org.maplibre.android.maps.MapLibreMap
 import java.util.Collections
@@ -27,6 +29,8 @@ class FeatureDisplayManager(
 
     @Volatile
     var currentPhase: PhaseDefinition? = null
+
+    private var lastRoadEndpointSignature: String? = null
 
     fun addFeature(feature: NarsFeature) {
         displayedFeatureIds.add(feature.id)
@@ -66,21 +70,57 @@ class FeatureDisplayManager(
         displayedFeatureIds.addAll(newIds.filterNot { it in displayedFeatureIds })
 
         if (currentPhaseKey == Phases.ROADS_KEY) {
-            featureRenderer.labelAndMarkerManager.addRoadEndpointMarkers(allFeatures)
+            val signature = roadEndpointSignature(allFeatures)
+            if (signature != lastRoadEndpointSignature) {
+                featureRenderer.labelAndMarkerManager.addRoadEndpointMarkers(allFeatures)
+                lastRoadEndpointSignature = signature
+            }
         }
     }
+
+    private fun roadEndpointSignature(allFeatures: List<NarsFeature>): String =
+        allFeatures
+            .filter { it.properties.phase == Phases.ROADS_KEY }
+            .joinToString("|") { road -> "${road.id}:${road.geometry}:${road.properties.name}" }
 
     fun updateFeatureOnMap(feature: NarsFeature) {
         val sourceName = FeatureLayerNames.sourceName(feature.id)
         val source = map?.style?.getSource(sourceName)
         if (source is org.maplibre.android.style.sources.GeoJsonSource) {
-            val geoJsonFeature = geometryConverter.convertToGeoJson(feature)
-            val geoJsonString = geometryConverter.buildFeatureGeoJson(geoJsonFeature, properties = null)
+            val geoJsonString = buildUpdatedGeoJson(feature)
             source.setGeoJson(geoJsonString)
             NarsLogger.d("FeatureDisplayManager", "Updated feature ${feature.id} in-place")
         } else {
             removeFeature(feature.id)
             addFeature(feature)
+        }
+    }
+
+    private fun buildUpdatedGeoJson(feature: NarsFeature): String = when (val geom = feature.geometry) {
+        // The circle is stored as a Point for Geoman but must render as a
+        // polygon ring — rebuild it so the circle does not vanish on update.
+        is CircleGeometry ->
+            geometryConverter.buildCircleGeoJson(
+                centerLng = geom.coordinates.getOrNull(0) ?: 0.0,
+                centerLat = geom.coordinates.getOrNull(1) ?: 0.0,
+                radiusMeters =
+                    geom.coordinates.getOrNull(2)?.takeIf { it > 0 }
+                        ?: FeatureRenderer.DEFAULT_CIRCLE_RADIUS_METERS,
+            )
+
+        is PolygonGeometry -> {
+            updatePolygonEdgesSource(feature, geom)
+            geometryConverter.buildFeatureGeoJson(geometryConverter.convertToGeoJson(feature))
+        }
+
+        else -> geometryConverter.buildFeatureGeoJson(geometryConverter.convertToGeoJson(feature))
+    }
+
+    private fun updatePolygonEdgesSource(feature: NarsFeature, geom: PolygonGeometry) {
+        val edgeSourceName = "${FeatureLayerNames.sourceName(feature.id)}_edges"
+        val edgeSource = map?.style?.getSource(edgeSourceName)
+        if (edgeSource is org.maplibre.android.style.sources.GeoJsonSource) {
+            edgeSource.setGeoJson(geometryConverter.buildPolygonEdgesGeoJson(geom.coordinates))
         }
     }
 
@@ -93,6 +133,7 @@ class FeatureDisplayManager(
     fun onStyleReloaded(allFeatures: List<NarsFeature>) {
         displayedFeatureIds.clear()
         featureRenderer.clearTracking()
+        lastRoadEndpointSignature = null
         geoman.onStyleReloaded()
         updateDisplayedFeatures(allFeatures)
     }
@@ -146,6 +187,7 @@ class FeatureDisplayManager(
 
     fun clearAllFeatures() {
         displayedFeatureIds.clear()
+        lastRoadEndpointSignature = null
         geoman.clearAllFeatures()
         featureRenderer.clearTracking()
     }

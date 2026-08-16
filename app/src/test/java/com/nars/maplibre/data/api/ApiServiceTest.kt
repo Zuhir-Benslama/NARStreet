@@ -151,6 +151,71 @@ class ApiServiceTest {
     }
 
     @Test
+    fun `loadFeatures fetches every page up to the envelope count`() = runTest {
+        val requests = java.util.concurrent.ConcurrentLinkedQueue<String>()
+        engine =
+            MockEngine { request ->
+                requests.add(request.url.toString())
+                val skip = request.url.parameters["skip"]?.toIntOrNull() ?: 0
+                respond(
+                    content =
+                    """{"features": [
+                        {"id": "r$skip", "type": "road", "data": {"type": "roads", "lat": 36.0, "lng": 3.0}}
+                    ], "count": 3, "skip": $skip, "take": 1}""",
+                    status = HttpStatusCode.OK,
+                )
+            }
+        val client =
+            HttpClient(engine) {
+                install(ContentNegotiation) {
+                    json(
+                        Json {
+                            ignoreUnknownKeys = true
+                            isLenient = true
+                        },
+                    )
+                }
+            }
+        apiService = ApiService(client, appPreferences)
+
+        val result = apiService.loadFeatures()
+
+        assertTrue(result.isSuccess)
+        val features = result.getOrNull()
+        assertEquals(listOf("r0", "r1", "r2"), features?.map { it.id })
+        assertEquals(listOf("0", "1", "2"), requests.map { it.substringAfter("skip=").substringBefore("&") })
+        assertTrue(requests.all { it.contains("take=500") })
+    }
+
+    @Test
+    fun `login surfaces the Problem Details message on failure`() = runTest {
+        engine =
+            MockEngine { _ ->
+                respond(
+                    content = """{"title":"Unauthorized","status":401,"detail":"Invalid credentials"}""",
+                    status = HttpStatusCode.Unauthorized,
+                )
+            }
+        val client =
+            HttpClient(engine) {
+                install(ContentNegotiation) {
+                    json(
+                        Json {
+                            ignoreUnknownKeys = true
+                            isLenient = true
+                        },
+                    )
+                }
+            }
+        apiService = ApiService(client, appPreferences)
+
+        val result = apiService.login("user", "bad")
+
+        assertTrue(result.isFailure)
+        assertEquals("Invalid credentials", result.exceptionOrNull()?.message)
+    }
+
+    @Test
     fun `saveFeature returns id from response`() = runTest {
         val feature =
             NarsFeature(

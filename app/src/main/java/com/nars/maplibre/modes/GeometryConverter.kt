@@ -16,6 +16,7 @@ import com.nars.maplibre.data.model.PointGeometry
 import com.nars.maplibre.data.model.PolygonGeometry
 import com.nars.maplibre.utils.GeometryUtils
 import com.nars.maplibre.utils.NarsLogger
+import kotlinx.serialization.json.JsonArrayBuilder
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.add
 import kotlinx.serialization.json.buildJsonArray
@@ -55,13 +56,10 @@ class GeometryConverter {
                 }
 
                 is MultiPolygon -> {
-                    val rings = geometry.coordinates.flatten()
-                    if (rings.isEmpty()) {
-                        null
-                    } else {
-                        val allCoords = rings.flatMap { ring -> ring.flatMap { listOf(it[0], it[1]) } }
-                        PolygonGeometry(coordinates = allCoords)
-                    }
+                    // Take the exterior ring of the first polygon only —
+                    // flattening all rings would connect them with bogus edges.
+                    val ring = geometry.coordinates.firstOrNull()?.firstOrNull() ?: return null
+                    PolygonGeometry(coordinates = ring.flatMap { listOf(it[0], it[1]) })
                 }
 
                 else -> null
@@ -153,32 +151,21 @@ class GeometryConverter {
                 is LineString -> {
                     put("type", "LineString")
                     putJsonArray("coordinates") {
-                        for (coord in geometry.coordinates) {
-                            add(
-                                buildJsonArray {
-                                    coord.forEach { add(it) }
-                                },
-                            )
-                        }
+                        geometry.coordinates.forEach { addPosition(it) }
                     }
                 }
 
                 is Polygon -> {
                     put("type", "Polygon")
                     putJsonArray("coordinates") {
-                        for (ring in geometry.coordinates) {
-                            add(
-                                buildJsonArray {
-                                    for (coord in ring) {
-                                        add(
-                                            buildJsonArray {
-                                                coord.forEach { add(it) }
-                                            },
-                                        )
-                                    }
-                                },
-                            )
-                        }
+                        geometry.coordinates.forEach { addRing(it) }
+                    }
+                }
+
+                is MultiPolygon -> {
+                    put("type", "MultiPolygon")
+                    putJsonArray("coordinates") {
+                        geometry.coordinates.forEach { addPolygon(it) }
                     }
                 }
 
@@ -188,6 +175,18 @@ class GeometryConverter {
                 }
             }
         }
+
+    private fun JsonArrayBuilder.addPosition(position: List<Double>) {
+        add(buildJsonArray { position.forEach { add(it) } })
+    }
+
+    private fun JsonArrayBuilder.addRing(ring: List<List<Double>>) {
+        add(buildJsonArray { ring.forEach { addPosition(it) } })
+    }
+
+    private fun JsonArrayBuilder.addPolygon(polygon: List<List<List<Double>>>) {
+        add(buildJsonArray { polygon.forEach { addRing(it) } })
+    }
 
     private fun coordinatesToLngLats(coords: List<Double>): List<LngLat> = coords
         .chunked(2)

@@ -47,6 +47,18 @@ android {
         val sslCertHashes = localProperties.getProperty("SSL_CERT_HASHES", "")
         buildConfigField("String", "SSL_CERT_HASHES", "\"$sslCertHashes\"")
 
+        if (apiUrl.isBlank()) {
+            val isReleaseBuild = gradle.startParameter.taskNames.any {
+                it.contains("release", ignoreCase = true) || it.contains("Release")
+            }
+            if (isReleaseBuild) {
+                throw GradleException(
+                    "NARS_API_BASE_URL must be set in local.properties for release builds",
+                )
+            }
+            println("WARNING: NARS_API_BASE_URL is not set in local.properties — the app cannot reach the backend")
+        }
+
         val tileSatellite = localProperties.getProperty("TILE_SATELLITE", "")
         buildConfigField("String", "TILE_SATELLITE", "\"$tileSatellite\"")
 

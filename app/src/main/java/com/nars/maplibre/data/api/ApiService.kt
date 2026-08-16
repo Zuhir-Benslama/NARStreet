@@ -11,6 +11,7 @@ import io.ktor.client.HttpClient
 import io.ktor.client.request.delete
 import io.ktor.client.request.get
 import io.ktor.client.request.header
+import io.ktor.client.request.parameter
 import io.ktor.client.request.post
 import io.ktor.client.request.put
 import io.ktor.client.request.setBody
@@ -34,6 +35,9 @@ class ApiService(private val httpClient: HttpClient, private val preferences: Ap
         private const val TAG = "ApiService"
         private val COOKIE_ACCESS_TOKEN_REGEX = Regex("access_token=([^;]+)")
         private val COOKIE_REFRESH_TOKEN_REGEX = Regex("refresh_token=([^;]+)")
+
+        /** Max rows the backend returns per page (clamped server-side). */
+        private const val FEATURES_PAGE_SIZE = 500
     }
 
     private val baseUrl: String = BuildConfig.API_BASE_URL.trimEnd('/')
@@ -207,15 +211,9 @@ class ApiService(private val httpClient: HttpClient, private val preferences: Ap
 
             if (!response.status.isSuccess()) {
                 val body = response.bodyAsText()
-                val errorResponse =
-                    try {
-                        apiJson.decodeFromString<LoginApiResponse>(body)
-                    } catch (_: kotlinx.serialization.SerializationException) {
-                        null
-                    }
-                return Result.failure(
-                    Exception(errorResponse?.message ?: "Login failed: HTTP ${response.status.value}"),
-                )
+                val errorMessage =
+                    parseErrorMessage(body) ?: "Login failed: HTTP ${response.status.value}"
+                return Result.failure(Exception(errorMessage))
             }
 
             val body = response.bodyAsText()
@@ -249,11 +247,36 @@ class ApiService(private val httpClient: HttpClient, private val preferences: Ap
         }
     }
 
-    suspend fun logout(): Result<Unit> = try {
-        val response = httpClient.post("$baseUrl/api/logout") {
-            authHeaders().forEach { (k, v) -> headers.append(k, v) }
-            contentType(ContentType.Application.Json)
+    /**
+     * Extracts a user-facing message from a failed-login body: the backend's
+     * own payload first, then an RFC 7807 Problem Details payload, then null.
+     */
+    private fun parseErrorMessage(body: String): String? {
+        try {
+            apiJson.decodeFromString<LoginApiResponse>(body).message?.let { return it }
+        } catch (_: kotlinx.serialization.SerializationException) {
+            // Not a LoginApiResponse body.
         }
+        try {
+            val problem = apiJson.decodeFromString<ApiProblemDetails>(body)
+            return problem.detail ?: problem.title
+        } catch (_: kotlinx.serialization.SerializationException) {
+            // Not a Problem Details body.
+        }
+        return null
+    }
+
+    suspend fun logout(): Result<Unit> = try {
+        // Go through authenticatedRequest so a stale access token is refreshed
+        // first — otherwise logout would 401 and the refresh token would never
+        // be revoked on the server.
+        val response =
+            authenticatedRequest {
+                httpClient.post("$baseUrl/api/logout") {
+                    authHeaders().forEach { (k, v) -> headers.append(k, v) }
+                    contentType(ContentType.Application.Json)
+                }
+            }
         if (!response.status.isSuccess()) {
             Result.failure(Exception("Logout failed: HTTP ${response.status.value}"))
         } else {
@@ -268,21 +291,37 @@ class ApiService(private val httpClient: HttpClient, private val preferences: Ap
 
     suspend fun loadFeatures(): Result<List<NarsFeature>> {
         return try {
-            val response =
-                authenticatedRequest {
-                    httpClient.get("$baseUrl/api/features") {
-                        authHeaders().forEach { (k, v) -> headers.append(k, v) }
+            val allFeatures = mutableListOf<NarsFeature>()
+            var skip = 0
+            var hasMore = true
+            while (hasMore) {
+                val response =
+                    authenticatedRequest {
+                        httpClient.get("$baseUrl/api/features") {
+                            authHeaders().forEach { (k, v) -> headers.append(k, v) }
+                            parameter("skip", skip)
+                            parameter("take", FEATURES_PAGE_SIZE)
+                        }
                     }
+                if (!response.status.isSuccess()) {
+                    val error = Exception("Load failed: HTTP ${response.status.value}")
+                    NarsLogger.e(TAG, "loadFeatures failed", error)
+                    return Result.failure(error)
                 }
-            if (!response.status.isSuccess()) {
-                val error = Exception("Load failed: HTTP ${response.status.value}")
-                NarsLogger.e(TAG, "loadFeatures failed", error)
-                return Result.failure(error)
+                val body = response.bodyAsText()
+                val apiResponse = body.ifBlank { null }?.let {
+                    apiJson.decodeFromString<ApiLoadFeaturesResponse>(it)
+                }
+                if (apiResponse == null) {
+                    hasMore = false
+                } else {
+                    val features = apiResponse.features
+                    allFeatures += features.mapNotNull { it.toNarsFeature() }
+                    skip += features.size
+                    hasMore = features.isNotEmpty() && apiResponse.count > skip
+                }
             }
-            val body = response.bodyAsText()
-            if (body.isBlank()) return Result.success(emptyList())
-            val apiResponse = apiJson.decodeFromString<ApiLoadFeaturesResponse>(body)
-            Result.success(apiResponse.features.mapNotNull { it.toNarsFeature() })
+            Result.success(allFeatures)
         } catch (e: CancellationException) {
             throw e
         } catch (e: kotlinx.serialization.SerializationException) {

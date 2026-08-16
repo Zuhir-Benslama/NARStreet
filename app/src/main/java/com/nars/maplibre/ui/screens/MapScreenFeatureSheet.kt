@@ -1,5 +1,6 @@
 package com.nars.maplibre.ui.screens
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -32,6 +33,8 @@ import com.nars.maplibre.data.model.NarsFeature
 import com.nars.maplibre.data.model.PhaseDefinition
 import com.nars.maplibre.ui.components.FeatureValidationModal
 import com.nars.maplibre.ui.theme.GlassBackground
+import com.nars.maplibre.ui.theme.TextPrimary
+import com.nars.maplibre.ui.theme.TextSecondary
 
 @Composable
 internal fun MapScreenBottomSheet(
@@ -70,6 +73,14 @@ private fun MapScreenFeatureSheet(
     onSaveEdits: () -> Unit,
     onCancelEdits: () -> Unit,
 ) {
+    // Back press dismisses the selection sheet (and aborts an in-progress edit).
+    BackHandler(enabled = selectedFeature != null) {
+        if (editingFeature?.id == selectedFeature?.id) {
+            onCancelEdits()
+        } else {
+            onDismissFeature()
+        }
+    }
     selectedFeature?.let { feature ->
         SelectedFeatureCard(
             feature = feature,
@@ -108,11 +119,15 @@ private fun SelectedFeatureCard(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Column(modifier = Modifier.weight(1f)) {
-                    Text(text = feature.properties.name ?: feature.type.value, fontSize = 14.sp)
+                    Text(
+                        text = feature.properties.name ?: feature.type.value,
+                        fontSize = 14.sp,
+                        color = TextPrimary,
+                    )
                     Text(
                         text = feature.properties.phase,
                         fontSize = 12.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        color = TextSecondary,
                     )
                 }
                 IconButton(onClick = onDismiss) {

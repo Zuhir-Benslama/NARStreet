@@ -14,8 +14,10 @@ object NarsLogger {
     private const val DEFAULT_TAG = "NARS"
 
     /**
-     * Enable/disable logging
-     * In production, automatically disabled
+     * Whether verbose/debug/info logging is enabled.
+     * Production builds keep these off (chatty, but harmless) while warnings,
+     * errors and failures are always logged — they are already sanitized and are
+     * essential for diagnosing production issues.
      */
     val isEnabled: Boolean = com.nars.maplibre.BuildConfig.DEBUG
 
@@ -41,24 +43,24 @@ object NarsLogger {
     }
 
     /**
-     * Warning logging - for potential issues
+     * Warning logging - for potential issues (also enabled in production)
      */
     fun w(tag: String = DEFAULT_TAG, message: String, throwable: Throwable? = null) {
-        if (isEnabled) log(Level.WARNING, tag, message, throwable)
+        log(Level.WARNING, tag, message, throwable)
     }
 
     /**
-     * Error logging - for errors and exceptions
+     * Error logging - for errors and exceptions (also enabled in production)
      */
     fun e(tag: String = DEFAULT_TAG, message: String, throwable: Throwable? = null) {
-        if (isEnabled) log(Level.ERROR, tag, message, throwable)
+        log(Level.ERROR, tag, message, throwable)
     }
 
     /**
-     * What a Terrible Failure - for critical errors
+     * What a Terrible Failure - for critical errors (also enabled in production)
      */
     fun wtf(tag: String = DEFAULT_TAG, message: String, throwable: Throwable? = null) {
-        if (isEnabled) log(Level.WTF, tag, message, throwable)
+        log(Level.WTF, tag, message, throwable)
     }
 
     private enum class Level {

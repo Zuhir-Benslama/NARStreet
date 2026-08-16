@@ -21,6 +21,9 @@ import androidx.compose.ui.unit.sp
 import com.nars.maplibre.R
 import com.nars.maplibre.data.model.FeatureProperties
 
+/** Option values for traffic/activity radio groups (persisted as strings). */
+private val TRAFFIC_LEVEL_OPTIONS = listOf("high", "medium", "low")
+
 @Composable
 fun RoadsValidationFields(
     props: FeatureProperties.RoadProperties,
@@ -29,14 +32,14 @@ fun RoadsValidationFields(
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         ValidationRadioGroup(
             label = stringResource(R.string.road_traffic),
-            options = listOf("high", "medium", "low"),
+            options = TRAFFIC_LEVEL_OPTIONS,
             selectedValue = props.roadTraffic,
             onValueChanged = { onPropsChanged(props.copy(roadTraffic = it)) },
         )
 
         ValidationRadioGroup(
             label = stringResource(R.string.trad_activity),
-            options = listOf("high", "medium", "low"),
+            options = TRAFFIC_LEVEL_OPTIONS,
             selectedValue = props.tradActivity,
             onValueChanged = { onPropsChanged(props.copy(tradActivity = it)) },
         )

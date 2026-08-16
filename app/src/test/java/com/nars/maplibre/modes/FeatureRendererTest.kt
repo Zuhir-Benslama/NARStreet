@@ -194,7 +194,6 @@ class FeatureRendererTest {
     @Test
     fun `line width constants have expected values`() {
         assertEquals(2, FeatureRenderer.STYLE_LINE_WIDTH_THIN)
-        assertEquals(3, FeatureRenderer.STYLE_LINE_WIDTH_MEDIUM)
         assertEquals(8, FeatureRenderer.STYLE_LINE_WIDTH_THICK)
     }
 }

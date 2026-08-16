@@ -27,22 +27,35 @@ class SessionManager(private val apiService: ApiService, private val appPreferen
 
     /**
      * Logs out locally and reports the server-side revocation outcome.
-     * Local state is always cleared (defensive); the returned Result lets
-     * callers distinguish "fully logged out" from "logged out locally but the
-     * server revocation failed".
+     * Local state is always cleared (defensive, even if the server call throws
+     * unexpectedly); the returned Result lets callers distinguish "fully logged
+     * out" from "logged out locally but the server revocation failed".
      */
+    @Suppress("TooGenericExceptionCaught")
     suspend fun logout(): Result<Unit> {
-        val result = apiService.logout()
+        val result =
+            try {
+                apiService.logout()
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                NarsLogger.w(TAG, "Server-side logout threw — local session still cleared", e)
+                Result.failure(e)
+            }
         result.onFailure { e ->
             NarsLogger.w(TAG, "Server-side logout failed — local session still cleared", e)
         }
+        clearLocalSession()
+        return result
+    }
+
+    private fun clearLocalSession() {
         appPreferences.authToken = null
         appPreferences.refreshToken = null
         appPreferences.user = null
         appPreferences.municipalityName = null
         apiService.setSessionToken(null)
         apiService.setRefreshToken(null)
-        return result
     }
 
     fun getUser() = appPreferences.user

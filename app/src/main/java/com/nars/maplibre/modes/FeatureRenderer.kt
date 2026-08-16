@@ -35,11 +35,10 @@ class FeatureRenderer(internal val map: MapLibreMap, val labelAndMarkerManager: 
         private const val TAG = "FeatureRenderer"
         private const val DEFAULT_FALLBACK_COLOR = "#8e44ad"
         private const val DEFAULT_MARKER_ICON_SIZE = 0.5f
-        private const val DEFAULT_CIRCLE_RADIUS_METERS = 50.0
+        internal const val DEFAULT_CIRCLE_RADIUS_METERS = 50.0
         private const val CIRCLE_FILL_OPACITY = 0f
 
         const val STYLE_LINE_WIDTH_THIN = 2
-        const val STYLE_LINE_WIDTH_MEDIUM = 3
         const val STYLE_LINE_WIDTH_THICK = 8
         const val STYLE_FILL_OPACITY_LIGHT = 0.20f
     }
@@ -120,10 +119,17 @@ class FeatureRenderer(internal val map: MapLibreMap, val labelAndMarkerManager: 
     private fun addCircleLayer(layerName: String, sourceName: String, style: FeatureStyle, geom: CircleGeometry) {
         val centerLng = geom.coordinates.getOrNull(0) ?: return
         val centerLat = geom.coordinates.getOrNull(1) ?: return
-        val radiusMeters = geom.coordinates.getOrNull(2)?.takeIf { it > 0 } ?: DEFAULT_CIRCLE_RADIUS_METERS
+        val radiusMeters = geom.coordinates.getOrNull(2)?.takeIf { it > 0 }
+        if (radiusMeters == null) {
+            NarsLogger.w(
+                TAG,
+                "Circle ${geom.coordinates} has no positive radius — " +
+                    "rendering with default ${DEFAULT_CIRCLE_RADIUS_METERS}m",
+            )
+        }
         val circleGeoJson =
             geometryConverterProvider()
-                .buildCircleGeoJson(centerLng, centerLat, radiusMeters)
+                .buildCircleGeoJson(centerLng, centerLat, radiusMeters ?: DEFAULT_CIRCLE_RADIUS_METERS)
 
         removeExistingSource(sourceName)
         map.style?.addSource(geoJsonSourceFactory(sourceName, circleGeoJson))
@@ -148,6 +154,8 @@ class FeatureRenderer(internal val map: MapLibreMap, val labelAndMarkerManager: 
         try {
             map.style?.getSource(sourceName)?.let { map.style?.removeSource(sourceName) }
         } catch (e: IllegalArgumentException) {
+            NarsLogger.w(TAG, "Error removing source $sourceName", e)
+        } catch (e: IllegalStateException) {
             NarsLogger.w(TAG, "Error removing source $sourceName", e)
         }
     }

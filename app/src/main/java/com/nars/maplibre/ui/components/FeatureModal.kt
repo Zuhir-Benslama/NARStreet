@@ -44,6 +44,8 @@ import com.nars.maplibre.data.model.PhaseDefinition
 import com.nars.maplibre.data.model.Phases
 import com.nars.maplibre.data.model.PointGeometry
 import com.nars.maplibre.ui.theme.GlassBackground
+import com.nars.maplibre.ui.theme.TextPrimary
+import com.nars.maplibre.ui.theme.TextSecondary
 import com.nars.maplibre.utils.formatDecimal
 import com.nars.maplibre.utils.validateFeatureProperties
 
@@ -55,9 +57,10 @@ fun FeatureValidationModal(
     onDismiss: () -> Unit,
 ) {
     // Re-lookup feature by ID at save time to avoid stale base if feature was
-    // updated externally (e.g. server push) while the dialog was open.
-    var props by remember { mutableStateOf(feature.properties) }
-    var validationErrors by remember { mutableStateOf<Map<String, Int>>(emptyMap()) }
+    // updated externally (e.g. server push) while the dialog was open. Keyed by
+    // the feature so opening the dialog for a different feature resets the form.
+    var props by remember(feature) { mutableStateOf(feature.properties) }
+    var validationErrors by remember(feature) { mutableStateOf<Map<String, Int>>(emptyMap()) }
 
     Dialog(onDismissRequest = onDismiss) {
         Card(
@@ -124,7 +127,7 @@ private fun FeatureModalHeader(phase: PhaseDefinition, onDismiss: () -> Unit) {
             },
             fontSize = 18.sp,
             fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onSurface,
+            color = TextPrimary,
         )
         IconButton(
             onClick = onDismiss,
@@ -133,7 +136,7 @@ private fun FeatureModalHeader(phase: PhaseDefinition, onDismiss: () -> Unit) {
             Icon(
                 Icons.Default.Close,
                 contentDescription = stringResource(R.string.map_close),
-                tint = MaterialTheme.colorScheme.onSurface,
+                tint = TextPrimary,
             )
         }
     }
@@ -146,7 +149,7 @@ private fun FeatureModalCoordinateInfo(feature: NarsFeature) {
         text = roadName,
         fontSize = 22.sp,
         fontWeight = FontWeight.Bold,
-        color = MaterialTheme.colorScheme.onSurface,
+        color = TextPrimary,
     )
 
     val coords = when (val geom = feature.geometry) {
@@ -178,7 +181,7 @@ private fun FeatureModalCoordinateInfo(feature: NarsFeature) {
         else -> null
     }
     coords?.let {
-        Text(text = it, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(text = it, fontSize = 12.sp, color = TextSecondary)
     }
 }
 

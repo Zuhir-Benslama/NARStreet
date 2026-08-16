@@ -6,6 +6,7 @@ import com.nars.maplibre.R
 import com.nars.maplibre.data.api.ApiService
 import com.nars.maplibre.data.api.SessionManager
 import com.nars.maplibre.data.model.NarsFeature
+import com.nars.maplibre.data.store.UndoAction
 import com.nars.maplibre.modes.NarsGeoman
 import com.nars.maplibre.utils.NarsLogger
 import com.nars.maplibre.utils.isPointNearFeature
@@ -131,6 +132,17 @@ class MapScreenHandlers(
         }
     }
 
+    /** Undoes the last action and refreshes the affected feature on the map. */
+    fun undo() {
+        val action = viewModel.undo() ?: return
+        val displayManager = narsGeoman?.displayManager
+        when (action) {
+            is UndoAction.Create -> displayManager?.removeFeature(action.feature.id)
+            is UndoAction.Delete -> displayManager?.updateFeatureOnMap(action.feature)
+            is UndoAction.Update -> displayManager?.updateFeatureOnMap(action.oldFeature)
+        }
+    }
+
     fun toggleEditing(currentEditEnabled: Boolean) {
         if (currentEditEnabled) {
             viewModel.toggleEditMode(false)
@@ -148,11 +160,13 @@ class MapScreenHandlers(
 
     fun saveFeature(feature: NarsFeature) {
         scope.launch {
-            val result = apiService.saveFeature(feature)
+            val result = retryOnTransientFailure { apiService.saveFeature(feature) }
             result.onSuccess { savedId ->
-                val updatedFeature = feature.copy(dbId = savedId)
-                viewModel.updateFeatureInPlace(updatedFeature)
-                narsGeoman?.displayManager?.updateFeatureOnMap(updatedFeature)
+                // Attach the backend id to the current store entry so any edits
+                // made while the save was in flight are not overwritten.
+                viewModel.updateFeatureInPlace(savedId, feature.id)
+                val current = viewModel.allFeatures.value.find { it.id == feature.id }
+                current?.let { narsGeoman?.displayManager?.updateFeatureOnMap(it) }
                 snackbar(context.getString(R.string.map_feature_saved))
             }
             result.onFailure { snackbar("${context.getString(R.string.map_save_failed)}: ${it.message}") }
@@ -162,7 +176,7 @@ class MapScreenHandlers(
     fun updateFeature(feature: NarsFeature) {
         scope.launch {
             val apiId = feature.dbId ?: feature.id
-            val result = apiService.updateFeature(apiId, feature)
+            val result = retryOnTransientFailure { apiService.updateFeature(apiId, feature) }
             result.onSuccess { snackbar(context.getString(R.string.map_feature_updated)) }
             result.onFailure { snackbar("${context.getString(R.string.map_update_failed)}: ${it.message}") }
         }
@@ -180,13 +194,35 @@ class MapScreenHandlers(
             return
         }
         scope.launch {
-            val result = apiService.deleteFeature(feature.dbId)
+            val result = retryOnTransientFailure { apiService.deleteFeature(feature.dbId) }
             result.onSuccess { snackbar(context.getString(R.string.map_feature_deleted)) }
             result.onFailure {
-                viewModel.restoreFeature(feature)
-                viewModel.clearDeleteUndo(feature.id)
-                narsGeoman?.displayManager?.addFeature(feature)
+                // Only roll back if the feature was not re-added meanwhile.
+                if (viewModel.allFeatures.value.none { it.id == feature.id }) {
+                    viewModel.restoreFeature(feature)
+                    viewModel.clearDeleteUndo(feature.id)
+                    narsGeoman?.displayManager?.addFeature(feature)
+                }
                 snackbar("${context.getString(R.string.map_delete_failed)}: ${it.message}")
+            }
+        }
+    }
+
+    /**
+     * Re-arms the interaction mode on a freshly created map. The drawing/edit
+     * flags live in the ViewModel and survive configuration changes, but the
+     * Geoman instance is rebuilt on the new map, so the active mode must be
+     * restarted once features are displayed. (A partially drawn shape cannot be
+     * reconstructed — only the mode itself is resumed.)
+     */
+    private fun replayInteractionMode() {
+        val geoman = narsGeoman ?: return
+        when {
+            viewModel.drawingEnabled.value -> geoman.startDrawing()
+            viewModel.editModeEnabled.value -> {
+                viewModel.selectedFeature.value?.let { feature ->
+                    geoman.startEditing(feature)
+                }
             }
         }
     }
@@ -209,6 +245,7 @@ class MapScreenHandlers(
             result.onSuccess { features ->
                 viewModel.addFeatures(features)
                 narsGeoman?.displayManager?.updateDisplayedFeatures(features)
+                replayInteractionMode()
                 val msg =
                     if (features.isEmpty()) {
                         context.getString(R.string.map_no_features)

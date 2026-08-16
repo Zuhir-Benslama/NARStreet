@@ -29,6 +29,7 @@ import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -402,7 +403,7 @@ class MapViewModelTest {
         val vm = createViewModel()
         val result = vm.undo()
 
-        assertTrue(result)
+        assertNotNull(result)
         assertEquals("Removed: Removed Road", vm.uiState.value.successMessage)
     }
 
@@ -422,7 +423,7 @@ class MapViewModelTest {
         val vm = createViewModel()
         val result = vm.undo()
 
-        assertTrue(result)
+        assertNotNull(result)
         assertEquals("Restored: Old Name", vm.uiState.value.successMessage)
     }
 
@@ -433,7 +434,7 @@ class MapViewModelTest {
 
         val result = vm.undo()
 
-        assertFalse(result)
+        assertNull(result)
         assertEquals("Nothing to undo", vm.uiState.value.errorMessage)
     }
 
@@ -452,7 +453,7 @@ class MapViewModelTest {
         val vm = createViewModel()
         val result = vm.undo()
 
-        assertTrue(result)
+        assertNotNull(result)
     }
 
     @Test
@@ -486,19 +487,20 @@ class MapViewModelTest {
 
         val vm = createViewModel()
 
-        assertTrue(vm.undo())
+        assertNotNull(vm.undo())
         assertEquals("Restored: Second", vm.uiState.value.successMessage)
 
-        assertTrue(vm.undo())
+        assertNotNull(vm.undo())
         assertEquals("Restored: First", vm.uiState.value.successMessage)
     }
 
     @Test
     fun `canUndo updates after adding a feature`() {
-        every { featureStore.canUndo } returns true
+        val undoState = MutableStateFlow(false)
+        every { featureStore.undoState } returns undoState
         val vm = createViewModel()
 
-        vm.addFeature(mockk(relaxed = true))
+        undoState.value = true
 
         assertTrue(vm.canUndo.value)
     }

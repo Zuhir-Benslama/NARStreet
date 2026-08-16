@@ -152,11 +152,21 @@ class GeomanEventHandler(
 
     internal fun handleGeometryChanged(featureData: FeatureData?) {
         val data = featureData ?: return
-        val geometry = extractGeometryFromFeatureData(data) ?: run {
-            NarsLogger.e(TAG, "Failed to extract geometry during edit — skipping update")
-            return
-        }
         val original = getEditingFeature() ?: return
+        // Circles are reported by Geoman as a polygon approximation during edit
+        // — reconstruct the CircleGeometry so the radius is not lost.
+        val geometry =
+            if (original.geometry is CircleGeometry) {
+                extractCircleGeometry(data) ?: run {
+                    NarsLogger.e(TAG, "Failed to extract circle geometry during edit — skipping update")
+                    return
+                }
+            } else {
+                extractGeometryFromFeatureData(data) ?: run {
+                    NarsLogger.e(TAG, "Failed to extract geometry during edit — skipping update")
+                    return
+                }
+            }
         val updated = original.copy(geometry = geometry)
         onFeatureUpdated(updated)
     }
