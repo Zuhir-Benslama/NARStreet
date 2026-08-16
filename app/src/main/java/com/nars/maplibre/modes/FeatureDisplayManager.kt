@@ -78,10 +78,9 @@ class FeatureDisplayManager(
         }
     }
 
-    private fun roadEndpointSignature(allFeatures: List<NarsFeature>): String =
-        allFeatures
-            .filter { it.properties.phase == Phases.ROADS_KEY }
-            .joinToString("|") { road -> "${road.id}:${road.geometry}:${road.properties.name}" }
+    private fun roadEndpointSignature(allFeatures: List<NarsFeature>): String = allFeatures
+        .filter { it.properties.phase == Phases.ROADS_KEY }
+        .joinToString("|") { road -> "${road.id}:${road.geometry}:${road.properties.name}" }
 
     fun updateFeatureOnMap(feature: NarsFeature) {
         val sourceName = FeatureLayerNames.sourceName(feature.id)
@@ -104,8 +103,8 @@ class FeatureDisplayManager(
                 centerLng = geom.coordinates.getOrNull(0) ?: 0.0,
                 centerLat = geom.coordinates.getOrNull(1) ?: 0.0,
                 radiusMeters =
-                    geom.coordinates.getOrNull(2)?.takeIf { it > 0 }
-                        ?: FeatureRenderer.DEFAULT_CIRCLE_RADIUS_METERS,
+                geom.coordinates.getOrNull(2)?.takeIf { it > 0 }
+                    ?: FeatureRenderer.DEFAULT_CIRCLE_RADIUS_METERS,
             )
 
         is PolygonGeometry -> {

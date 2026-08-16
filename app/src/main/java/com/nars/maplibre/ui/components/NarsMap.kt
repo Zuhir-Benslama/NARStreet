@@ -105,20 +105,21 @@ fun NarsMap(
  * the map is released/recreated in step with the host.
  */
 @Composable
-private fun MapViewLifecycleEffect(
-    lifecycleOwner: LifecycleOwner,
-    mapView: MapView,
-    mapViewBundle: Bundle,
-) {
+private fun MapViewLifecycleEffect(lifecycleOwner: LifecycleOwner, mapView: MapView, mapViewBundle: Bundle) {
     DisposableEffect(lifecycleOwner, mapView) {
         val observer =
             LifecycleEventObserver { _, event ->
                 when (event) {
                     Lifecycle.Event.ON_CREATE -> mapView.onCreate(mapViewBundle)
+
                     Lifecycle.Event.ON_START -> mapView.onStart()
+
                     Lifecycle.Event.ON_RESUME -> mapView.onResume()
+
                     Lifecycle.Event.ON_PAUSE -> mapView.onPause()
+
                     Lifecycle.Event.ON_STOP -> mapView.onStop()
+
                     Lifecycle.Event.ON_DESTROY -> {
                         mapView.onSaveInstanceState(mapViewBundle)
                         mapView.onDestroy()
@@ -144,11 +145,7 @@ private fun MapViewLifecycleEffect(
  * duplicate style load at startup).
  */
 @Composable
-private fun BaseLayerSyncEffect(
-    mapView: MapView,
-    baseLayer: BaseLayerType,
-    onStyleLoaded: (() -> Unit)?,
-) {
+private fun BaseLayerSyncEffect(mapView: MapView, baseLayer: BaseLayerType, onStyleLoaded: (() -> Unit)?) {
     var appliedLayer by remember { mutableStateOf(baseLayer) }
     LaunchedEffect(baseLayer) {
         if (appliedLayer == baseLayer) return@LaunchedEffect

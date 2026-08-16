@@ -213,11 +213,7 @@ data class ApiSaveFeatureResponse(val success: Boolean = true, val id: String? =
  * a bare HTTP status code.
  */
 @Serializable
-data class ApiProblemDetails(
-    val title: String? = null,
-    val status: Int? = null,
-    val detail: String? = null,
-)
+data class ApiProblemDetails(val title: String? = null, val status: Int? = null, val detail: String? = null)
 
 // ─── Feature ↔ API DTO conversion ─────────────────────────────────────────────
 
@@ -280,9 +276,7 @@ fun NarsFeature.toApiSaveRequest(): ApiSaveFeatureRequest {
     val apiLayer =
         when (val props = properties) {
             is FeatureProperties.RoadProperties -> props.roadTypeKey ?: "street"
-
             is FeatureProperties.HouseEntranceProperties -> props.entranceTypeKey ?: "main_entrance"
-
             is FeatureProperties.NamingPanelProperties -> "naming_panel"
         }
     return ApiSaveFeatureRequest(
