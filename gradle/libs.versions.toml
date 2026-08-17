@@ -22,7 +22,7 @@ compose-bom = "2026.06.01"
 compose-material3 = "1.4.0"
 
 # MapLibre
-maplibre-sdk = "13.4.1"
+maplibre-sdk = "13.5.0"
 
 # Koin (DI)
 koin = "4.2.2"
