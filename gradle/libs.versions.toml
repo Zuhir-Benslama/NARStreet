@@ -9,7 +9,7 @@ kotlinx-coroutines = "1.11.0"
 
 # AndroidX Core
 androidx-core-ktx = "1.19.0"
-androidx-appcompat = "1.7.1"
+androidx-appcompat = "1.8.0"
 androidx-activity = "1.13.0"
 androidx-lifecycle = "2.11.0"
 androidx-navigation = "2.9.8"
