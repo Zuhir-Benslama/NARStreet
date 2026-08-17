@@ -16,10 +16,10 @@ jobs:
     env:
       GEOMAN_DIR: ${{ github.workspace }}/maplibre-geoman-android/app
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Checkout maplibre-geoman-android
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           repository: Zuhir-Benslama/maplibre-geoman-android
           ref: main
@@ -104,10 +104,10 @@ jobs:
     env:
       GEOMAN_DIR: ${{ github.workspace }}/maplibre-geoman-android/app
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Checkout maplibre-geoman-android
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           repository: Zuhir-Benslama/maplibre-geoman-android
           ref: main
