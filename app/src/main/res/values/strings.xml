@@ -96,7 +96,6 @@
     <string name="map_load_failed">Failed to load features</string>
     <string name="map_delete_failed">Failed to delete from backend</string>
     <string name="map_phase_changed">Phase</string>
-    <string name="map_cannot_advance">Cannot advance: requirements not met</string>
     <string name="map_phase_badge_label">Phase %1$s</string>
     <string name="alert_at_least_one_road">At least one road is required before advancing</string>
     <string name="alert_at_least_one_entrance">At least one house entrance is required before advancing</string>

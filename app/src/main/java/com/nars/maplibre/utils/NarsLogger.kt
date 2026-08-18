@@ -74,46 +74,46 @@ object NarsLogger {
 
     private fun log(level: Level, tag: String, message: String, throwable: Throwable?) {
         val safeMessage = sanitizeMessage(message)
-        val safeThrowable = throwable?.let(::sanitizeThrowable)
         val tree = Timber.tag(tag)
-        when (level) {
-            Level.VERBOSE ->
-                if (safeThrowable != null) tree.v(safeThrowable, safeMessage) else tree.v(safeMessage)
-
-            Level.DEBUG ->
-                if (safeThrowable != null) tree.d(safeThrowable, safeMessage) else tree.d(safeMessage)
-
-            Level.INFO ->
-                if (safeThrowable != null) tree.i(safeThrowable, safeMessage) else tree.i(safeMessage)
-
-            Level.WARNING ->
-                if (safeThrowable != null) tree.w(safeThrowable, safeMessage) else tree.w(safeMessage)
-
-            Level.ERROR ->
-                if (safeThrowable != null) tree.e(safeThrowable, safeMessage) else tree.e(safeMessage)
-
-            Level.WTF ->
-                if (safeThrowable != null) tree.wtf(safeThrowable, safeMessage) else tree.wtf(safeMessage)
+        if (throwable != null) {
+            val logThrowable = sanitizeThrowable(throwable, safeMessage)
+            when (level) {
+                Level.VERBOSE -> tree.v(logThrowable)
+                Level.DEBUG -> tree.d(logThrowable)
+                Level.INFO -> tree.i(logThrowable)
+                Level.WARNING -> tree.w(logThrowable)
+                Level.ERROR -> tree.e(logThrowable)
+                Level.WTF -> tree.wtf(logThrowable)
+            }
+        } else {
+            when (level) {
+                Level.VERBOSE -> tree.v(safeMessage)
+                Level.DEBUG -> tree.d(safeMessage)
+                Level.INFO -> tree.i(safeMessage)
+                Level.WARNING -> tree.w(safeMessage)
+                Level.ERROR -> tree.e(safeMessage)
+                Level.WTF -> tree.wtf(safeMessage)
+            }
         }
     }
 
     /**
-     * Returns the throwable with its message sanitized. When the raw message
-     * contains sensitive data (e.g. a SerializationException embedding a raw
-     * JSON body) a wrapper preserving the original stack trace is returned,
-     * with the original kept as the cause for full diagnostics in a debugger.
+     * Returns a throwable whose message is [displayMessage] (already sanitized
+     * by the caller) and whose cause is the original [throwable] with any
+     * sensitive data in its own message redacted.
      */
-    private fun sanitizeThrowable(throwable: Throwable): Throwable {
-        val rawMessage = throwable.message ?: return throwable
-        val safeMessage = sanitizeMessage(rawMessage)
-        return if (safeMessage == rawMessage) {
-            throwable
-        } else {
-            RuntimeException(safeMessage).also {
+    private fun sanitizeThrowable(throwable: Throwable, displayMessage: String): Throwable {
+        val rawMessage = throwable.message
+        val safeCause = rawMessage?.let(::sanitizeMessage)
+        val cause = if (safeCause != null && safeCause != rawMessage) {
+            RuntimeException(safeCause).also {
                 it.setStackTrace(throwable.stackTrace)
-                it.initCause(throwable)
+                it.initCause(throwable.cause)
             }
+        } else {
+            throwable
         }
+        return RuntimeException(displayMessage, cause)
     }
 
     /**
