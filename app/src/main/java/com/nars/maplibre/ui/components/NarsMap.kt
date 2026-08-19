@@ -114,18 +114,23 @@ private fun MapViewLifecycleEffect(lifecycleOwner: LifecycleOwner, mapView: MapV
                     Lifecycle.Event.ON_CREATE -> {
                         mapView.onCreate(mapViewBundle)
                     }
+
                     Lifecycle.Event.ON_START -> {
                         mapView.onStart()
                     }
+
                     Lifecycle.Event.ON_RESUME -> {
                         mapView.onResume()
                     }
+
                     Lifecycle.Event.ON_PAUSE -> {
                         mapView.onPause()
                     }
+
                     Lifecycle.Event.ON_STOP -> {
                         mapView.onStop()
                     }
+
                     Lifecycle.Event.ON_DESTROY -> {
                         if (!destroyed) {
                             destroyed = true
@@ -133,6 +138,7 @@ private fun MapViewLifecycleEffect(lifecycleOwner: LifecycleOwner, mapView: MapV
                             mapView.onDestroy()
                         }
                     }
+
                     else -> {
                         Unit
                     }

@@ -262,11 +262,13 @@ private fun JsonObjectBuilder.addPropertyKeys(properties: FeatureProperties) {
         is FeatureProperties.RoadProperties -> {
             properties.roadTypeKey?.let { put("roadTypeKey", it) }
         }
+
         is FeatureProperties.HouseEntranceProperties -> {
             properties.entranceTypeKey?.let { put("entranceTypeKey", it) }
             properties.roadDbId?.let { put("roadDbId", it) }
             properties.side?.let { put("side", it) }
         }
+
         is FeatureProperties.NamingPanelProperties -> {
             Unit
         }

@@ -33,6 +33,7 @@ class GeomanEventHandler(
     }
 
     @Volatile private var currentPhase: PhaseDefinition? = null
+
     @Volatile private var destroyed = false
 
     private val editingLock = Any()
