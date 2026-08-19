@@ -221,6 +221,7 @@ class MapScreenHandlers(
             viewModel.drawingEnabled.value -> {
                 geoman.startDrawing()
             }
+
             viewModel.editModeEnabled.value -> {
                 viewModel.selectedFeature.value?.let { feature ->
                     geoman.startEditing(feature)

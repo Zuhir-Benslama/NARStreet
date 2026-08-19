@@ -109,10 +109,12 @@ class FeatureDisplayManager(
                     ?: FeatureRenderer.DEFAULT_CIRCLE_RADIUS_METERS,
             )
         }
+
         is PolygonGeometry -> {
             updatePolygonEdgesSource(feature, geom)
             geometryConverter.buildFeatureGeoJson(geometryConverter.convertToGeoJson(feature))
         }
+
         else -> {
             geometryConverter.buildFeatureGeoJson(geometryConverter.convertToGeoJson(feature))
         }
