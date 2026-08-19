@@ -510,10 +510,12 @@ class ApiServiceSessionTest {
                         respond(content = "", status = HttpStatusCode.Unauthorized)
                     }
 
-                    else -> respond(
-                        content = """{"features": [], "count": 0, "skip": 0, "take": 100}""",
-                        status = HttpStatusCode.OK,
-                    )
+                    else -> {
+                        respond(
+                            content = """{"features": [], "count": 0, "skip": 0, "take": 100}""",
+                            status = HttpStatusCode.OK,
+                        )
+                    }
                 }
             }
         val client =

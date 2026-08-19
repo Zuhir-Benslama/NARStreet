@@ -17,6 +17,7 @@ import com.nars.maplibre.data.model.PhaseDefinition
 import com.nars.maplibre.data.model.Phases
 import com.nars.maplibre.utils.NarsLogger
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 
 class GeomanEventHandler(
@@ -28,13 +29,16 @@ class GeomanEventHandler(
 ) {
     companion object {
         private const val TAG = "GeomanEventHandler"
+        internal const val SHAPE_TYPE_CIRCLE = "circle"
     }
 
     @Volatile private var currentPhase: PhaseDefinition? = null
+    @Volatile private var destroyed = false
 
     private val editingLock = Any()
     private var editingFeatureId: String? = null
     private var editingFeature: NarsFeature? = null
+    private var eventJob: Job? = null
 
     fun setCurrentPhase(phase: PhaseDefinition) {
         currentPhase = phase
@@ -52,8 +56,9 @@ class GeomanEventHandler(
     fun getEditingFeature(): NarsFeature? = synchronized(editingLock) { editingFeature }
 
     fun setupEventListeners() {
-        scope.launch {
+        eventJob = scope.launch {
             geoman.events.events.collect { event ->
+                if (destroyed) return@collect
                 when (event) {
                     is GmMapEvent.Loaded -> {
                         NarsLogger.d(TAG, "Geoman loaded")
@@ -101,7 +106,7 @@ class GeomanEventHandler(
     internal fun createNarsFeatureFromFeatureData(featureData: FeatureData?, phase: PhaseDefinition): NarsFeature? {
         val geometry =
             if (featureData != null) {
-                if (featureData.properties["shapeType"] == "circle" ||
+                if (featureData.properties["shapeType"] == SHAPE_TYPE_CIRCLE ||
                     featureData.properties["radius"] != null
                 ) {
                     extractCircleGeometry(featureData)
@@ -217,6 +222,12 @@ class GeomanEventHandler(
 
     fun extractGeometryFromFeatureData(featureData: FeatureData): Geometry? =
         extractGeometryFromGeoJson(featureData.geometry)
+
+    fun destroy() {
+        destroyed = true
+        eventJob?.cancel()
+        eventJob = null
+    }
 
     internal fun getFeatureTypeFromPhase(phase: PhaseDefinition): NarsFeatureType = when (phase.key) {
         Phases.ROADS_KEY -> NarsFeatureType.ROAD

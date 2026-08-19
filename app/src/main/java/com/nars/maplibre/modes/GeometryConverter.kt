@@ -40,29 +40,30 @@ class GeometryConverter {
         ): com.nars.maplibre.data.model.Geometry? {
             if (geometry == null) return null
             return when (geometry) {
-                is Point ->
+                is Point -> {
                     PointGeometry(
                         coordinates = listOf(
                             geometry.coordinates.getOrNull(0) ?: 0.0,
                             geometry.coordinates.getOrNull(1) ?: 0.0,
                         ),
                     )
-
-                is LineString -> LineStringGeometry(coordinates = geometry.coordinates.flatMap { listOf(it[0], it[1]) })
-
+                }
+                is LineString -> {
+                    LineStringGeometry(coordinates = geometry.coordinates.flatMap { listOf(it[0], it[1]) })
+                }
                 is Polygon -> {
                     val ring = geometry.coordinates.firstOrNull() ?: return null
                     PolygonGeometry(coordinates = ring.flatMap { listOf(it[0], it[1]) })
                 }
-
                 is MultiPolygon -> {
                     // Take the exterior ring of the first polygon only —
                     // flattening all rings would connect them with bogus edges.
                     val ring = geometry.coordinates.firstOrNull()?.firstOrNull() ?: return null
                     PolygonGeometry(coordinates = ring.flatMap { listOf(it[0], it[1]) })
                 }
-
-                else -> null
+                else -> {
+                    null
+                }
             }
         }
     }

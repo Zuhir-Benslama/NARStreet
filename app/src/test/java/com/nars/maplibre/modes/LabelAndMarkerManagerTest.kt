@@ -1,11 +1,9 @@
 package com.nars.maplibre.modes
 
 import com.nars.maplibre.data.model.FeatureProperties
-import com.nars.maplibre.data.model.LineStringGeometry
 import com.nars.maplibre.data.model.NarsFeature
 import com.nars.maplibre.data.model.NarsFeatureType
 import com.nars.maplibre.data.model.PointGeometry
-import com.nars.maplibre.data.model.PolygonGeometry
 import io.mockk.mockk
 import io.mockk.verify
 import org.junit.Before
@@ -26,13 +24,13 @@ class LabelAndMarkerManagerTest {
     @Test
     fun `addLabelLayer with null text does nothing`() {
         manager.addLabelLayer("layer", "source", null)
-        verify(exactly = 0) { map.style?.addLayer(any<Layer>()) }
+        verify(exactly = 0) { map.style?.addLayer(any()) }
     }
 
     @Test
     fun `addLabelLayer with blank text does nothing`() {
         manager.addLabelLayer("layer", "source", "")
-        verify(exactly = 0) { map.style?.addLayer(any<Layer>()) }
+        verify(exactly = 0) { map.style?.addLayer(any()) }
     }
 
     @Test

@@ -7,6 +7,9 @@ import com.nars.maplibre.data.model.NarsFeatureType
 import com.nars.maplibre.data.model.Phases
 import com.nars.maplibre.data.model.PointGeometry
 import com.nars.maplibre.data.model.PolygonGeometry
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
@@ -92,9 +95,12 @@ class GeometryConverterTest {
         val result = converter.buildPolygonEdgesGeoJson(listOf(3.0, 36.0, 3.01, 36.0, 3.005, 36.01))
 
         assertNotNull(result)
-        assertTrue(result.startsWith("{"))
-        assertTrue(result.contains("LineString"))
-        assertTrue(result.contains("Feature"))
+        val json = Json.parseToJsonElement(result).jsonObject
+        assertEquals("Feature", json["type"]?.jsonPrimitive?.content)
+        val geometry = json["geometry"]?.jsonObject
+        assertNotNull(geometry)
+        assertEquals("LineString", geometry?.get("type")?.jsonPrimitive?.content)
+        assertNotNull(geometry?.get("coordinates"))
     }
 
     @Test
@@ -102,8 +108,22 @@ class GeometryConverterTest {
         val result = converter.buildCircleGeoJson(3.0, 36.0, 50.0)
 
         assertNotNull(result)
-        assertTrue(result.startsWith("{"))
-        assertTrue(result.contains("Polygon"))
-        assertTrue(result.contains("Feature"))
+        val json = Json.parseToJsonElement(result).jsonObject
+        assertEquals("Feature", json["type"]?.jsonPrimitive?.content)
+        val geometry = json["geometry"]?.jsonObject
+        assertNotNull(geometry)
+        assertEquals("Polygon", geometry?.get("type")?.jsonPrimitive?.content)
+        assertNotNull(geometry?.get("coordinates"))
+    }
+
+    @Test
+    fun `buildCircleGeoJson produces closed ring`() {
+        val result = converter.buildCircleGeoJson(3.0, 36.0, 50.0)
+        val json = Json.parseToJsonElement(result).jsonObject
+        val geometry = json["geometry"]?.jsonObject
+        assertNotNull(geometry)
+        assertEquals("Polygon", geometry?.get("type")?.jsonPrimitive?.content)
+        val coords = geometry?.get("coordinates")
+        assertNotNull(coords)
     }
 }

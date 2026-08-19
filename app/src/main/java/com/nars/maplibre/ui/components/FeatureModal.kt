@@ -178,7 +178,9 @@ private fun FeatureModalCoordinateInfo(feature: NarsFeature) {
             }
         }
 
-        else -> null
+        else -> {
+            null
+        }
     }
     coords?.let {
         Text(text = it, fontSize = 12.sp, color = TextSecondary)

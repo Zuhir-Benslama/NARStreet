@@ -45,6 +45,7 @@ material = "1.14.0"
 # Testing
 junit = "4.13.2"
 mockk = "1.14.11"
+androidx-test-espresso = "3.6.1"
 
 [libraries]
 # Kotlin
@@ -101,6 +102,7 @@ kotlinx-coroutines-test = { group = "org.jetbrains.kotlinx", name = "kotlinx-cor
 androidx-test-ext-junit = { group = "androidx.test.ext", name = "junit", version.ref = "androidx-test-ext" }
 mockk = { group = "io.mockk", name = "mockk", version.ref = "mockk" }
 mockk-android = { group = "io.mockk", name = "mockk-android", version.ref = "mockk" }
+androidx-test-espresso-core = { group = "androidx.test.espresso", name = "espresso-core", version.ref = "androidx-test-espresso" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

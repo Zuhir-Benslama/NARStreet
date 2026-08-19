@@ -66,8 +66,10 @@ class FeatureDisplayManager(
         val toAdd = filtered.filter { it.id !in displayedFeatureIds }
         toAdd.forEach { addFeature(it) }
 
-        displayedFeatureIds.retainAll(newIds)
-        displayedFeatureIds.addAll(newIds.filterNot { it in displayedFeatureIds })
+        synchronized(displayedFeatureIds) {
+            displayedFeatureIds.retainAll(newIds)
+            displayedFeatureIds.addAll(newIds.filterNot { it in displayedFeatureIds })
+        }
 
         if (currentPhaseKey == Phases.ROADS_KEY) {
             val signature = roadEndpointSignature(allFeatures)
@@ -98,7 +100,7 @@ class FeatureDisplayManager(
     private fun buildUpdatedGeoJson(feature: NarsFeature): String = when (val geom = feature.geometry) {
         // The circle is stored as a Point for Geoman but must render as a
         // polygon ring — rebuild it so the circle does not vanish on update.
-        is CircleGeometry ->
+        is CircleGeometry -> {
             geometryConverter.buildCircleGeoJson(
                 centerLng = geom.coordinates.getOrNull(0) ?: 0.0,
                 centerLat = geom.coordinates.getOrNull(1) ?: 0.0,
@@ -106,13 +108,14 @@ class FeatureDisplayManager(
                 geom.coordinates.getOrNull(2)?.takeIf { it > 0 }
                     ?: FeatureRenderer.DEFAULT_CIRCLE_RADIUS_METERS,
             )
-
+        }
         is PolygonGeometry -> {
             updatePolygonEdgesSource(feature, geom)
             geometryConverter.buildFeatureGeoJson(geometryConverter.convertToGeoJson(feature))
         }
-
-        else -> geometryConverter.buildFeatureGeoJson(geometryConverter.convertToGeoJson(feature))
+        else -> {
+            geometryConverter.buildFeatureGeoJson(geometryConverter.convertToGeoJson(feature))
+        }
     }
 
     private fun updatePolygonEdgesSource(feature: NarsFeature, geom: PolygonGeometry) {
