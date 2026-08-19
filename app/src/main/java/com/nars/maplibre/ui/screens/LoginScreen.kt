@@ -29,6 +29,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -60,10 +61,10 @@ private const val FOCUS_LABEL_ALPHA = 0.85f
 @Composable
 fun LoginScreen(onLoginSuccess: () -> Unit, modifier: Modifier = Modifier) {
     val scope = rememberCoroutineScope()
-    var username by remember { mutableStateOf("") }
-    var password by remember { mutableStateOf("") }
-    var isLoading by remember { mutableStateOf(false) }
-    var errorMessage by remember { mutableStateOf<String?>(null) }
+    var username by rememberSaveable { mutableStateOf("") }
+    var password by rememberSaveable { mutableStateOf("") }
+    var isLoading by rememberSaveable { mutableStateOf(false) }
+    var errorMessage by rememberSaveable { mutableStateOf<String?>(null) }
 
     val sessionManager: SessionManager = koinInject()
 

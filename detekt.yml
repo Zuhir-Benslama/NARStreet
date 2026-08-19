@@ -7,6 +7,14 @@ naming:
       - "androidx.compose.runtime.Composable"
   MatchingDeclarationName:
     active: true
+  MemberNameEqualsClassName:
+    active: true
+  TopLevelPropertyNaming:
+    active: true
+    constantPattern: "[A-Za-z][_A-Za-z0-9]*"
+    propertyPattern: "[A-Za-z][_A-Za-z0-9]*"
+  BooleanPropertyNaming:
+    active: true
 
 style:
   MagicNumber:
@@ -45,6 +53,15 @@ style:
     active: true
     max: 3
   UnusedImport:
+    active: true
+  WildcardImport:
+    active: true
+    excludes:
+      - "**/test/**"
+      - "**/androidTest/**"
+  BracesOnIfStatements:
+    active: true
+  BracesOnWhenStatements:
     active: true
 
 complexity:

@@ -259,7 +259,9 @@ private fun JsonObjectBuilder.addGeometryPayload(geometry: Geometry) {
 
 private fun JsonObjectBuilder.addPropertyKeys(properties: FeatureProperties) {
     when (properties) {
-        is FeatureProperties.RoadProperties -> properties.roadTypeKey?.let { put("roadTypeKey", it) }
+        is FeatureProperties.RoadProperties -> {
+            properties.roadTypeKey?.let { put("roadTypeKey", it) }
+        }
 
         is FeatureProperties.HouseEntranceProperties -> {
             properties.entranceTypeKey?.let { put("entranceTypeKey", it) }
@@ -267,7 +269,9 @@ private fun JsonObjectBuilder.addPropertyKeys(properties: FeatureProperties) {
             properties.side?.let { put("side", it) }
         }
 
-        is FeatureProperties.NamingPanelProperties -> Unit
+        is FeatureProperties.NamingPanelProperties -> {
+            Unit
+        }
     }
 }
 

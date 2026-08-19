@@ -99,6 +99,18 @@ class FeatureStore : FeatureStoreInterface {
         }
     }
 
+    override fun updateFeatureWithUndo(featureId: String, updatedFeature: NarsFeature): NarsFeature? = lock.withLock {
+        val previous = _allFeatures.value.find { it.id == featureId } ?: return@withLock null
+        if (previous == updatedFeature) return@withLock null
+        _allFeatures.value = _allFeatures.value.map { if (it.id == featureId) updatedFeature else it }
+        rebuildPhaseMap(_allFeatures.value)
+        if (_selectedFeature.value?.id == featureId) {
+            _selectedFeature.value = updatedFeature
+        }
+        undoManager.addUndoAction(UndoAction.Update(oldFeature = previous, newFeature = updatedFeature))
+        previous
+    }
+
     override fun removeFeature(featureId: String) = lock.withLock {
         withPhaseMap { map ->
             val iterator = map.entries.iterator()
@@ -119,15 +131,19 @@ class FeatureStore : FeatureStoreInterface {
         }
     }
 
-    override fun getFeaturesByPhase(phaseKey: String): List<NarsFeature> =
+    override fun getFeaturesByPhase(phaseKey: String): List<NarsFeature> = lock.withLock {
         _featuresByPhase.value[phaseKey] ?: emptyList()
+    }
 
-    override fun getCurrentPhaseFeatures(): List<NarsFeature> =
-        currentPhase.value?.let { getFeaturesByPhase(it.key) } ?: emptyList()
+    override fun getCurrentPhaseFeatures(): List<NarsFeature> = lock.withLock {
+        currentPhase.value?.let { _featuresByPhase.value[it.key] } ?: emptyList()
+    }
 
-    override fun getFeatureById(featureId: String): NarsFeature? = _allFeatures.value.find { it.id == featureId }
+    override fun getFeatureById(featureId: String): NarsFeature? = lock.withLock {
+        _allFeatures.value.find { it.id == featureId }
+    }
 
-    override fun selectFeature(feature: NarsFeature?) {
+    override fun selectFeature(feature: NarsFeature?) = lock.withLock {
         _selectedFeature.value = feature
     }
 
@@ -145,13 +161,17 @@ class FeatureStore : FeatureStoreInterface {
         _allFeatures.value = _allFeatures.value.filter { it.properties.phase != phaseKey }
     }
 
-    override fun getFeatureCounts(): Map<String, Int> = _featuresByPhase.value.mapValues { it.value.size }
+    override fun getFeatureCounts(): Map<String, Int> = lock.withLock {
+        _featuresByPhase.value.mapValues { it.value.size }
+    }
 
-    override fun setReferenceRoad(dbId: String?) {
+    override fun setReferenceRoad(dbId: String?) = lock.withLock {
         _referenceRoadDbId.value = dbId
     }
 
-    override fun getAllRoads(): List<NarsFeature> = _featuresByPhase.value[Phases.ROADS_KEY] ?: emptyList()
+    override fun getAllRoads(): List<NarsFeature> = lock.withLock {
+        _featuresByPhase.value[Phases.ROADS_KEY] ?: emptyList()
+    }
 
     override val canUndo: Boolean get() = undoManager.canUndo
 

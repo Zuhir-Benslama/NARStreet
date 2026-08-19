@@ -27,6 +27,14 @@ interface FeatureStoreInterface {
 
     fun updateFeature(featureId: String, updatedFeature: NarsFeature)
 
+    /**
+     * Atomically reads the current feature, updates it, and records an undo
+     * action — all under a single lock acquisition. Returns the previous
+     * feature if it differed from the update (null means nothing changed or
+     * the feature was not found).
+     */
+    fun updateFeatureWithUndo(featureId: String, updatedFeature: NarsFeature): NarsFeature?
+
     fun removeFeature(featureId: String)
 
     fun getFeaturesByPhase(phaseKey: String): List<NarsFeature>

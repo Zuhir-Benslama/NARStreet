@@ -222,6 +222,7 @@ class NarsGeoman internal constructor(
             if (destroyed) return
             destroyed = true
         }
+        eventHandler.destroy()
         stopDrawing()
         stopEditing()
         geoman.destroy()
@@ -232,7 +233,7 @@ class NarsGeoman internal constructor(
 /**
  * Callbacks for feature lifecycle events from [NarsGeoman].
  */
-data class FeatureCallbacks(
+class FeatureCallbacks(
     val onCreated: (NarsFeature) -> Unit,
     val onUpdated: (NarsFeature) -> Unit,
     val onDeleted: (String) -> Unit,

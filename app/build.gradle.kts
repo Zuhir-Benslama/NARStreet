@@ -41,11 +41,14 @@ android {
         }
 
         // Build config fields from local.properties
+        fun String.escapeBuildConfigString(): String =
+            replace("\\", "\\\\").replace("\"", "\\\"")
+
         val apiUrl = localProperties.getProperty("NARS_API_BASE_URL", "")
-        buildConfigField("String", "API_BASE_URL", "\"$apiUrl\"")
+        buildConfigField("String", "API_BASE_URL", "\"${apiUrl.escapeBuildConfigString()}\"")
 
         val sslCertHashes = localProperties.getProperty("SSL_CERT_HASHES", "")
-        buildConfigField("String", "SSL_CERT_HASHES", "\"$sslCertHashes\"")
+        buildConfigField("String", "SSL_CERT_HASHES", "\"${sslCertHashes.escapeBuildConfigString()}\"")
 
         if (apiUrl.isBlank()) {
             val isReleaseBuild = gradle.startParameter.taskNames.any {
@@ -60,16 +63,16 @@ android {
         }
 
         val tileSatellite = localProperties.getProperty("TILE_SATELLITE", "")
-        buildConfigField("String", "TILE_SATELLITE", "\"$tileSatellite\"")
+        buildConfigField("String", "TILE_SATELLITE", "\"${tileSatellite.escapeBuildConfigString()}\"")
 
         val tileStreet = localProperties.getProperty("TILE_STREET", "")
-        buildConfigField("String", "TILE_STREET", "\"$tileStreet\"")
+        buildConfigField("String", "TILE_STREET", "\"${tileStreet.escapeBuildConfigString()}\"")
 
         val tileLight = localProperties.getProperty("TILE_LIGHT", "")
-        buildConfigField("String", "TILE_LIGHT", "\"$tileLight\"")
+        buildConfigField("String", "TILE_LIGHT", "\"${tileLight.escapeBuildConfigString()}\"")
 
         val tileDark = localProperties.getProperty("TILE_DARK", "")
-        buildConfigField("String", "TILE_DARK", "\"$tileDark\"")
+        buildConfigField("String", "TILE_DARK", "\"${tileDark.escapeBuildConfigString()}\"")
     }
 
     buildTypes {
@@ -138,19 +141,19 @@ tasks.register<JacocoReport>("jacocoTestReport") {
     )
     classDirectories.setFrom(
         files(
-            fileTree("${project.buildDir}/intermediates/javac/debug/compileDebugJavaWithJavac/classes") {
+            fileTree(project.layout.buildDirectory.dir("intermediates/javac/debug/compileDebugJavaWithJavac/classes").get().asFile) {
                 exclude("**/R.class", "**/R\$*.class", "**/BuildConfig.*", "**/Manifest*.*")
                 exclude(untestableInJvm)
             },
-            fileTree("${project.buildDir}/intermediates/built_in_kotlinc/debug/compileDebugKotlin/classes") {
+            fileTree(project.layout.buildDirectory.dir("intermediates/built_in_kotlinc/debug/compileDebugKotlin/classes").get().asFile) {
                 exclude("**/R.class", "**/R\$*.class", "**/BuildConfig.*", "**/Manifest*.*")
                 exclude(untestableInJvm)
             },
         ),
     )
-    sourceDirectories.setFrom(files("src/main/java"))
+    sourceDirectories.setFrom(files("src/main/java", "src/main/kotlin"))
     executionData.setFrom(
-        fileTree(project.buildDir) {
+        fileTree(project.layout.buildDirectory.get().asFile) {
             include("outputs/unit_test_code_coverage/debugUnitTest/*.exec")
             include("jacoco/*.exec")
         },

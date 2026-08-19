@@ -218,7 +218,9 @@ class MapScreenHandlers(
     private fun replayInteractionMode() {
         val geoman = narsGeoman ?: return
         when {
-            viewModel.drawingEnabled.value -> geoman.startDrawing()
+            viewModel.drawingEnabled.value -> {
+                geoman.startDrawing()
+            }
 
             viewModel.editModeEnabled.value -> {
                 viewModel.selectedFeature.value?.let { feature ->
