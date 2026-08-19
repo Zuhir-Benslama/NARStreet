@@ -42,6 +42,8 @@ class ApiService(private val httpClient: HttpClient, private val preferences: Ap
 
     private val baseUrl: String = BuildConfig.API_BASE_URL.trimEnd('/')
 
+    private val tokenLock = Any()
+
     @Volatile private var sessionToken: String? = null
 
     @Volatile private var refreshToken: String? = null
@@ -83,13 +85,15 @@ class ApiService(private val httpClient: HttpClient, private val preferences: Ap
      */
     private fun extractAndSetCookies(response: io.ktor.client.statement.HttpResponse): Boolean {
         var sawAccessToken = false
-        response.headers.getAll(HttpHeaders.SetCookie)?.forEach { rawCookie ->
-            COOKIE_ACCESS_TOKEN_REGEX.find(rawCookie)?.let { match ->
-                sessionToken = match.groupValues[1]
-                sawAccessToken = true
-            }
-            COOKIE_REFRESH_TOKEN_REGEX.find(rawCookie)?.let { match ->
-                refreshToken = match.groupValues[1]
+        synchronized(tokenLock) {
+            response.headers.getAll(HttpHeaders.SetCookie)?.forEach { rawCookie ->
+                COOKIE_ACCESS_TOKEN_REGEX.find(rawCookie)?.let { match ->
+                    sessionToken = match.groupValues[1]
+                    sawAccessToken = true
+                }
+                COOKIE_REFRESH_TOKEN_REGEX.find(rawCookie)?.let { match ->
+                    refreshToken = match.groupValues[1]
+                }
             }
         }
         return sawAccessToken
@@ -101,8 +105,10 @@ class ApiService(private val httpClient: HttpClient, private val preferences: Ap
      * transport layer as the single owner of token persistence.
      */
     private fun persistTokens() {
-        preferences.authToken = sessionToken
-        preferences.refreshToken = refreshToken
+        synchronized(tokenLock) {
+            preferences.authToken = sessionToken
+            preferences.refreshToken = refreshToken
+        }
     }
 
     /**
@@ -110,9 +116,11 @@ class ApiService(private val httpClient: HttpClient, private val preferences: Ap
      * (expired/revoked refresh token) or on logout.
      */
     private fun clearTokens() {
-        sessionToken = null
-        refreshToken = null
-        persistTokens()
+        synchronized(tokenLock) {
+            sessionToken = null
+            refreshToken = null
+            persistTokens()
+        }
     }
 
     private fun buildUserFromResponse(apiResponse: LoginApiResponse): User {
@@ -229,7 +237,9 @@ class ApiService(private val httpClient: HttpClient, private val preferences: Ap
             extractAndSetCookies(response)
 
             val token = apiResponse.token ?: apiResponse.accessToken
-            token?.let { sessionToken = it }
+            synchronized(tokenLock) {
+                token?.let { sessionToken = it }
+            }
 
             persistTokens()
 

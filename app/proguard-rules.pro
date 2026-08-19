@@ -34,9 +34,14 @@
     kotlinx.serialization.KSerializer serializer(...);
 }
 
-# Keep model classes
--keep class com.nars.maplibre.data.model.** { *; }
--keep class com.geoman.maplibre.geoman.types.geojson.** { *; }
+# Keep Kotlin serialization models (serializers + companion objects)
+-keep class com.nars.maplibre.data.model.** {
+    kotlinx.serialization.KSerializer serializer(...);
+}
+-keep class com.nars.maplibre.data.model.**$Companion { *; }
+-keep class com.geoman.maplibre.geoman.types.geojson.** {
+    kotlinx.serialization.KSerializer serializer(...);
+}
 
 # =============================================================================
 # Security - EncryptedSharedPreferences
@@ -45,17 +50,17 @@
 -keep class androidx.security.crypto.** { *; }
 -keep class androidx.startup.** { *; }
 
-# Keep Android Keystore classes
--keep class javax.crypto.** { *; }
--dontwarn javax.crypto.**
--keep class java.security.** { *; }
--dontwarn java.security.**
+# Keep only the specific crypto classes used via reflection
+-keep class javax.crypto.KeyGenerator { *; }
+-keep class javax.crypto.SecretKey { *; }
+-keep class javax.crypto.spec.SecretKeySpec { *; }
+-keep class java.security.KeyStore { *; }
 
 # =============================================================================
-# MapLibre
+# MapLibre - rely on the AAR's consumer ProGuard rules
 # =============================================================================
 
--keep class org.maplibre.** { *; }
+-keep class org.maplibre.android.** { *; }
 -dontwarn org.maplibre.**
 
 # =============================================================================
@@ -64,8 +69,11 @@
 
 -keep,allowobfuscation,allowshrinking class kotlin.coroutines.Continuation
 
-# Keep API client
--keep class com.nars.maplibre.data.api.** { *; }
+# Keep API models used for serialization
+-keep class com.nars.maplibre.data.api.** {
+    kotlinx.serialization.KSerializer serializer(...);
+}
+-keep class com.nars.maplibre.data.api.**$Companion { *; }
 
 # =============================================================================
 # Compose
@@ -89,7 +97,8 @@
 # ViewModel & Lifecycle
 # =============================================================================
 
--keep class * extends androidx.lifecycle.AndroidViewModel { *; }
+-keep class com.nars.maplibre.MapViewModel { *; }
+-keep class com.nars.maplibre.SettingsViewModel { *; }
 
 # =============================================================================
 # Prevent obfuscation of classes used in reflection

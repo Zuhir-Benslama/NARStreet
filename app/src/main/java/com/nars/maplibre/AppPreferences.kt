@@ -26,6 +26,9 @@ class AppPreferences internal constructor(
     private val _themeModeFlow = MutableStateFlow(themeMode)
     val themeModeFlow: StateFlow<ThemeMode> = _themeModeFlow.asStateFlow()
 
+    private val _baseLayerFlow = MutableStateFlow(baseLayer)
+    val baseLayerFlow: StateFlow<BaseLayerType> = _baseLayerFlow.asStateFlow()
+
     var themeMode: ThemeMode
         get() = try {
             ThemeMode.valueOf(prefs.getString(KEY_THEME, ThemeMode.AUTO.name) ?: ThemeMode.AUTO.name)
@@ -46,7 +49,10 @@ class AppPreferences internal constructor(
         } catch (_: IllegalArgumentException) {
             BaseLayerType.SATELLITE
         }
-        set(value) = prefs.edit { putString(KEY_BASE_LAYER, value.name) }
+        set(value) {
+            prefs.edit { putString(KEY_BASE_LAYER, value.name) }
+            _baseLayerFlow.value = value
+        }
 
     var currentPhase: String?
         get() = prefs.getString(KEY_CURRENT_PHASE, null)

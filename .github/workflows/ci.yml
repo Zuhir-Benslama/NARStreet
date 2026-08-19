@@ -6,12 +6,16 @@ on:
   pull_request:
     branches: [main]
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 env:
   GRADLE_OPTS: -Dorg.gradle.daemon=false -Dorg.gradle.parallel=true
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 30
     env:
       GEOMAN_DIR: ${{ github.workspace }}/maplibre-geoman-android/app
@@ -43,12 +47,18 @@ jobs:
           path: |
             ~/.gradle/caches
             ~/.gradle/wrapper
-            ~/.gradle/notifications
           key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle.kts', 'gradle/libs.versions.toml', 'gradle/wrapper/gradle-wrapper.properties') }}
           restore-keys: ${{ runner.os }}-gradle-
 
       - name: Create local.properties
-        run: cp local.properties.example local.properties
+        run: |
+          if [ ! -f local.properties ]; then
+            if [ -f local.properties.example ]; then
+              cp local.properties.example local.properties
+            else
+              echo "# Auto-generated for CI" > local.properties
+            fi
+          fi
 
       - name: Check formatting (Spotless/ktlint)
         run: ./gradlew spotlessCheck
@@ -93,13 +103,14 @@ jobs:
           path: app/build/reports/jacoco/jacocoTestReport/
 
       - name: Upload APK
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: apk-debug
           path: app/build/outputs/apk/debug/*.apk
 
   connected-tests:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 45
     env:
       GEOMAN_DIR: ${{ github.workspace }}/maplibre-geoman-android/app
@@ -128,12 +139,18 @@ jobs:
           path: |
             ~/.gradle/caches
             ~/.gradle/wrapper
-            ~/.gradle/notifications
           key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle.kts', 'gradle/libs.versions.toml', 'gradle/wrapper/gradle-wrapper.properties') }}
           restore-keys: ${{ runner.os }}-gradle-
 
       - name: Create local.properties
-        run: cp local.properties.example local.properties
+        run: |
+          if [ ! -f local.properties ]; then
+            if [ -f local.properties.example ]; then
+              cp local.properties.example local.properties
+            else
+              echo "# Auto-generated for CI" > local.properties
+            fi
+          fi
 
       - name: Run connected tests on emulator
         uses: reactivecircus/android-emulator-runner@v2
@@ -142,7 +159,19 @@ jobs:
           arch: x86_64
           disable-animations: true
           emulator-boot-timeout: 900
-          script: adb wait-for-device && timeout 300 bash -c 'until adb shell service check package 2>/dev/null | grep -q found; do sleep 5; done'; for attempt in 1 2 3; do if ./gradlew connectedDebugAndroidTest; then echo "Connected tests passed."; exit 0; fi; echo "Attempt $attempt failed; waiting 30s before retry..."; sleep 30; done; echo "All connected test attempts failed."; exit 1
+          script: |
+            adb wait-for-device
+            timeout 300 bash -c 'until adb shell getprop sys.boot_completed 2>/dev/null | grep -q "1"; do sleep 5; done'
+            for attempt in 1 2 3; do
+              if ./gradlew connectedDebugAndroidTest; then
+                echo "Connected tests passed."
+                exit 0
+              fi
+              echo "Attempt $attempt failed; waiting 30s before retry..."
+              sleep 30
+            done
+            echo "All connected test attempts failed."
+            exit 1
 
       - name: Upload connected test report
         if: always()

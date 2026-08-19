@@ -49,19 +49,28 @@ class NarsApplication :
         MapLibre.getInstance(this, null, WellKnownTileServer.MapTiler)
 
         applicationScope.launch {
-            try {
-                val prefs: AppPreferences = get()
-                val apiService: ApiService = get()
-                prefs.authToken?.let { token ->
-                    apiService.setSessionToken(token)
-                    NarsLogger.d("NarsApplication", "User session found on startup")
+            val maxRetries = 5
+            val delayMs = 100L
+            repeat(maxRetries) { attempt ->
+                try {
+                    val prefs: AppPreferences = get()
+                    val apiService: ApiService = get()
+                    prefs.authToken?.let { token ->
+                        apiService.setSessionToken(token)
+                        NarsLogger.d("NarsApplication", "User session found on startup")
+                    }
+                    prefs.refreshToken?.let { token ->
+                        apiService.setRefreshToken(token)
+                    }
+                    return@launch
+                } catch (e: IllegalStateException) {
+                    NarsLogger.w("NarsApplication", "Session check attempt ${attempt + 1} failed: Koin not ready", e)
+                    if (attempt < maxRetries - 1) {
+                        kotlinx.coroutines.delay(delayMs * (attempt + 1))
+                    }
                 }
-                prefs.refreshToken?.let { token ->
-                    apiService.setRefreshToken(token)
-                }
-            } catch (e: IllegalStateException) {
-                NarsLogger.w("NarsApplication", "Session check skipped: Koin not ready", e)
             }
+            NarsLogger.w("NarsApplication", "Session restoration failed after $maxRetries attempts")
         }
 
         registerTokenClearingOnBackground()

@@ -209,12 +209,11 @@ class MapViewModelTest {
         val updatedProps = (oldFeature.properties as FeatureProperties.RoadProperties).copy(name = "New")
         val newFeature = oldFeature.copy(properties = updatedProps)
 
-        every { featureStore.getFeatureById("f1") } returns oldFeature
+        every { featureStore.updateFeatureWithUndo("f1", newFeature) } returns oldFeature
 
         vm.updateFeature(newFeature)
 
-        verify { featureStore.updateFeature("f1", newFeature) }
-        verify { featureStore.addUndoAction(any()) }
+        verify { featureStore.updateFeatureWithUndo("f1", newFeature) }
     }
 
     @Test

@@ -107,34 +107,47 @@ fun NarsMap(
 @Composable
 private fun MapViewLifecycleEffect(lifecycleOwner: LifecycleOwner, mapView: MapView, mapViewBundle: Bundle) {
     DisposableEffect(lifecycleOwner, mapView) {
+        var destroyed = false
         val observer =
             LifecycleEventObserver { _, event ->
                 when (event) {
-                    Lifecycle.Event.ON_CREATE -> mapView.onCreate(mapViewBundle)
-
-                    Lifecycle.Event.ON_START -> mapView.onStart()
-
-                    Lifecycle.Event.ON_RESUME -> mapView.onResume()
-
-                    Lifecycle.Event.ON_PAUSE -> mapView.onPause()
-
-                    Lifecycle.Event.ON_STOP -> mapView.onStop()
-
-                    Lifecycle.Event.ON_DESTROY -> {
-                        mapView.onSaveInstanceState(mapViewBundle)
-                        mapView.onDestroy()
+                    Lifecycle.Event.ON_CREATE -> {
+                        mapView.onCreate(mapViewBundle)
                     }
-
-                    else -> Unit
+                    Lifecycle.Event.ON_START -> {
+                        mapView.onStart()
+                    }
+                    Lifecycle.Event.ON_RESUME -> {
+                        mapView.onResume()
+                    }
+                    Lifecycle.Event.ON_PAUSE -> {
+                        mapView.onPause()
+                    }
+                    Lifecycle.Event.ON_STOP -> {
+                        mapView.onStop()
+                    }
+                    Lifecycle.Event.ON_DESTROY -> {
+                        if (!destroyed) {
+                            destroyed = true
+                            mapView.onSaveInstanceState(mapViewBundle)
+                            mapView.onDestroy()
+                        }
+                    }
+                    else -> {
+                        Unit
+                    }
                 }
             }
         lifecycleOwner.lifecycle.addObserver(observer)
         onDispose {
             lifecycleOwner.lifecycle.removeObserver(observer)
-            mapView.onSaveInstanceState(mapViewBundle)
-            mapView.onStop()
-            mapView.onPause()
-            mapView.onDestroy()
+            if (!destroyed) {
+                destroyed = true
+                mapView.onSaveInstanceState(mapViewBundle)
+                mapView.onStop()
+                mapView.onPause()
+                mapView.onDestroy()
+            }
         }
     }
 }
