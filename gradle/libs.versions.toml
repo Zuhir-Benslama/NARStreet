@@ -37,7 +37,7 @@ detekt = "2.0.0-alpha.6"
 timber = "5.0.1"
 
 # Formatting
-spotless = "8.9.0"
+spotless = "8.10.0"
 
 # Material
 material = "1.14.0"
@@ -45,7 +45,7 @@ material = "1.14.0"
 # Testing
 junit = "4.13.2"
 mockk = "1.14.11"
-androidx-test-espresso = "3.6.1"
+androidx-test-espresso = "3.7.0"
 
 [libraries]
 # Kotlin
