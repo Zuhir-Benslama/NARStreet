@@ -160,10 +160,10 @@ jobs:
           disable-animations: true
           emulator-boot-timeout: 900
           script: |
-            adb wait-for-device
-            timeout 300 bash -c 'until adb shell getprop sys.boot_completed 2>/dev/null | grep -q "1"; do sleep 5; done'
+            adb shell input keyevent 82
+            sleep 10
             for attempt in 1 2 3; do
-              if ./gradlew connectedDebugAndroidTest; then
+              if ./gradlew connectedDebugAndroidTest --no-daemon; then
                 echo "Connected tests passed."
                 exit 0
               fi
