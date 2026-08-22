@@ -270,7 +270,7 @@ private fun JsonObjectBuilder.addPropertyKeys(properties: FeatureProperties) {
         }
 
         is FeatureProperties.NamingPanelProperties -> {
-            Unit
+            // Naming panels have no extra properties to serialize
         }
     }
 }

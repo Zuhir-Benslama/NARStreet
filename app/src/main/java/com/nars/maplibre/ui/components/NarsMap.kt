@@ -140,7 +140,7 @@ private fun MapViewLifecycleEffect(lifecycleOwner: LifecycleOwner, mapView: MapV
                     }
 
                     else -> {
-                        Unit
+                        // Other lifecycle events need no map handling
                     }
                 }
             }

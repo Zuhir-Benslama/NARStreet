@@ -67,7 +67,7 @@ class GeomanEventHandler(
 
                     is GmDrawEvent.Create -> {
                         NarsLogger.d(TAG, "GmDrawEvent.Create received: shape=${event.shape}")
-                        handleFeatureCreated(event.feature as? FeatureData)
+                        handleFeatureCreated(event.feature)
                     }
 
                     is GmDrawEvent.EditEnd -> {
@@ -77,7 +77,7 @@ class GeomanEventHandler(
 
                     is GmEditEvent.ChangeEnd -> {
                         NarsLogger.d(TAG, "Geometry changed")
-                        handleGeometryChanged(event.feature as? FeatureData)
+                        handleGeometryChanged(event.feature)
                     }
 
                     is GmEditEvent.Delete -> {
