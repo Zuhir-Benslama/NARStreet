@@ -114,7 +114,7 @@ class NarsGeomanTest {
         narsGeoman.startDrawing()
         verify { geoman.disableAllModes() }
         verify { eventHandler.setEditingFeature(null, null) }
-        verify { geoman.enableDraw(DrawModeName.LINE) }
+        verify { geoman.enableMode(ModeType.DRAW, DrawModeName.LINE.name) }
         assertTrue(narsGeoman.isDrawing.value)
         assertFalse(narsGeoman.isEditing.value)
     }
@@ -123,7 +123,7 @@ class NarsGeomanTest {
     fun `startDrawing enables marker for MARKER draw type`() {
         narsGeoman.setCurrentPhase(markerPhase)
         narsGeoman.startDrawing()
-        verify { geoman.enableDraw(DrawModeName.MARKER) }
+        verify { geoman.enableMode(ModeType.DRAW, DrawModeName.MARKER.name) }
     }
 
     @Test
@@ -131,7 +131,7 @@ class NarsGeomanTest {
         val polygonPhase = PhaseDefinition(0, "poly", "poly", DrawType.POLYGON, "#000", "")
         narsGeoman.setCurrentPhase(polygonPhase)
         narsGeoman.startDrawing()
-        verify { geoman.enableDraw(DrawModeName.POLYGON) }
+        verify { geoman.enableMode(ModeType.DRAW, DrawModeName.POLYGON.name) }
     }
 
     @Test
@@ -139,7 +139,7 @@ class NarsGeomanTest {
         val circlePhase = PhaseDefinition(0, "circ", "circ", DrawType.CIRCLE, "#000", "")
         narsGeoman.setCurrentPhase(circlePhase)
         narsGeoman.startDrawing()
-        verify { geoman.enableDraw(DrawModeName.CIRCLE) }
+        verify { geoman.enableMode(ModeType.DRAW, DrawModeName.CIRCLE.name) }
     }
 
     // --- stopDrawing ---
@@ -168,7 +168,7 @@ class NarsGeomanTest {
         verify { geoman.disableAllModes() }
         verify { eventHandler.setEditingFeature(feature.id, feature) }
         verify { geoman.addGeoJsonFeature(geoJsonFeature, any()) }
-        verify { geoman.enableEdit(EditModeName.CHANGE) }
+        verify { geoman.enableMode(ModeType.EDIT, EditModeName.CHANGE.name) }
         verify { geoman.startEditingFeature(featureData) }
         assertTrue(narsGeoman.isEditing.value)
         assertFalse(narsGeoman.isDrawing.value)

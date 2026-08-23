@@ -170,11 +170,13 @@ jobs:
           script: |
             adb shell input keyevent 82
             sleep 10
-            bash -c 'for attempt in 1 2 3; do ./gradlew connectedDebugAndroidTest --no-daemon && echo "Connected tests passed." && exit 0; echo "Attempt $attempt failed; waiting 30s before retry..."; sleep 30; done; echo "All connected test attempts failed."; exit 1'
+            bash -c 'for attempt in 1 2 3; do ./gradlew connectedDebugAndroidTest --no-daemon && echo "Connected tests passed." && exit 0; echo "Attempt $attempt failed; waiting 30s before retry..."; adb logcat -d > connected-test-logcat.txt; sleep 30; done; echo "All connected test attempts failed."; exit 1'
 
       - name: Upload connected test report
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: connected-test-report
-          path: app/build/reports/androidTests/
+          path: |
+            app/build/reports/androidTests/
+            connected-test-logcat.txt

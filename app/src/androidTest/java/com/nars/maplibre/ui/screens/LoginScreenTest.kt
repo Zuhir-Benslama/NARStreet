@@ -5,6 +5,8 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextInput
@@ -130,7 +132,9 @@ class LoginScreenTest {
                 targetContext.getString(com.nars.maplibre.R.string.login_sign_in),
             ).performClick()
 
-        composeTestRule.waitForIdle()
+        // The login runs asynchronously in a coroutine; waitForIdle() can return
+        // before the callback fires on fast machines, so poll explicitly.
+        composeTestRule.waitUntil(timeoutMillis = 5_000) { loginSucceeded }
         assertTrue("Login should have succeeded", loginSucceeded)
         coVerify { mockSessionManager.login("testuser", "testpass") }
     }
@@ -156,7 +160,17 @@ class LoginScreenTest {
                 targetContext.getString(com.nars.maplibre.R.string.login_sign_in),
             ).performClick()
 
-        composeTestRule.waitForIdle()
-        composeTestRule.onNodeWithText("Invalid credentials", substring = true).assertIsDisplayed()
+        // Poll until the error text is composed and laid out; waitForIdle() can
+        // race ahead of the async login result on fast machines.
+        composeTestRule.waitUntil(timeoutMillis = 5_000) {
+            composeTestRule
+                .onAllNodesWithText("Invalid credentials", substring = true)
+                .fetchSemanticsNodes()
+                .isNotEmpty()
+        }
+        composeTestRule
+            .onAllNodesWithText("Invalid credentials", substring = true)
+            .onFirst()
+            .assertIsDisplayed()
     }
 }

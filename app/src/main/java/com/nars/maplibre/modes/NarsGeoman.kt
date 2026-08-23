@@ -6,6 +6,7 @@ import com.geoman.maplibre.geoman.core.options.GmOptionsData
 import com.geoman.maplibre.geoman.core.options.SettingsOptions
 import com.geoman.maplibre.geoman.types.DrawModeName
 import com.geoman.maplibre.geoman.types.EditModeName
+import com.geoman.maplibre.geoman.types.ModeType
 import com.nars.maplibre.data.model.DrawType
 import com.nars.maplibre.data.model.NarsFeature
 import com.nars.maplibre.data.model.PhaseDefinition
@@ -116,10 +117,10 @@ class NarsGeoman internal constructor(
         _isDrawing.value = true
 
         when (phase.drawType) {
-            DrawType.POLYGON -> geoman.enableDraw(DrawModeName.POLYGON)
-            DrawType.POLYLINE -> geoman.enableDraw(DrawModeName.LINE)
-            DrawType.CIRCLE -> geoman.enableDraw(DrawModeName.CIRCLE)
-            DrawType.MARKER -> geoman.enableDraw(DrawModeName.MARKER)
+            DrawType.POLYGON -> geoman.enableMode(ModeType.DRAW, DrawModeName.POLYGON.name)
+            DrawType.POLYLINE -> geoman.enableMode(ModeType.DRAW, DrawModeName.LINE.name)
+            DrawType.CIRCLE -> geoman.enableMode(ModeType.DRAW, DrawModeName.CIRCLE.name)
+            DrawType.MARKER -> geoman.enableMode(ModeType.DRAW, DrawModeName.MARKER.name)
         }
     }
 
@@ -142,7 +143,7 @@ class NarsGeoman internal constructor(
             geometryConverter.getSourceNameForGeometry(feature.geometry),
         )
 
-        geoman.enableEdit(EditModeName.CHANGE)
+        geoman.enableMode(ModeType.EDIT, EditModeName.CHANGE.name)
         geoman.startEditingFeature(geometryConverter.convertToGeomanFeatureData(feature))
     }
 
