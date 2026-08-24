@@ -78,6 +78,21 @@ class ApiService(private val httpClient: HttpClient, private val preferences: Ap
     fun getRefreshToken(): String? = refreshToken
 
     /**
+     * Drops in-memory tokens WITHOUT touching persisted storage. Used by the
+     * app-lifecycle security policy (NarsApplication): when the app is
+     * backgrounded the tokens must leave memory, but stay encrypted in prefs
+     * so the foreground restore can bring them back. Runs under [tokenLock]
+     * so a backgrounding clear is atomic against concurrent refresh/login
+     * cookie writes.
+     */
+    fun clearInMemoryTokens() {
+        synchronized(tokenLock) {
+            sessionToken = null
+            refreshToken = null
+        }
+    }
+
+    /**
      * Extracts the access + refresh token cookies issued by the backend.
      * The backend sets both cookies on signin and on every /api/refresh.
      * Returns true when an access-token cookie was present, so callers can

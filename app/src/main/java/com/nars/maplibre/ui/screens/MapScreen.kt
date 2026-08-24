@@ -15,16 +15,14 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import com.nars.maplibre.MapViewModel
 import com.nars.maplibre.UiState
-import com.nars.maplibre.data.api.ApiService
-import com.nars.maplibre.data.api.SessionManager
 import com.nars.maplibre.data.model.BaseLayerType
 import com.nars.maplibre.data.model.NarsFeature
 import com.nars.maplibre.data.model.PhaseDefinition
+import com.nars.maplibre.data.model.User
 import com.nars.maplibre.utils.NarsLogger
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import org.koin.androidx.compose.koinViewModel
-import org.koin.compose.koinInject
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -34,8 +32,6 @@ fun MapScreen(onNavigateToSettings: () -> Unit, onLogout: () -> Unit) {
 
     val context = LocalContext.current
     val viewModel: MapViewModel = koinViewModel()
-    val apiService: ApiService = koinInject()
-    val sessionManager: SessionManager = koinInject()
 
     val currentPhase by viewModel.currentPhase.collectAsState()
     val allFeatures by viewModel.allFeatures.collectAsState()
@@ -46,7 +42,7 @@ fun MapScreen(onNavigateToSettings: () -> Unit, onLogout: () -> Unit) {
     val editModeEnabled by viewModel.editModeEnabled.collectAsState()
 
     val handlers = remember {
-        MapScreenHandlers(viewModel, apiService, sessionManager, context.applicationContext, scope) { msg ->
+        MapScreenHandlers(viewModel, context.applicationContext, scope) { msg ->
             scope.launch { snackbarHostState.showSnackbar(msg) }
         }
     }
@@ -64,7 +60,7 @@ fun MapScreen(onNavigateToSettings: () -> Unit, onLogout: () -> Unit) {
         allFeatures.groupingBy { it.properties.phase }.eachCount()
     }
 
-    MapScreenEffects(viewModel, handlers, apiService, onLogout, currentPhase, allFeatures, uiState, snackbarHostState)
+    MapScreenEffects(viewModel, handlers, onLogout, currentPhase, allFeatures, uiState, snackbarHostState)
 
     MapScreenScaffold(
         state = MapScreenViewState(
@@ -82,7 +78,7 @@ fun MapScreen(onNavigateToSettings: () -> Unit, onLogout: () -> Unit) {
             onLogout = onLogout,
             viewModel = viewModel,
             handlers = handlers,
-            sessionManager = sessionManager,
+            user = viewModel.currentUser,
         ),
         snackbarHostState = snackbarHostState,
     )
@@ -92,7 +88,6 @@ fun MapScreen(onNavigateToSettings: () -> Unit, onLogout: () -> Unit) {
 private fun MapScreenEffects(
     viewModel: MapViewModel,
     handlers: MapScreenHandlers,
-    apiService: ApiService,
     onSessionExpired: () -> Unit,
     currentPhase: PhaseDefinition?,
     allFeatures: List<NarsFeature>,
@@ -103,7 +98,7 @@ private fun MapScreenEffects(
     // permanently dead — drop local state and return to the login screen
     // instead of leaving the user on a map that silently rejects every request.
     LaunchedEffect(Unit) {
-        apiService.sessionExpired.collect {
+        viewModel.sessionExpired.collect {
             NarsLogger.w("MapScreen", "Session expired — returning to login")
             viewModel.clearAll()
             handlers.narsGeoman?.displayManager?.updateDisplayedFeatures(emptyList())
@@ -153,7 +148,7 @@ internal class MapScreenCallbacks(
     val onLogout: () -> Unit,
     val viewModel: MapViewModel,
     val handlers: MapScreenHandlers,
-    val sessionManager: SessionManager,
+    val user: User?,
 )
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -196,9 +191,9 @@ private fun MapScreenScaffold(
                     }
                 callbacks.viewModel.updateFeature(finalFeature)
                 callbacks.handlers.narsGeoman?.displayManager?.updateFeatureOnMap(finalFeature)
-                callbacks.handlers.updateFeature(finalFeature)
+                callbacks.viewModel.updateFeatureOnBackend(finalFeature)
             } else if (existing != null) {
-                callbacks.handlers.saveFeature(feature)
+                callbacks.viewModel.saveFeatureToBackend(feature)
             }
             showFeatureModal = false
             editingFeatureId = null

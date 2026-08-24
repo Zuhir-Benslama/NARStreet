@@ -96,9 +96,11 @@
 # =============================================================================
 # ViewModel & Lifecycle
 # =============================================================================
-
--keep class com.nars.maplibre.MapViewModel { *; }
--keep class com.nars.maplibre.SettingsViewModel { *; }
+# ViewModels are resolved by Koin via class literals (no string reflection), so
+# R8 already retains the classes and their constructors. keepnames is a safety
+# net for crash-report readability without blocking member shrinking.
+-keepnames class com.nars.maplibre.MapViewModel
+-keepnames class com.nars.maplibre.SettingsViewModel
 
 # =============================================================================
 # Prevent obfuscation of classes used in reflection

@@ -25,12 +25,8 @@ import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -43,59 +39,29 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.nars.maplibre.LoginViewModel
 import com.nars.maplibre.R
-import com.nars.maplibre.data.api.SessionManager
 import com.nars.maplibre.ui.theme.DangerColor
 import com.nars.maplibre.ui.theme.GlassBackground
 import com.nars.maplibre.ui.theme.PrimaryColor
 import com.nars.maplibre.ui.theme.PrimaryGradientEnd
 import com.nars.maplibre.ui.theme.PrimaryGradientStart
-import com.nars.maplibre.utils.NarsLogger
-import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.launch
-import org.koin.compose.koinInject
+import org.koin.androidx.compose.koinViewModel
 
 private const val FORM_WIDTH_FRACTION = 0.85f
 private const val FOCUS_LABEL_ALPHA = 0.85f
 
 @Composable
 fun LoginScreen(onLoginSuccess: () -> Unit, modifier: Modifier = Modifier) {
-    val scope = rememberCoroutineScope()
-    var username by rememberSaveable { mutableStateOf("") }
-    var password by rememberSaveable { mutableStateOf("") }
-    var isLoading by rememberSaveable { mutableStateOf(false) }
-    var errorMessage by rememberSaveable { mutableStateOf<String?>(null) }
+    val viewModel: LoginViewModel = koinViewModel()
 
-    val sessionManager: SessionManager = koinInject()
+    val username by viewModel.username.collectAsState()
+    val password by viewModel.password.collectAsState()
+    val isLoading by viewModel.isLoading.collectAsState()
+    val errorMessage by viewModel.errorMessage.collectAsState()
 
     LaunchedEffect(Unit) {
-        if (sessionManager.isLoggedIn()) onLoginSuccess()
-    }
-
-    val loginFailed = stringResource(R.string.login_failed)
-    val loginError = stringResource(R.string.login_error)
-
-    fun performLogin() {
-        if (!isLoading && username.isNotBlank() && password.isNotBlank()) {
-            val user = username
-            val pass = password
-            scope.launch {
-                isLoading = true
-                errorMessage = null
-                try {
-                    val result = sessionManager.login(user, pass)
-                    result.onSuccess { onLoginSuccess() }
-                    result.onFailure { error -> errorMessage = "$loginFailed: ${error.message}" }
-                } catch (e: CancellationException) {
-                    throw e
-                } catch (e: java.io.IOException) {
-                    NarsLogger.e("LoginScreen", "Login failed", e)
-                    errorMessage = "$loginError: ${e.message}"
-                } finally {
-                    isLoading = false
-                }
-            }
-        }
+        if (viewModel.isLoggedIn()) onLoginSuccess()
     }
 
     Box(
@@ -111,19 +77,13 @@ fun LoginScreen(onLoginSuccess: () -> Unit, modifier: Modifier = Modifier) {
     ) {
         LoginForm(
             username = username,
-            onUsernameChange = {
-                username = it
-                errorMessage = null
-            },
+            onUsernameChange = viewModel::onUsernameChange,
             password = password,
-            onPasswordChange = {
-                password = it
-                errorMessage = null
-            },
+            onPasswordChange = viewModel::onPasswordChange,
             isLoading = isLoading,
             errorMessage = errorMessage,
             canSubmit = username.isNotBlank() && password.isNotBlank(),
-            onLogin = { performLogin() },
+            onLogin = { viewModel.login(onLoginSuccess) },
         )
     }
 }

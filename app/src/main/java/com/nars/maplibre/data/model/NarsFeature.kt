@@ -63,7 +63,7 @@ sealed class FeatureProperties {
     data class RoadProperties(
         override val name: String? = null,
         override val phase: String = Phases.ROADS_KEY,
-        override val color: String = "#3498db",
+        override val color: String = Phases.ROADS_COLOR,
         val roadTypeKey: String? = null,
         val roadTraffic: String? = null,
         val tradActivity: String? = null,
@@ -79,7 +79,7 @@ sealed class FeatureProperties {
     data class HouseEntranceProperties(
         override val name: String? = null,
         override val phase: String = Phases.HOUSE_ENTRANCES_KEY,
-        override val color: String = "#27ae60",
+        override val color: String = Phases.HOUSE_ENTRANCES_COLOR,
         val entranceTypeKey: String? = null,
         val roadDbId: String? = null,
         val side: String? = null,
@@ -94,7 +94,7 @@ sealed class FeatureProperties {
     data class NamingPanelProperties(
         override val name: String? = null,
         override val phase: String = Phases.NAMING_PANELS_KEY,
-        override val color: String = "#9b59b6",
+        override val color: String = Phases.NAMING_PANELS_COLOR,
         val hasNamingPanelLocation: Boolean? = null,
         val hasNamingPanel: Boolean? = null,
         val namingCorrect: Boolean? = null,
@@ -132,6 +132,14 @@ object Phases {
     const val HOUSE_ENTRANCES_KEY = "houseEntrances"
     const val NAMING_PANELS_KEY = "namingPanels"
 
+    /**
+     * Canonical styling color per feature type. Single source of truth shared
+     * by the model defaults, the API response mapper and the map renderer.
+     */
+    const val ROADS_COLOR = "#3498db"
+    const val HOUSE_ENTRANCES_COLOR = "#27ae60"
+    const val NAMING_PANELS_COLOR = "#9b59b6"
+
     val ALL =
         listOf(
             PhaseDefinition(
@@ -139,7 +147,7 @@ object Phases {
                 key = ROADS_KEY,
                 label = "phase_roads_label",
                 drawType = DrawType.POLYLINE,
-                color = "#3498db",
+                color = ROADS_COLOR,
                 hint = "phase_roads_hint",
             ),
             PhaseDefinition(
@@ -147,7 +155,7 @@ object Phases {
                 key = HOUSE_ENTRANCES_KEY,
                 label = "phase_houseEntrances_label",
                 drawType = DrawType.MARKER,
-                color = "#27ae60",
+                color = HOUSE_ENTRANCES_COLOR,
                 hint = "phase_houseEntrances_hint",
             ),
             PhaseDefinition(
@@ -155,7 +163,7 @@ object Phases {
                 key = NAMING_PANELS_KEY,
                 label = "phase_namingPanels_label",
                 drawType = DrawType.MARKER,
-                color = "#9b59b6",
+                color = NAMING_PANELS_COLOR,
                 hint = "phase_namingPanels_hint",
             ),
         )

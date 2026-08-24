@@ -36,7 +36,9 @@ class SettingsScreenTest {
             modules(
                 module {
                     single<SessionManager> { mockSessionManager }
-                    viewModel { SettingsViewModel(mockk<AppPreferences>(relaxed = true)) }
+                    viewModel {
+                        SettingsViewModel(mockk<AppPreferences>(relaxed = true), mockSessionManager)
+                    }
                 },
             )
         }

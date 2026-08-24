@@ -2,6 +2,8 @@ package com.nars.maplibre
 
 import android.app.Application
 import com.nars.maplibre.R
+import com.nars.maplibre.data.api.ApiService
+import com.nars.maplibre.data.api.SessionManager
 import com.nars.maplibre.data.model.BaseLayerType
 import com.nars.maplibre.data.model.FeatureProperties
 import com.nars.maplibre.data.model.LineStringGeometry
@@ -13,6 +15,8 @@ import com.nars.maplibre.data.model.PointGeometry
 import com.nars.maplibre.data.store.FeatureStoreInterface
 import com.nars.maplibre.data.store.UndoAction
 import io.mockk.Runs
+import io.mockk.coEvery
+import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.just
 import io.mockk.mockk
@@ -40,6 +44,8 @@ class MapViewModelTest {
     private val application = mockk<Application>(relaxed = true)
     private val featureStore = mockk<FeatureStoreInterface>(relaxed = true)
     private val appPreferences = mockk<AppPreferences>(relaxed = true)
+    private val apiService = mockk<ApiService>(relaxed = true)
+    private val sessionManager = mockk<SessionManager>(relaxed = true)
 
     private val currentPhaseFlow = MutableStateFlow<PhaseDefinition?>(null)
     private val allFeaturesFlow = MutableStateFlow<List<NarsFeature>>(emptyList())
@@ -74,7 +80,7 @@ class MapViewModelTest {
     }
 
     private fun createViewModel(): MapViewModel {
-        val vm = MapViewModel(application, featureStore, appPreferences)
+        val vm = MapViewModel(application, featureStore, appPreferences, apiService, sessionManager)
         testDispatcher.scheduler.advanceUntilIdle()
         return vm
     }
@@ -154,7 +160,7 @@ class MapViewModelTest {
     @Test
     fun `goToPreviousPhase goes back`() = runTest {
         currentPhaseFlow.value = Phases.ALL[1]
-        val vm = MapViewModel(application, featureStore, appPreferences)
+        val vm = MapViewModel(application, featureStore, appPreferences, apiService, sessionManager)
         advanceUntilIdle()
 
         val result = vm.goToPreviousPhase()
@@ -502,5 +508,140 @@ class MapViewModelTest {
         undoState.value = true
 
         assertTrue(vm.canUndo.value)
+    }
+
+    // ─── Backend operations (viewModelScope-backed) ──────────────────────────
+
+    private fun testFeature(id: String = "f1", dbId: String? = null) = NarsFeature(
+        id = id,
+        dbId = dbId,
+        type = NarsFeatureType.ROAD,
+        geometry = PointGeometry(coordinates = listOf(0.0, 0.0)),
+        properties = FeatureProperties.RoadProperties(name = "Test Road"),
+    )
+
+    @Test
+    fun `loadFeatures adds backend features and clears loading`() {
+        val features = listOf(testFeature("srv-1", dbId = "srv-1"))
+        coEvery { apiService.loadFeatures() } returns Result.success(features)
+        val vm = createViewModel()
+
+        vm.loadFeatures()
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        verify { featureStore.addFeatures(features) }
+        assertFalse(vm.uiState.value.isLoading)
+    }
+
+    @Test
+    fun `loadFeatures failure surfaces error and clears loading`() {
+        coEvery { apiService.loadFeatures() } returns Result.failure(java.io.IOException("boom"))
+        val vm = createViewModel()
+
+        vm.loadFeatures()
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        assertTrue(vm.uiState.value.errorMessage.orEmpty().contains("boom"))
+        assertFalse(vm.uiState.value.isLoading)
+    }
+
+    @Test
+    fun `saveFeatureToBackend attaches server id to stored feature`() {
+        val feature = testFeature("client-1")
+        coEvery { apiService.saveFeature(feature) } returns Result.success("srv-9")
+        every { featureStore.getFeatureById("client-1") } returns feature
+        val vm = createViewModel()
+
+        vm.saveFeatureToBackend(feature)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        verify {
+            featureStore.updateFeature("client-1", match { it.dbId == "srv-9" && it.id == "client-1" })
+        }
+    }
+
+    @Test
+    fun `saveFeatureToBackend retries transient failures then reports error`() {
+        val feature = testFeature("f1")
+        coEvery { apiService.saveFeature(any()) } returns Result.failure(java.io.IOException("net down"))
+        val vm = createViewModel()
+
+        vm.saveFeatureToBackend(feature)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        coVerify(exactly = 3) { apiService.saveFeature(any()) }
+        assertTrue(vm.uiState.value.errorMessage.orEmpty().contains("net down"))
+    }
+
+    @Test
+    fun `updateFeatureOnBackend pushes to the backend id`() {
+        val feature = testFeature("client-1", dbId = "srv-9")
+        coEvery { apiService.updateFeature("srv-9", feature) } returns Result.success(Unit)
+        val vm = createViewModel()
+
+        vm.updateFeatureOnBackend(feature)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        coVerify(exactly = 1) { apiService.updateFeature("srv-9", feature) }
+    }
+
+    @Test
+    fun `deleteFeatureOnBackend skips API for local-only feature`() {
+        val feature = testFeature("client-1", dbId = null)
+        every { featureStore.getFeatureById("client-1") } returns feature
+        val vm = createViewModel()
+
+        vm.deleteFeatureOnBackend("client-1")
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        verify { featureStore.removeFeature("client-1") }
+        coVerify(exactly = 0) { apiService.deleteFeature(any()) }
+        verify(exactly = 0) { featureStore.addFeature(any(), recordUndo = false) }
+    }
+
+    @Test
+    fun `deleteFeatureOnBackend rolls back local delete when API fails`() {
+        val feature = testFeature("f1", dbId = "srv-1")
+        every { featureStore.getFeatureById("f1") } returns feature
+        allFeaturesFlow.value = emptyList()
+        coEvery { apiService.deleteFeature("srv-1") } returns Result.failure(Exception("denied"))
+        val vm = createViewModel()
+
+        vm.deleteFeatureOnBackend("f1")
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        verify { featureStore.removeFeature("f1") }
+        verify(exactly = 1) { featureStore.addFeature(feature, recordUndo = false) }
+        verify { featureStore.removeMostRecentActionForFeature("f1") }
+        assertTrue(vm.uiState.value.errorMessage.orEmpty().contains("denied"))
+    }
+
+    @Test
+    fun `deleteFeatureOnBackend does not roll back when feature was re-added meanwhile`() {
+        val feature = testFeature("f1", dbId = "srv-1")
+        every { featureStore.getFeatureById("f1") } returns feature
+        coEvery { apiService.deleteFeature("srv-1") } returns Result.failure(Exception("denied"))
+        val vm = createViewModel()
+        // Simulates the user re-drawing the same feature while the DELETE was
+        // in flight (the launch only runs once the scheduler advances).
+        allFeaturesFlow.value = listOf(feature.copy(id = "f1"))
+
+        vm.deleteFeatureOnBackend("f1")
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        verify(exactly = 0) { featureStore.addFeature(any(), recordUndo = false) }
+        verify(exactly = 0) { featureStore.removeMostRecentActionForFeature("f1") }
+    }
+
+    @Test
+    fun `logout clears session then invokes navigation callback`() {
+        val vm = createViewModel()
+        var navigated = false
+
+        vm.logout { navigated = true }
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        coVerify { sessionManager.logout() }
+        assertTrue(navigated)
     }
 }

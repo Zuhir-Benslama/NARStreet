@@ -116,9 +116,9 @@ private fun MapScreenBoxContent(
         )
         MapScreenProfileOverlay(
             modifier = Modifier.align(Alignment.TopEnd),
-            user = callbacks.sessionManager.getUser(),
+            user = callbacks.user,
             onSettingsClick = callbacks.onNavigateToSettings,
-            onLogoutClick = { callbacks.handlers.logout(callbacks.onLogout) },
+            onLogoutClick = { callbacks.viewModel.logout(callbacks.onLogout) },
         )
         MapScreenSidePanelWrapper(
             modifier = Modifier.align(Alignment.CenterEnd),
@@ -168,7 +168,8 @@ private fun MapScreenMapOverlay(
         viewModel = viewModel,
         onMapReady = { mv, map ->
             handlers.initializeNarsGeoman(mv, map)
-            handlers.loadFeaturesOnMapReady()
+            viewModel.loadFeatures()
+            handlers.replayInteractionMode()
         },
         onStyleLoaded = {
             handlers.narsGeoman?.displayManager?.onStyleReloaded(viewModel.allFeatures.value)

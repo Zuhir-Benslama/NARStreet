@@ -23,7 +23,21 @@ import timber.log.Timber
 class NarsApplication :
     Application(),
     KoinComponent {
+    companion object {
+        private const val TAG = "NarsApplication"
+    }
+
     private val applicationScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+
+    /**
+     * Monotonic counter bumped on every foreground/background transition. A
+     * token restore launched for one transition must never apply tokens after
+     * a newer transition has cleared them — a fast background→foreground→
+     * background sequence would otherwise leave tokens resident in memory
+     * while the app sits in the background, defeating the whole point of the
+     * clearing policy.
+     */
+    @Volatile private var lifecycleEpoch = 0
 
     override fun onCreate() {
         super.onCreate()
@@ -57,20 +71,20 @@ class NarsApplication :
                     val apiService: ApiService = get()
                     prefs.authToken?.let { token ->
                         apiService.setSessionToken(token)
-                        NarsLogger.d("NarsApplication", "User session found on startup")
+                        NarsLogger.d(TAG, "User session found on startup")
                     }
                     prefs.refreshToken?.let { token ->
                         apiService.setRefreshToken(token)
                     }
                     return@launch
                 } catch (e: IllegalStateException) {
-                    NarsLogger.w("NarsApplication", "Session check attempt ${attempt + 1} failed: Koin not ready", e)
+                    NarsLogger.w(TAG, "Session check attempt ${attempt + 1} failed: Koin not ready", e)
                     if (attempt < maxRetries - 1) {
                         kotlinx.coroutines.delay(delayMs * (attempt + 1))
                     }
                 }
             }
-            NarsLogger.w("NarsApplication", "Session restoration failed after $maxRetries attempts")
+            NarsLogger.w(TAG, "Session restoration failed after $maxRetries attempts")
         }
 
         registerTokenClearingOnBackground()
@@ -78,37 +92,56 @@ class NarsApplication :
 
     private fun registerTokenClearingOnBackground() {
         val observer = LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_STOP) {
-                try {
-                    val apiService: ApiService = get()
-                    apiService.setSessionToken(null)
-                    apiService.setRefreshToken(null)
-                    NarsLogger.d("NarsApplication", "In-memory tokens cleared (app backgrounded)")
-                } catch (e: IllegalStateException) {
-                    NarsLogger.w("NarsApplication", "Token clearing skipped: Koin not ready", e)
-                }
-            } else if (event == Lifecycle.Event.ON_START) {
-                // Restore tokens off the main thread: EncryptedSharedPreferences
-                // decrypts lazily on first access, which can take ~100ms. The
-                // refresh flow falls back to the persisted token anyway, so an
-                // in-flight request before the restore completes is safe.
-                applicationScope.launch {
-                    try {
-                        val apiService: ApiService = get()
-                        val prefs: AppPreferences = get()
-                        prefs.authToken?.let { token ->
-                            apiService.setSessionToken(token)
-                            NarsLogger.d("NarsApplication", "In-memory tokens restored (app foregrounded)")
-                        }
-                        prefs.refreshToken?.let { token ->
-                            apiService.setRefreshToken(token)
-                        }
-                    } catch (e: IllegalStateException) {
-                        NarsLogger.w("NarsApplication", "Token restore skipped: Koin not ready", e)
-                    }
-                }
+            when (event) {
+                Lifecycle.Event.ON_STOP -> onAppBackgrounded()
+                Lifecycle.Event.ON_START -> onAppForegrounded()
+                else -> Unit
             }
         }
         ProcessLifecycleOwner.get().lifecycle.addObserver(observer)
+    }
+
+    private fun onAppBackgrounded() {
+        lifecycleEpoch++
+        try {
+            val apiService: ApiService = get()
+            // clearInMemoryTokens takes ApiService's token lock, so the clear
+            // is atomic against concurrent refresh/login cookie writes and can
+            // never leave a half-cleared state.
+            apiService.clearInMemoryTokens()
+            NarsLogger.d(TAG, "In-memory tokens cleared (app backgrounded)")
+        } catch (e: IllegalStateException) {
+            NarsLogger.w(TAG, "Token clearing skipped: Koin not ready", e)
+        }
+    }
+
+    private fun onAppForegrounded() {
+        val epoch = ++lifecycleEpoch
+        applicationScope.launch {
+            try {
+                val apiService: ApiService = get()
+                val prefs: AppPreferences = get()
+                // Slow part first: EncryptedSharedPreferences decrypts lazily
+                // (~100ms). Read everything before touching the token fields.
+                val authToken = prefs.authToken
+                val refreshToken = prefs.refreshToken
+                if (epoch != lifecycleEpoch) {
+                    NarsLogger.d(TAG, "Token restore skipped: lifecycle moved on")
+                    return@launch
+                }
+                authToken?.let { token ->
+                    apiService.setSessionToken(token)
+                    NarsLogger.d(TAG, "In-memory tokens restored (app foregrounded)")
+                }
+                refreshToken?.let { token -> apiService.setRefreshToken(token) }
+                if (epoch != lifecycleEpoch) {
+                    // A backgrounding landed while we were applying — undo so
+                    // the final in-memory state matches the newest transition.
+                    apiService.clearInMemoryTokens()
+                }
+            } catch (e: IllegalStateException) {
+                NarsLogger.w(TAG, "Token restore skipped: Koin not ready", e)
+            }
+        }
     }
 }

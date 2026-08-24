@@ -41,7 +41,6 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -54,22 +53,18 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.nars.maplibre.R
 import com.nars.maplibre.SettingsViewModel
-import com.nars.maplibre.data.api.SessionManager
 import com.nars.maplibre.ui.theme.DangerColor
 import com.nars.maplibre.ui.theme.GlassBackground
 import com.nars.maplibre.ui.theme.TextPrimary
 import com.nars.maplibre.ui.theme.TextSecondary
 import com.nars.maplibre.ui.theme.ThemeMode
-import kotlinx.coroutines.launch
 import org.koin.androidx.compose.koinViewModel
-import org.koin.compose.koinInject
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(onNavigateBack: () -> Unit, onLogout: () -> Unit) {
     val viewModel: SettingsViewModel = koinViewModel()
     val themeMode by viewModel.themeMode.collectAsState()
-    val performLogout = rememberLogoutHandler(onLogout)
 
     Scaffold(
         topBar = {
@@ -113,21 +108,9 @@ fun SettingsScreen(onNavigateBack: () -> Unit, onLogout: () -> Unit) {
                     title = stringResource(R.string.settings_about),
                     icon = Icons.Default.Info,
                 ) {
-                    SettingsAboutContent(onLogout = performLogout)
+                    SettingsAboutContent(onLogout = { viewModel.logout(onLogout) })
                 }
             }
-        }
-    }
-}
-
-@Composable
-private fun rememberLogoutHandler(onLogout: () -> Unit): () -> Unit {
-    val sessionManager: SessionManager = koinInject()
-    val scope = rememberCoroutineScope()
-    return {
-        scope.launch {
-            sessionManager.logout()
-            onLogout()
         }
     }
 }

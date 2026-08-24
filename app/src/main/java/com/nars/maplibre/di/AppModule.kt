@@ -2,6 +2,7 @@ package com.nars.maplibre.di
 
 import com.nars.maplibre.AppPreferences
 import com.nars.maplibre.BuildConfig
+import com.nars.maplibre.LoginViewModel
 import com.nars.maplibre.MapViewModel
 import com.nars.maplibre.SettingsViewModel
 import com.nars.maplibre.data.api.ApiService
@@ -90,6 +91,7 @@ val appModule =
 
         single { SessionManager(get(), get()) }
 
-        viewModel { MapViewModel(get(), get(), get()) }
-        viewModel { SettingsViewModel(get()) }
+        viewModel { MapViewModel(get(), get(), get(), get(), get()) }
+        viewModel { SettingsViewModel(get(), get()) }
+        viewModel { LoginViewModel(get(), get()) }
     }

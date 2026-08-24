@@ -3,25 +3,24 @@ package com.nars.maplibre.ui.screens
 import android.content.Context
 import com.nars.maplibre.MapViewModel
 import com.nars.maplibre.R
-import com.nars.maplibre.data.api.ApiService
-import com.nars.maplibre.data.api.SessionManager
 import com.nars.maplibre.data.model.NarsFeature
 import com.nars.maplibre.data.store.UndoAction
 import com.nars.maplibre.modes.NarsGeoman
 import com.nars.maplibre.utils.NarsLogger
 import com.nars.maplibre.utils.isPointNearFeature
-import com.nars.maplibre.utils.retryOnTransientFailure
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.launch
 import org.maplibre.android.camera.CameraUpdateFactory
 import org.maplibre.android.geometry.LatLng
 import org.maplibre.android.maps.MapLibreMap
 import org.maplibre.android.maps.MapView
 
+/**
+ * View-bound controller for map/Geoman interaction only. Backend persistence
+ * lives in [MapViewModel] (viewModelScope-backed so in-flight operations
+ * survive configuration changes); this class never talks to the network.
+ */
 class MapScreenHandlers(
     private val viewModel: MapViewModel,
-    private val apiService: ApiService,
-    private val sessionManager: SessionManager,
     private val context: Context,
     private val scope: CoroutineScope,
     private val snackbar: (String) -> Unit,
@@ -50,14 +49,14 @@ class MapScreenHandlers(
                         snackbar(context.getString(R.string.map_feature_updated))
                     },
                     onFeatureDeleted = { featureId ->
-                        deleteFeature(featureId)
+                        viewModel.deleteFeatureOnBackend(featureId)
                     },
                 )
             narsGeoman = geoman
 
             viewModel.currentPhase.value?.let { geoman.setCurrentPhase(it) }
 
-            sessionManager.getUser()?.let { user ->
+            viewModel.currentUser?.let { user ->
                 if (user.hasCommuneLocation()) {
                     val lat = user.communeLatitude ?: return@let
                     val lng = user.communeLongitude ?: return@let
@@ -158,56 +157,6 @@ class MapScreenHandlers(
         }
     }
 
-    fun saveFeature(feature: NarsFeature) {
-        scope.launch {
-            val result = retryOnTransientFailure { apiService.saveFeature(feature) }
-            result.onSuccess { savedId ->
-                // Attach the backend id to the current store entry so any edits
-                // made while the save was in flight are not overwritten.
-                viewModel.updateFeatureInPlace(savedId, feature.id)
-                val current = viewModel.allFeatures.value.find { it.id == feature.id }
-                current?.let { narsGeoman?.displayManager?.updateFeatureOnMap(it) }
-                snackbar(context.getString(R.string.map_feature_saved))
-            }
-            result.onFailure { snackbar("${context.getString(R.string.map_save_failed)}: ${it.message}") }
-        }
-    }
-
-    fun updateFeature(feature: NarsFeature) {
-        scope.launch {
-            val apiId = feature.dbId ?: feature.id
-            val result = retryOnTransientFailure { apiService.updateFeature(apiId, feature) }
-            result.onSuccess { snackbar(context.getString(R.string.map_feature_updated)) }
-            result.onFailure { snackbar("${context.getString(R.string.map_update_failed)}: ${it.message}") }
-        }
-    }
-
-    fun deleteFeature(featureId: String) {
-        val feature = viewModel.allFeatures.value.find { it.id == featureId }
-        viewModel.deleteFeature(featureId)
-        narsGeoman?.displayManager?.removeFeature(featureId)
-        if (feature?.dbId == null) {
-            // Local-only (unsaved) feature — nothing to delete on the backend.
-            // Skipping the API call avoids a doomed DELETE (client UUID) that
-            // fails and restores the feature the user just deleted.
-            snackbar(context.getString(R.string.map_feature_deleted))
-            return
-        }
-        scope.launch {
-            val result = retryOnTransientFailure { apiService.deleteFeature(feature.dbId) }
-            result.onSuccess { snackbar(context.getString(R.string.map_feature_deleted)) }
-            result.onFailure {
-                // Only roll back if the feature was not re-added meanwhile.
-                if (viewModel.allFeatures.value.none { it.id == feature.id }) {
-                    viewModel.restoreFeature(feature)
-                    viewModel.clearDeleteUndo(feature.id)
-                    narsGeoman?.displayManager?.addFeature(feature)
-                }
-                snackbar("${context.getString(R.string.map_delete_failed)}: ${it.message}")
-            }
-        }
-    }
-
     /**
      * Re-arms the interaction mode on a freshly created map. The drawing/edit
      * flags live in the ViewModel and survive configuration changes, but the
@@ -215,7 +164,7 @@ class MapScreenHandlers(
      * restarted once features are displayed. (A partially drawn shape cannot be
      * reconstructed — only the mode itself is resumed.)
      */
-    private fun replayInteractionMode() {
+    fun replayInteractionMode() {
         val geoman = narsGeoman ?: return
         when {
             viewModel.drawingEnabled.value -> {
@@ -227,42 +176,6 @@ class MapScreenHandlers(
                     geoman.startEditing(feature)
                 }
             }
-        }
-    }
-
-    private suspend fun loadFeaturesWithRetry(): Result<List<NarsFeature>> =
-        retryOnTransientFailure { apiService.loadFeatures() }
-
-    fun logout(onLogout: () -> Unit) {
-        scope.launch {
-            sessionManager.logout()
-            onLogout()
-        }
-    }
-
-    fun loadFeaturesOnMapReady() {
-        scope.launch {
-            NarsLogger.d(TAG, "Loading features from backend...")
-            viewModel.updateUiState(isLoading = true)
-            val result = loadFeaturesWithRetry()
-            result.onSuccess { features ->
-                viewModel.addFeatures(features)
-                narsGeoman?.displayManager?.updateDisplayedFeatures(features)
-                replayInteractionMode()
-                val msg =
-                    if (features.isEmpty()) {
-                        context.getString(R.string.map_no_features)
-                    } else {
-                        context.resources.getQuantityString(
-                            R.plurals.map_features_loaded,
-                            features.size,
-                            features.size,
-                        )
-                    }
-                snackbar(msg)
-            }
-            result.onFailure { snackbar("${context.getString(R.string.map_load_failed)}: ${it.message}") }
-            viewModel.updateUiState(isLoading = false)
         }
     }
 }

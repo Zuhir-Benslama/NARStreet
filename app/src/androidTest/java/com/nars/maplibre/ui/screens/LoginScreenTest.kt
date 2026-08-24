@@ -1,5 +1,6 @@
 package com.nars.maplibre.ui.screens
 
+import android.app.Application
 import android.content.Context
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
@@ -11,6 +12,7 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextInput
 import androidx.test.platform.app.InstrumentationRegistry
+import com.nars.maplibre.LoginViewModel
 import com.nars.maplibre.data.api.SessionManager
 import io.mockk.coEvery
 import io.mockk.coVerify
@@ -20,8 +22,10 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
+import org.koin.android.ext.koin.androidContext
 import org.koin.core.context.startKoin
 import org.koin.core.context.stopKoin
+import org.koin.core.module.dsl.viewModel
 import org.koin.dsl.module
 
 class LoginScreenTest {
@@ -36,9 +40,12 @@ class LoginScreenTest {
         targetContext = InstrumentationRegistry.getInstrumentation().targetContext
         stopKoin()
         startKoin {
+            androidContext(targetContext)
             modules(
                 module {
+                    single<Application> { targetContext.applicationContext as Application }
                     single<SessionManager> { mockSessionManager }
+                    viewModel { LoginViewModel(get(), get()) }
                 },
             )
         }

@@ -1,6 +1,6 @@
 [versions]
 # Android Gradle Plugin - Compatible with Gradle 9.6.1 + JDK 21
-agp = "9.3.1"
+agp = "9.3.2"
 
 # Kotlin - Compatible with JDK 21
 kotlin = "2.4.10"
@@ -8,6 +8,8 @@ kotlinx-serialization = "1.11.0"
 kotlinx-coroutines = "1.11.0"
 
 # AndroidX Core
+# Note: appcompat/material/espresso are consumed by the :geoman module
+# (sibling maplibre-geoman-android checkout), which shares this catalog.
 androidx-core-ktx = "1.19.0"
 androidx-appcompat = "1.8.0"
 androidx-activity = "1.13.0"
@@ -36,10 +38,13 @@ detekt = "2.0.0-alpha.6"
 # Logging
 timber = "5.0.1"
 
+# Memory leak detection (debug builds)
+leakcanary = "2.14"
+
 # Formatting
 spotless = "8.10.0"
 
-# Material
+# Material (used by :geoman)
 material = "1.14.0"
 
 # Testing
@@ -81,7 +86,10 @@ maplibre-android-sdk = { group = "org.maplibre.gl", name = "android-sdk", versio
 # Timber
 timber = { group = "com.jakewharton.timber", name = "timber", version.ref = "timber" }
 
-# Material
+# LeakCanary
+leakcanary-android = { group = "com.squareup.leakcanary", name = "leakcanary-android", version.ref = "leakcanary" }
+
+# Material (used by :geoman)
 material = { group = "com.google.android.material", name = "material", version.ref = "material" }
 
 # Koin DI

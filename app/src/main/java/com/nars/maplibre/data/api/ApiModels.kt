@@ -8,6 +8,7 @@ import com.nars.maplibre.data.model.NarsFeature
 import com.nars.maplibre.data.model.NarsFeatureType
 import com.nars.maplibre.data.model.Phases
 import com.nars.maplibre.data.model.PointGeometry
+import com.nars.maplibre.utils.NarsLogger
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
@@ -118,7 +119,7 @@ data class ApiFeatureResult(
                     FeatureProperties.RoadProperties(
                         name = name,
                         phase = Phases.ROADS_KEY,
-                        color = "#3498db",
+                        color = Phases.ROADS_COLOR,
                         roadTypeKey = data.str("roadTypeKey") ?: topLayer,
                     )
                 }
@@ -127,7 +128,7 @@ data class ApiFeatureResult(
                     FeatureProperties.HouseEntranceProperties(
                         name = name,
                         phase = Phases.HOUSE_ENTRANCES_KEY,
-                        color = "#27ae60",
+                        color = Phases.HOUSE_ENTRANCES_COLOR,
                         entranceTypeKey = data.str("entranceTypeKey") ?: topLayer,
                         roadDbId = data.str("roadDbId"),
                         side = data.str("side"),
@@ -138,7 +139,7 @@ data class ApiFeatureResult(
                     FeatureProperties.NamingPanelProperties(
                         name = name,
                         phase = Phases.NAMING_PANELS_KEY,
-                        color = "#9b59b6",
+                        color = Phases.NAMING_PANELS_COLOR,
                     )
                 }
             }
@@ -152,6 +153,8 @@ data class ApiFeatureResult(
         private const val MILLIS_PER_HOUR = 3_600_000L
         private const val MILLIS_PER_MINUTE = 60_000L
 
+        private const val TAG = "ApiModels"
+
         private val ISO_8601_REGEX =
             Regex(
                 """(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2}):(\d{2})(?:\.\d+)?(?:([+-])(\d{2}):(\d{2})|Z)?""",
@@ -164,8 +167,15 @@ data class ApiFeatureResult(
          */
         @Suppress("MagicNumber")
         private fun String?.toEpochMillis(): Long {
-            val raw = this ?: return System.currentTimeMillis()
-            val match = ISO_8601_REGEX.matchEntire(raw) ?: return System.currentTimeMillis()
+            if (this == null) {
+                NarsLogger.d(TAG, "Feature has no createdAt timestamp — using current time")
+                return System.currentTimeMillis()
+            }
+            val match = ISO_8601_REGEX.matchEntire(this)
+            if (match == null) {
+                NarsLogger.w(TAG, "Unparseable createdAt timestamp — using current time")
+                return System.currentTimeMillis()
+            }
             val parts = match.groupValues
             // Malformed calendar fields (e.g. month 00 or day 32) throw here;
             // fall back to "now" instead of crashing the whole feature load.
@@ -188,7 +198,8 @@ data class ApiFeatureResult(
                     millis -= if (sign == "+") delta else -delta
                 }
                 millis
-            } catch (_: IllegalArgumentException) {
+            } catch (e: IllegalArgumentException) {
+                NarsLogger.w(TAG, "Invalid createdAt timestamp — using current time", e)
                 System.currentTimeMillis()
             }
         }

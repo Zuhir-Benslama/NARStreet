@@ -3,6 +3,8 @@ package com.nars.maplibre
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.nars.maplibre.data.api.ApiService
+import com.nars.maplibre.data.api.SessionManager
 import com.nars.maplibre.data.model.BaseLayerType
 import com.nars.maplibre.data.model.NarsFeature
 import com.nars.maplibre.data.model.PhaseDefinition
@@ -11,6 +13,7 @@ import com.nars.maplibre.data.store.UndoAction
 import com.nars.maplibre.utils.NarsLogger
 import com.nars.maplibre.utils.PhaseNavigationResult
 import com.nars.maplibre.utils.PhaseNavigator
+import com.nars.maplibre.utils.retryOnTransientFailure
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -18,18 +21,30 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 
 @Suppress("TooManyFunctions")
 class MapViewModel(
     application: Application,
     private val featureStore: FeatureStoreInterface,
     private val appPreferences: AppPreferences,
+    private val apiService: ApiService,
+    private val sessionManager: SessionManager,
 ) : AndroidViewModel(application) {
+    companion object {
+        private const val TAG = "MapViewModel"
+    }
+
     private val phaseNavigator = PhaseNavigator(featureStore)
 
     val currentPhase: StateFlow<PhaseDefinition?> = featureStore.currentPhase
     val allFeatures: StateFlow<List<NarsFeature>> = featureStore.allFeatures
     val selectedFeature: StateFlow<NarsFeature?> = featureStore.selectedFeature
+
+    /** Re-emitted when the backend rejects a refresh token (session dead). */
+    val sessionExpired = apiService.sessionExpired
+
+    val currentUser get() = appPreferences.user
 
     private val _uiState = MutableStateFlow(UiState())
     val uiState: StateFlow<UiState> = _uiState.asStateFlow()
@@ -188,6 +203,111 @@ class MapViewModel(
     }
 
     fun clearSelection() = featureStore.selectFeature(null)
+
+    /**
+     * Loads all features from the backend into the store. Runs in
+     * [viewModelScope] so an in-flight load survives configuration changes —
+     * the previous composition-scoped version silently cancelled the load on
+     * rotation. The map re-syncs through [allFeatures] emissions.
+     */
+    fun loadFeatures() {
+        viewModelScope.launch {
+            NarsLogger.d(TAG, "Loading features from backend...")
+            updateUiState(isLoading = true)
+            val result = retryOnTransientFailure { apiService.loadFeatures() }
+            result.onSuccess { features ->
+                addFeatures(features)
+                val app = getApplication<Application>()
+                val msg =
+                    if (features.isEmpty()) {
+                        app.getString(R.string.map_no_features)
+                    } else {
+                        app.resources.getQuantityString(
+                            R.plurals.map_features_loaded,
+                            features.size,
+                            features.size,
+                        )
+                    }
+                updateUiState(successMessage = msg)
+            }
+            result.onFailure {
+                NarsLogger.e(TAG, "loadFeatures failed", it)
+                updateUiState(errorMessage = "${appString(R.string.map_load_failed)}: ${it.message}")
+            }
+            updateUiState(isLoading = false)
+        }
+    }
+
+    /**
+     * Persists a newly created feature to the backend and attaches the
+     * server-assigned id to the matching store entry.
+     */
+    fun saveFeatureToBackend(feature: NarsFeature) {
+        viewModelScope.launch {
+            val result = retryOnTransientFailure { apiService.saveFeature(feature) }
+            result.onSuccess { savedId ->
+                // Attach the backend id to the current store entry so any edits
+                // made while the save was in flight are not overwritten.
+                updateFeatureInPlace(savedId, feature.id)
+                updateUiState(successMessage = appString(R.string.map_feature_saved))
+            }
+            result.onFailure {
+                updateUiState(errorMessage = "${appString(R.string.map_save_failed)}: ${it.message}")
+            }
+        }
+    }
+
+    /** Pushes feature edits to the backend. */
+    fun updateFeatureOnBackend(feature: NarsFeature) {
+        viewModelScope.launch {
+            val apiId = feature.dbId ?: feature.id
+            val result = retryOnTransientFailure { apiService.updateFeature(apiId, feature) }
+            result.onSuccess { updateUiState(successMessage = appString(R.string.map_feature_updated)) }
+            result.onFailure {
+                updateUiState(errorMessage = "${appString(R.string.map_update_failed)}: ${it.message}")
+            }
+        }
+    }
+
+    /**
+     * Deletes a feature optimistically (store first, backend second), rolling
+     * back the local delete when the backend rejects it. The map re-syncs via
+     * [allFeatures]: the removal takes the feature off the map immediately and
+     * a rollback re-adds it, so no view-layer calls are needed here.
+     */
+    fun deleteFeatureOnBackend(featureId: String) {
+        val feature = featureStore.getFeatureById(featureId)
+        deleteFeature(featureId)
+        if (feature?.dbId == null) {
+            // Local-only (unsaved) feature — nothing to delete on the backend.
+            // Skipping the API call avoids a doomed DELETE (client UUID) that
+            // fails and restores the feature the user just deleted.
+            updateUiState(successMessage = appString(R.string.map_feature_deleted))
+            return
+        }
+        viewModelScope.launch {
+            val result = retryOnTransientFailure { apiService.deleteFeature(feature.dbId) }
+            result.onSuccess { updateUiState(successMessage = appString(R.string.map_feature_deleted)) }
+            result.onFailure {
+                // Only roll back if the feature was not re-added meanwhile.
+                if (featureStore.allFeatures.value.none { it.id == feature.id }) {
+                    restoreFeature(feature)
+                    clearDeleteUndo(feature.id)
+                }
+                updateUiState(errorMessage = "${appString(R.string.map_delete_failed)}: ${it.message}")
+            }
+        }
+    }
+
+    /** Revokes the session server-side, then hands control back for navigation. */
+    fun logout(onLogout: () -> Unit) {
+        viewModelScope.launch {
+            sessionManager.logout()
+            onLogout()
+        }
+    }
+
+    private fun appString(resId: Int): String = getApplication<Application>().getString(resId)
 
     /** Clears all local feature state (used when a session expires). */
     fun clearAll() {

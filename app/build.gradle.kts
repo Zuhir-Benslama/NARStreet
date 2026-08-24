@@ -184,7 +184,7 @@ tasks.configureEach {
 }
 
 dependencies {
-    // MapLibre Android SDK 13.4.1 (see gradle/libs.versions.toml)
+    // MapLibre Android SDK (version pinned in gradle/libs.versions.toml)
     implementation(libs.maplibre.android.sdk)
 
     // MapLibre Geoman Android (local module)
@@ -197,7 +197,6 @@ dependencies {
 
     // AndroidX Core
     implementation(libs.androidx.core.ktx)
-    implementation(libs.androidx.appcompat)
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.lifecycle.runtime.compose)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
@@ -242,4 +241,7 @@ dependencies {
     androidTestImplementation(libs.mockk.android)
     debugImplementation(libs.compose.ui.tooling)
     debugImplementation(libs.compose.ui.test.manifest)
+
+    // Memory leak detection in debug builds only
+    debugImplementation(libs.leakcanary.android)
 }

@@ -13,14 +13,16 @@ import androidx.compose.ui.Modifier
 import com.nars.maplibre.ui.navigation.NarsNavHost
 import com.nars.maplibre.ui.theme.NARSTheme
 import com.nars.maplibre.ui.theme.ThemeMode
-import org.koin.java.KoinJavaComponent.get
+import org.koin.android.ext.android.inject
 
 class MainActivity : ComponentActivity() {
+    // Lazy property injection (resolved on first access in onCreate) — keeps
+    // this activity free of manual service-locator lookups.
+    private val appPreferences: AppPreferences by inject()
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-
-        val appPreferences: AppPreferences = get(AppPreferences::class.java)
 
         setContent {
             val themeMode by appPreferences.themeModeFlow.collectAsState(initial = appPreferences.themeMode)

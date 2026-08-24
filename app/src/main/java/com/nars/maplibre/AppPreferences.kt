@@ -7,6 +7,7 @@ import com.nars.maplibre.data.model.BaseLayerType
 import com.nars.maplibre.data.model.User
 import com.nars.maplibre.security.SecurePreferences
 import com.nars.maplibre.ui.theme.ThemeMode
+import com.nars.maplibre.utils.NarsLogger
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -32,7 +33,8 @@ class AppPreferences internal constructor(
     var themeMode: ThemeMode
         get() = try {
             ThemeMode.valueOf(prefs.getString(KEY_THEME, ThemeMode.AUTO.name) ?: ThemeMode.AUTO.name)
-        } catch (_: IllegalArgumentException) {
+        } catch (e: IllegalArgumentException) {
+            NarsLogger.w("AppPreferences", "Corrupted theme pref — resetting to AUTO", e)
             ThemeMode.AUTO
         }
         set(value) {
@@ -46,7 +48,8 @@ class AppPreferences internal constructor(
                 prefs.getString(KEY_BASE_LAYER, BaseLayerType.SATELLITE.name)
                     ?: BaseLayerType.SATELLITE.name,
             )
-        } catch (_: IllegalArgumentException) {
+        } catch (e: IllegalArgumentException) {
+            NarsLogger.w("AppPreferences", "Corrupted base layer pref — resetting to SATELLITE", e)
             BaseLayerType.SATELLITE
         }
         set(value) {

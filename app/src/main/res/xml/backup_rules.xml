@@ -1,7 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <full-backup-content>
     <!-- Back up only plain preferences (theme, base layer, current phase).
-         The encrypted credential store (nars_secure_prefs) is intentionally
-         not included, so tokens/credentials are never backed up or restored. -->
+         Credential stores (legacy nars_secure_prefs and nars_secure_prefs_v2)
+         are intentionally not included: tokens must never be backed up or
+         restored — and a Keystore-backed key would not survive the restore
+         anyway, making restored ciphertext undecryptable. -->
     <include domain="sharedpref" path="nars_preferences"/>
 </full-backup-content>
