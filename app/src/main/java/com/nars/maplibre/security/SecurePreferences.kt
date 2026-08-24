@@ -27,10 +27,7 @@ import java.io.File
  * The underlying collaborators are injectable for JVM unit tests.
  */
 @Suppress("TooManyFunctions")
-class SecurePreferences internal constructor(
-    private val prefs: SharedPreferences,
-    private val cipher: ValueCipher,
-) {
+class SecurePreferences internal constructor(private val prefs: SharedPreferences, private val cipher: ValueCipher) {
     constructor(context: Context) : this(createSecureStore(context))
 
     internal constructor(store: SecureStore) : this(store.prefs, store.cipher)

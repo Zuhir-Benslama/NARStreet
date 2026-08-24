@@ -18,14 +18,7 @@ import java.util.GregorianCalendar
 import java.util.TimeZone
 
 class ApiModelsTest {
-    private fun utcCalendar(
-        year: Int,
-        month: Int,
-        day: Int,
-        hour: Int,
-        minute: Int,
-        second: Int,
-    ): Long {
+    private fun utcCalendar(year: Int, month: Int, day: Int, hour: Int, minute: Int, second: Int): Long {
         val calendar = GregorianCalendar(TimeZone.getTimeZone("UTC"))
         calendar.clear()
         calendar.set(year, month - 1, day, hour, minute, second)
@@ -78,9 +71,24 @@ class ApiModelsTest {
             put(
                 "coordinates",
                 kotlinx.serialization.json.buildJsonArray {
-                    add(buildJsonObject { put("lat", 1.0); put("lng", 11.0) })
-                    add(buildJsonObject { put("lat", 2.0); put("lng", 12.0) })
-                    add(buildJsonObject { put("lat", 3.0); put("lng", 13.0) })
+                    add(
+                        buildJsonObject {
+                            put("lat", 1.0)
+                            put("lng", 11.0)
+                        },
+                    )
+                    add(
+                        buildJsonObject {
+                            put("lat", 2.0)
+                            put("lng", 12.0)
+                        },
+                    )
+                    add(
+                        buildJsonObject {
+                            put("lat", 3.0)
+                            put("lng", 13.0)
+                        },
+                    )
                 },
             )
         }
@@ -100,7 +108,12 @@ class ApiModelsTest {
             put(
                 "coordinates",
                 kotlinx.serialization.json.buildJsonArray {
-                    add(buildJsonObject { put("lat", 5.0); put("lng", 6.0) })
+                    add(
+                        buildJsonObject {
+                            put("lat", 5.0)
+                            put("lng", 6.0)
+                        },
+                    )
                 },
             )
         }

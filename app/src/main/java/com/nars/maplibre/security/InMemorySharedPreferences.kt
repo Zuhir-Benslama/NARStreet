@@ -73,11 +73,9 @@ internal class InMemorySharedPreferences : SharedPreferences {
     override fun getStringSet(key: String, defValues: MutableSet<String>?): MutableSet<String>? =
         synchronized(this) { values[key] as? MutableSet<String> ?: defValues }
 
-    override fun getInt(key: String, defValue: Int): Int =
-        synchronized(this) { values[key] as? Int ?: defValue }
+    override fun getInt(key: String, defValue: Int): Int = synchronized(this) { values[key] as? Int ?: defValue }
 
-    override fun getLong(key: String, defValue: Long): Long =
-        synchronized(this) { values[key] as? Long ?: defValue }
+    override fun getLong(key: String, defValue: Long): Long = synchronized(this) { values[key] as? Long ?: defValue }
 
     override fun getFloat(key: String, defValue: Float): Float =
         synchronized(this) { values[key] as? Float ?: defValue }

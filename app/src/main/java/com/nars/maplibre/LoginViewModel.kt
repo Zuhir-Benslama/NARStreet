@@ -17,10 +17,8 @@ import java.io.IOException
  * lived directly in LoginScreen's composition on a rememberCoroutineScope —
  * an in-flight login was silently cancelled by rotation/navigation.
  */
-class LoginViewModel(
-    application: Application,
-    private val sessionManager: SessionManager,
-) : AndroidViewModel(application) {
+class LoginViewModel(application: Application, private val sessionManager: SessionManager) :
+    AndroidViewModel(application) {
     companion object {
         private const val TAG = "LoginViewModel"
     }
