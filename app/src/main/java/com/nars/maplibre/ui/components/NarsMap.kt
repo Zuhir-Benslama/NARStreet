@@ -41,32 +41,24 @@ import org.maplibre.android.maps.Style
  * Integrates MapLibre Android SDK with Jetpack Compose
  */
 @Composable
-fun NarsMap(
-    viewModel: MapViewModel,
-    onMapReady: (MapView, MapLibreMap) -> Unit,
-    modifier: Modifier = Modifier,
-    onMapClick: ((LatLng) -> Unit)? = null,
-    onMapLongClick: ((LatLng) -> Unit)? = null,
-    shouldHandleClick: (() -> Boolean)? = null,
-    onStyleLoaded: (() -> Unit)? = null,
-) {
+fun NarsMap(viewModel: MapViewModel, callbacks: NarsMapCallbacks, modifier: Modifier = Modifier) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
     val baseLayer by viewModel.baseLayer.collectAsState()
 
-    var currentOnMapClick by remember { mutableStateOf(onMapClick) }
-    var currentOnMapLongClick by remember { mutableStateOf(onMapLongClick) }
-    var currentShouldHandleClick by remember { mutableStateOf(shouldHandleClick) }
+    var currentOnMapClick by remember { mutableStateOf(callbacks.onMapClick) }
+    var currentOnMapLongClick by remember { mutableStateOf(callbacks.onMapLongClick) }
+    var currentShouldHandleClick by remember { mutableStateOf(callbacks.shouldHandleClick) }
 
-    LaunchedEffect(onMapClick) { currentOnMapClick = onMapClick }
-    LaunchedEffect(onMapLongClick) { currentOnMapLongClick = onMapLongClick }
-    LaunchedEffect(shouldHandleClick) { currentShouldHandleClick = shouldHandleClick }
+    LaunchedEffect(callbacks.onMapClick) { currentOnMapClick = callbacks.onMapClick }
+    LaunchedEffect(callbacks.onMapLongClick) { currentOnMapLongClick = callbacks.onMapLongClick }
+    LaunchedEffect(callbacks.shouldHandleClick) { currentShouldHandleClick = callbacks.shouldHandleClick }
 
     val mapViewBundle = rememberSaveable { Bundle() }
     val mapView = remember { MapView(context) }
 
     MapViewLifecycleEffect(lifecycleOwner, mapView, mapViewBundle)
-    BaseLayerSyncEffect(mapView, baseLayer, onStyleLoaded)
+    BaseLayerSyncEffect(mapView, baseLayer, callbacks.onStyleLoaded)
 
     AndroidView(
         factory = { ctx ->
@@ -79,7 +71,6 @@ fun NarsMap(
                         shouldHandleClick = { currentShouldHandleClick?.invoke() ?: true },
                     )
 
-                    // Set initial camera position (Algeria)
                     val cameraPosition = CameraPosition.Builder()
                         .target(LatLng(Config.MAP_DEFAULT_LAT, Config.MAP_DEFAULT_LNG))
                         .zoom(Config.MAP_DEFAULT_ZOOM)
@@ -88,11 +79,9 @@ fun NarsMap(
                         .build()
                     mapLibreMap.setCameraPosition(cameraPosition)
 
-                    // Initialize base layer
                     initializeBaseLayer(mapLibreMap, baseLayer)
 
-                    // Notify map ready
-                    onMapReady(this, mapLibreMap)
+                    callbacks.onMapReady(this, mapLibreMap)
                 }
             }
         },

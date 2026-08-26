@@ -314,36 +314,42 @@ class ApiService(private val httpClient: HttpClient, private val preferences: Ap
         Result.failure(e)
     }
 
+    private suspend fun fetchFeaturesPage(skip: Int): Result<ApiLoadFeaturesResponse?> {
+        val response =
+            authenticatedRequest {
+                httpClient.get("$baseUrl/api/features") {
+                    authHeaders().forEach { (k, v) -> headers.append(k, v) }
+                    parameter("skip", skip)
+                    parameter("take", FEATURES_PAGE_SIZE)
+                }
+            }
+        if (!response.status.isSuccess()) {
+            val error = Exception("Load failed: HTTP ${response.status.value}")
+            NarsLogger.e(TAG, "loadFeatures failed", error)
+            return Result.failure(error)
+        }
+        val body = response.bodyAsText()
+        return Result.success(
+            body.ifBlank { null }?.let {
+                apiJson.decodeFromString<ApiLoadFeaturesResponse>(it)
+            },
+        )
+    }
+
     suspend fun loadFeatures(): Result<List<NarsFeature>> {
         return try {
             val allFeatures = mutableListOf<NarsFeature>()
             var skip = 0
             var hasMore = true
             while (hasMore) {
-                val response =
-                    authenticatedRequest {
-                        httpClient.get("$baseUrl/api/features") {
-                            authHeaders().forEach { (k, v) -> headers.append(k, v) }
-                            parameter("skip", skip)
-                            parameter("take", FEATURES_PAGE_SIZE)
-                        }
-                    }
-                if (!response.status.isSuccess()) {
-                    val error = Exception("Load failed: HTTP ${response.status.value}")
-                    NarsLogger.e(TAG, "loadFeatures failed", error)
-                    return Result.failure(error)
-                }
-                val body = response.bodyAsText()
-                val apiResponse = body.ifBlank { null }?.let {
-                    apiJson.decodeFromString<ApiLoadFeaturesResponse>(it)
-                }
-                if (apiResponse == null) {
+                val page = fetchFeaturesPage(skip).getOrElse { return Result.failure(it) }
+                if (page == null) {
                     hasMore = false
                 } else {
-                    val features = apiResponse.features
+                    val features = page.features
                     allFeatures += features.mapNotNull { it.toNarsFeature() }
                     skip += features.size
-                    hasMore = features.isNotEmpty() && apiResponse.count > skip
+                    hasMore = features.isNotEmpty() && page.count > skip
                 }
             }
             Result.success(allFeatures)

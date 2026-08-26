@@ -193,6 +193,26 @@ class GeometryConverter {
         add(buildJsonArray { polygon.forEach { addRing(it) } })
     }
 
+    private fun buildRingCoordinates(coords: List<List<Double>>): kotlinx.serialization.json.JsonArray =
+        buildJsonArray {
+            for (c in coords) {
+                add(
+                    buildJsonArray {
+                        add(c[0])
+                        add(c[1])
+                    },
+                )
+            }
+        }
+
+    private fun buildFeatureWrapper(
+        geometry: kotlinx.serialization.json.JsonObject,
+    ): kotlinx.serialization.json.JsonObject = buildJsonObject {
+        put("type", "Feature")
+        put("geometry", geometry)
+        putJsonObject("properties") {}
+    }
+
     private fun coordinatesToLngLats(coords: List<Double>): List<LngLat> = coords
         .chunked(2)
         .filter {
@@ -211,27 +231,13 @@ class GeometryConverter {
                 points + points.firstOrNull()
             }
 
-        return buildJsonObject {
-            put("type", "Feature")
-            putJsonObject("geometry") {
-                put("type", "LineString")
-                putJsonArray("coordinates") {
-                    add(
-                        buildJsonArray {
-                            for (coord in ring.filterNotNull()) {
-                                add(
-                                    buildJsonArray {
-                                        add(coord[0])
-                                        add(coord[1])
-                                    },
-                                )
-                            }
-                        },
-                    )
-                }
+        val geometry = buildJsonObject {
+            put("type", "LineString")
+            putJsonArray("coordinates") {
+                add(buildRingCoordinates(ring.filterNotNull()))
             }
-            putJsonObject("properties") { }
-        }.toString()
+        }
+        return buildFeatureWrapper(geometry).toString()
     }
 
     /**
@@ -248,34 +254,16 @@ class GeometryConverter {
                 val cosLat = Math.cos(Math.toRadians(centerLat)).coerceAtLeast(MIN_COS_LATITUDE)
                 val lng = centerLng + radiusDegrees * Math.cos(angle) / cosLat
                 val lat = centerLat + radiusDegrees * Math.sin(angle)
-                lng to lat
+                listOf(lng, lat)
             }
 
-        return buildJsonObject {
-            put("type", "Feature")
-            putJsonObject("geometry") {
-                put("type", "Polygon")
-                putJsonArray("coordinates") {
-                    add(
-                        buildJsonArray {
-                            add(
-                                buildJsonArray {
-                                    for ((lng, lat) in ring) {
-                                        add(
-                                            buildJsonArray {
-                                                add(lng)
-                                                add(lat)
-                                            },
-                                        )
-                                    }
-                                },
-                            )
-                        },
-                    )
-                }
+        val geometry = buildJsonObject {
+            put("type", "Polygon")
+            putJsonArray("coordinates") {
+                add(buildJsonArray { add(buildRingCoordinates(ring)) })
             }
-            putJsonObject("properties") { }
-        }.toString()
+        }
+        return buildFeatureWrapper(geometry).toString()
     }
 
     /**

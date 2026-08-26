@@ -4,6 +4,7 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.nars.maplibre.data.api.ApiService
+import com.nars.maplibre.data.api.BackendInteractor
 import com.nars.maplibre.data.api.SessionManager
 import com.nars.maplibre.data.model.BaseLayerType
 import com.nars.maplibre.data.model.NarsFeature
@@ -13,7 +14,6 @@ import com.nars.maplibre.data.store.UndoAction
 import com.nars.maplibre.utils.NarsLogger
 import com.nars.maplibre.utils.PhaseNavigationResult
 import com.nars.maplibre.utils.PhaseNavigator
-import com.nars.maplibre.utils.retryOnTransientFailure
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -30,6 +30,7 @@ class MapViewModel(
     private val appPreferences: AppPreferences,
     private val apiService: ApiService,
     private val sessionManager: SessionManager,
+    private val interactor: BackendInteractor,
 ) : AndroidViewModel(application) {
     companion object {
         private const val TAG = "MapViewModel"
@@ -214,7 +215,7 @@ class MapViewModel(
         viewModelScope.launch {
             NarsLogger.d(TAG, "Loading features from backend...")
             updateUiState(isLoading = true)
-            val result = retryOnTransientFailure { apiService.loadFeatures() }
+            val result = interactor.loadFeatures()
             result.onSuccess { features ->
                 addFeatures(features)
                 val app = getApplication<Application>()
@@ -244,7 +245,7 @@ class MapViewModel(
      */
     fun saveFeatureToBackend(feature: NarsFeature) {
         viewModelScope.launch {
-            val result = retryOnTransientFailure { apiService.saveFeature(feature) }
+            val result = interactor.saveFeature(feature)
             result.onSuccess { savedId ->
                 // Attach the backend id to the current store entry so any edits
                 // made while the save was in flight are not overwritten.
@@ -261,7 +262,7 @@ class MapViewModel(
     fun updateFeatureOnBackend(feature: NarsFeature) {
         viewModelScope.launch {
             val apiId = feature.dbId ?: feature.id
-            val result = retryOnTransientFailure { apiService.updateFeature(apiId, feature) }
+            val result = interactor.updateFeature(apiId, feature)
             result.onSuccess { updateUiState(successMessage = appString(R.string.map_feature_updated)) }
             result.onFailure {
                 updateUiState(errorMessage = "${appString(R.string.map_update_failed)}: ${it.message}")
@@ -286,7 +287,7 @@ class MapViewModel(
             return
         }
         viewModelScope.launch {
-            val result = retryOnTransientFailure { apiService.deleteFeature(feature.dbId) }
+            val result = interactor.deleteFeature(feature.dbId)
             result.onSuccess { updateUiState(successMessage = appString(R.string.map_feature_deleted)) }
             result.onFailure {
                 // Only roll back if the feature was not re-added meanwhile.

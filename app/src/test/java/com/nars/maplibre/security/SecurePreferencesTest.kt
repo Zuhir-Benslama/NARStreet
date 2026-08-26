@@ -19,7 +19,7 @@ private object FakeCipher : ValueCipher {
     override fun encrypt(plainText: String): String = plainText.reversed()
 
     override fun decrypt(payload: String): String = if (payload == UNREADABLE_PAYLOAD) {
-        throw IllegalStateException("simulated keystore failure")
+        throw java.security.GeneralSecurityException("simulated keystore failure")
     } else {
         payload.reversed()
     }

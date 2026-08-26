@@ -50,8 +50,6 @@ fun MapScreen(onNavigateToSettings: () -> Unit, onLogout: () -> Unit) {
     DisposableEffect(Unit) {
         onDispose {
             handlers.narsGeoman?.destroy()
-            // Drop the reference so the handler can't leak the destroyed Geoman
-            // (its listeners/observers are dead after destroy()).
             handlers.narsGeoman = null
         }
     }
@@ -60,18 +58,24 @@ fun MapScreen(onNavigateToSettings: () -> Unit, onLogout: () -> Unit) {
         allFeatures.groupingBy { it.properties.phase }.eachCount()
     }
 
-    MapScreenEffects(viewModel, handlers, onLogout, currentPhase, allFeatures, uiState, snackbarHostState)
+    val effectContext = remember(viewModel, handlers, onLogout, snackbarHostState) {
+        MapScreenEffectContext(viewModel, handlers, onLogout, snackbarHostState)
+    }
+
+    MapScreenEffects(effectContext, currentPhase, allFeatures, uiState)
 
     MapScreenScaffold(
-        state = MapScreenViewState(
+        featureState = MapScreenFeatureState(
             currentPhase = currentPhase,
             allFeatures = allFeatures,
             selectedFeature = selectedFeature,
+            featureCounts = featureCounts,
+        ),
+        uiState = MapScreenControlState(
             baseLayer = baseLayer,
             uiState = uiState,
             drawingEnabled = drawingEnabled,
             editModeEnabled = editModeEnabled,
-            featureCounts = featureCounts,
         ),
         callbacks = MapScreenCallbacks(
             onNavigateToSettings = onNavigateToSettings,
@@ -86,61 +90,79 @@ fun MapScreen(onNavigateToSettings: () -> Unit, onLogout: () -> Unit) {
 
 @Composable
 private fun MapScreenEffects(
-    viewModel: MapViewModel,
-    handlers: MapScreenHandlers,
-    onSessionExpired: () -> Unit,
+    ctx: MapScreenEffectContext,
     currentPhase: PhaseDefinition?,
     allFeatures: List<NarsFeature>,
     uiState: UiState,
-    snackbarHostState: SnackbarHostState,
 ) {
-    // A rejected refresh token (401/403 on /api/refresh) means the session is
-    // permanently dead — drop local state and return to the login screen
-    // instead of leaving the user on a map that silently rejects every request.
     LaunchedEffect(Unit) {
-        viewModel.sessionExpired.collect {
+        ctx.viewModel.sessionExpired.collect {
             NarsLogger.w("MapScreen", "Session expired — returning to login")
-            viewModel.clearAll()
-            handlers.narsGeoman?.displayManager?.updateDisplayedFeatures(emptyList())
-            onSessionExpired()
+            ctx.viewModel.clearAll()
+            ctx.handlers.narsGeoman?.displayManager?.updateDisplayedFeatures(emptyList())
+            ctx.onSessionExpired()
         }
     }
     LaunchedEffect(uiState.errorMessage) {
         uiState.errorMessage?.let {
-            snackbarHostState.showSnackbar(it)
-            viewModel.clearErrorMessage()
+            ctx.snackbarHostState.showSnackbar(it)
+            ctx.viewModel.clearErrorMessage()
         }
     }
     LaunchedEffect(uiState.successMessage) {
         uiState.successMessage?.let {
-            snackbarHostState.showSnackbar(it)
-            viewModel.clearSuccessMessage()
+            ctx.snackbarHostState.showSnackbar(it)
+            ctx.viewModel.clearSuccessMessage()
         }
     }
 
     LaunchedEffect(allFeatures) {
-        handlers.narsGeoman?.displayManager?.updateDisplayedFeatures(allFeatures)
+        ctx.handlers.narsGeoman?.displayManager?.updateDisplayedFeatures(allFeatures)
     }
 
     LaunchedEffect(currentPhase) {
         currentPhase?.let { phase ->
             NarsLogger.d("MapScreen", "Phase changed: ${phase.label}")
-            handlers.narsGeoman?.setCurrentPhase(phase)
-            handlers.narsGeoman?.displayManager?.updateDisplayedFeatures(allFeatures)
-            viewModel.updateUiState(isLoading = false)
+            ctx.handlers.narsGeoman?.setCurrentPhase(phase)
+            ctx.handlers.narsGeoman?.displayManager?.updateDisplayedFeatures(allFeatures)
+            ctx.viewModel.updateUiState(isLoading = false)
         }
     }
 }
 
-internal data class MapScreenViewState(
+internal data class MapScreenEffectContext(
+    val viewModel: MapViewModel,
+    val handlers: MapScreenHandlers,
+    val onSessionExpired: () -> Unit,
+    val snackbarHostState: SnackbarHostState,
+)
+
+internal data class MapScreenFeatureState(
     val currentPhase: PhaseDefinition?,
     val allFeatures: List<NarsFeature>,
     val selectedFeature: NarsFeature?,
+    val featureCounts: Map<String, Int>,
+)
+
+internal data class MapScreenControlState(
     val baseLayer: BaseLayerType,
     val uiState: UiState,
     val drawingEnabled: Boolean,
     val editModeEnabled: Boolean,
-    val featureCounts: Map<String, Int>,
+)
+
+internal data class FeatureModalState(
+    val show: Boolean,
+    val editingFeature: NarsFeature?,
+    val currentPhase: PhaseDefinition?,
+)
+
+internal class FeatureModalActions(
+    val onEditFeature: (NarsFeature) -> Unit,
+    val onDismissModal: () -> Unit,
+    val onSaveFeature: (NarsFeature) -> Unit,
+    val onSaveEdits: () -> Unit,
+    val onCancelEdits: () -> Unit,
 )
 
 internal class MapScreenCallbacks(
@@ -154,59 +176,68 @@ internal class MapScreenCallbacks(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun MapScreenScaffold(
-    state: MapScreenViewState,
+    featureState: MapScreenFeatureState,
+    uiState: MapScreenControlState,
     callbacks: MapScreenCallbacks,
     snackbarHostState: SnackbarHostState,
 ) {
     var showFeatureModal by rememberSaveable { mutableStateOf(false) }
     var editingFeatureId by rememberSaveable { mutableStateOf<String?>(null) }
 
-    // Re-derive the editing feature from the store by id so the modal survives
-    // configuration changes and never holds a stale snapshot.
-    val editingFeature = editingFeatureId?.let { id -> state.allFeatures.firstOrNull { it.id == id } }
+    val editingFeature = editingFeatureId?.let { id -> featureState.allFeatures.firstOrNull { it.id == id } }
+
+    val modalState = FeatureModalState(
+        show = showFeatureModal,
+        editingFeature = editingFeature,
+        currentPhase = featureState.currentPhase,
+    )
+
+    val modalActions = remember(editingFeature, callbacks) {
+        FeatureModalActions(
+            onEditFeature = { feature ->
+                editingFeatureId = feature.id
+                showFeatureModal = true
+            },
+            onDismissModal = {
+                showFeatureModal = false
+                editingFeatureId = null
+            },
+            onSaveFeature = { feature ->
+                handleSaveFeature(feature, editingFeature, callbacks)
+                showFeatureModal = false
+                editingFeatureId = null
+            },
+            onSaveEdits = {
+                callbacks.handlers.narsGeoman?.commitEdits()
+                callbacks.viewModel.clearSelection()
+                editingFeatureId = null
+            },
+            onCancelEdits = {
+                callbacks.handlers.narsGeoman?.cancelEdits()
+                callbacks.viewModel.clearSelection()
+                editingFeatureId = null
+            },
+        )
+    }
 
     MapScreenBody(
-        state = state,
+        featureState = featureState,
+        uiState = uiState,
         callbacks = callbacks,
         snackbarHostState = snackbarHostState,
-        showFeatureModal = showFeatureModal,
-        editingFeature = editingFeature,
-        onEditFeature = { feature ->
-            editingFeatureId = feature.id
-            showFeatureModal = true
-        },
-        onDismissModal = {
-            showFeatureModal = false
-            editingFeatureId = null
-        },
-        onSaveFeature = { feature ->
-            val existing = editingFeature
-            if (existing != null && existing.dbId != null) {
-                val committed = callbacks.handlers.narsGeoman?.commitEdits(notify = false)
-                val finalFeature =
-                    if (committed != null) {
-                        committed.copy(properties = feature.properties)
-                    } else {
-                        feature
-                    }
-                callbacks.viewModel.updateFeature(finalFeature)
-                callbacks.handlers.narsGeoman?.displayManager?.updateFeatureOnMap(finalFeature)
-                callbacks.viewModel.updateFeatureOnBackend(finalFeature)
-            } else if (existing != null) {
-                callbacks.viewModel.saveFeatureToBackend(feature)
-            }
-            showFeatureModal = false
-            editingFeatureId = null
-        },
-        onSaveEdits = {
-            callbacks.handlers.narsGeoman?.commitEdits()
-            callbacks.viewModel.clearSelection()
-            editingFeatureId = null
-        },
-        onCancelEdits = {
-            callbacks.handlers.narsGeoman?.cancelEdits()
-            callbacks.viewModel.clearSelection()
-            editingFeatureId = null
-        },
+        modalState = modalState,
+        modalActions = modalActions,
     )
+}
+
+private fun handleSaveFeature(feature: NarsFeature, existingFeature: NarsFeature?, callbacks: MapScreenCallbacks) {
+    if (existingFeature != null && existingFeature.dbId != null) {
+        val committed = callbacks.handlers.narsGeoman?.commitEdits(notify = false)
+        val finalFeature = committed?.copy(properties = feature.properties) ?: feature
+        callbacks.viewModel.updateFeature(finalFeature)
+        callbacks.handlers.narsGeoman?.displayManager?.updateFeatureOnMap(finalFeature)
+        callbacks.viewModel.updateFeatureOnBackend(finalFeature)
+    } else if (existingFeature != null) {
+        callbacks.viewModel.saveFeatureToBackend(feature)
+    }
 }

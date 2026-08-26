@@ -18,6 +18,7 @@ class SnappingEngine {
     companion object {
         private const val TAG = "SnappingEngine"
         private const val DEFAULT_SNAP_THRESHOLD_METERS = 20.0
+        private const val DEGENERATE_SEGMENT_THRESHOLD_METERS = 1.0
     }
 
     fun snapPoint(
@@ -138,7 +139,7 @@ class SnappingEngine {
 
     fun nearestPointOnSegment(point: LatLng, p1: LatLng, p2: LatLng): LatLng {
         val segLength = p1.distanceTo(p2)
-        if (segLength < 1.0) return p1
+        if (segLength < DEGENERATE_SEGMENT_THRESHOLD_METERS) return p1
 
         val d1 = p1.distanceTo(point)
         val d2 = p2.distanceTo(point)

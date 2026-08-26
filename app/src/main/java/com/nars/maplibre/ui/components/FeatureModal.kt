@@ -30,11 +30,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import com.nars.maplibre.R
 import com.nars.maplibre.data.model.FeatureProperties
@@ -43,6 +40,7 @@ import com.nars.maplibre.data.model.NarsFeature
 import com.nars.maplibre.data.model.PhaseDefinition
 import com.nars.maplibre.data.model.Phases
 import com.nars.maplibre.data.model.PointGeometry
+import com.nars.maplibre.ui.theme.Dimensions
 import com.nars.maplibre.ui.theme.GlassBackground
 import com.nars.maplibre.ui.theme.TextPrimary
 import com.nars.maplibre.ui.theme.TextSecondary
@@ -64,17 +62,20 @@ fun FeatureValidationModal(
 
     Dialog(onDismissRequest = onDismiss) {
         Card(
-            modifier = Modifier.fillMaxWidth().padding(8.dp),
-            shape = RoundedCornerShape(16.dp),
+            modifier = Modifier.fillMaxWidth().padding(Dimensions.CardPadding),
+            shape = RoundedCornerShape(Dimensions.CornerShapeLarge),
             colors = CardDefaults.cardColors(containerColor = GlassBackground),
         ) {
             Column(
-                modifier = Modifier.fillMaxWidth().padding(16.dp).verticalScroll(rememberScrollState()),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(Dimensions.ContentPadding)
+                    .verticalScroll(rememberScrollState()),
             ) {
                 FeatureModalHeader(phase = phase, onDismiss = onDismiss)
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(Dimensions.SpacingLarge))
                 FeatureModalCoordinateInfo(feature = feature)
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(Dimensions.SpacingLarge))
 
                 when (val typedProps = props) {
                     is FeatureProperties.RoadProperties -> RoadsValidationFields(
@@ -93,9 +94,9 @@ fun FeatureValidationModal(
                     )
                 }
 
-                Spacer(modifier = Modifier.height(20.dp))
+                Spacer(modifier = Modifier.height(Dimensions.SpacingXLarge))
                 FeatureModalValidationErrors(errors = validationErrors)
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(Dimensions.SpacingSmall))
                 FeatureModalSaveButton(
                     onSave = {
                         val result = validateFeatureProperties(props)
@@ -125,13 +126,13 @@ private fun FeatureModalHeader(phase: PhaseDefinition, onDismiss: () -> Unit) {
                 Phases.NAMING_PANELS_KEY -> stringResource(R.string.feature_panel_check)
                 else -> stringResource(R.string.feature_details)
             },
-            fontSize = 18.sp,
+            fontSize = Dimensions.TitleFontSize,
             fontWeight = FontWeight.Bold,
             color = TextPrimary,
         )
         IconButton(
             onClick = onDismiss,
-            modifier = Modifier.size(32.dp),
+            modifier = Modifier.size(Dimensions.IconButtonSize),
         ) {
             Icon(
                 Icons.Default.Close,
@@ -147,7 +148,7 @@ private fun FeatureModalCoordinateInfo(feature: NarsFeature) {
     val roadName = feature.properties.name ?: stringResource(R.string.feature_unnamed_road)
     Text(
         text = roadName,
-        fontSize = 22.sp,
+        fontSize = Dimensions.NameFontSize,
         fontWeight = FontWeight.Bold,
         color = TextPrimary,
     )
@@ -158,8 +159,8 @@ private fun FeatureModalCoordinateInfo(feature: NarsFeature) {
             if (c.isNotEmpty()) {
                 stringResource(
                     R.string.feature_coordinate_lat_lng,
-                    c[0][1].formatDecimal(6),
-                    c[0][0].formatDecimal(6),
+                    c[0][1].formatDecimal(Dimensions.COORDINATE_PRECISION),
+                    c[0][0].formatDecimal(Dimensions.COORDINATE_PRECISION),
                 )
             } else {
                 null
@@ -170,8 +171,8 @@ private fun FeatureModalCoordinateInfo(feature: NarsFeature) {
             if (geom.coordinates.size >= 2) {
                 stringResource(
                     R.string.feature_coordinate_lat_lng,
-                    geom.coordinates[1].formatDecimal(6),
-                    geom.coordinates[0].formatDecimal(6),
+                    geom.coordinates[1].formatDecimal(Dimensions.COORDINATE_PRECISION),
+                    geom.coordinates[0].formatDecimal(Dimensions.COORDINATE_PRECISION),
                 )
             } else {
                 null
@@ -183,7 +184,7 @@ private fun FeatureModalCoordinateInfo(feature: NarsFeature) {
         }
     }
     coords?.let {
-        Text(text = it, fontSize = 12.sp, color = TextSecondary)
+        Text(text = it, fontSize = Dimensions.CaptionFontSize, color = TextSecondary)
     }
 }
 
@@ -192,7 +193,7 @@ private fun FeatureModalValidationErrors(errors: Map<String, Int>) {
     errors.entries.forEach { (field, msgResId) ->
         Text(
             text = "$field: ${stringResource(msgResId)}",
-            fontSize = 12.sp,
+            fontSize = Dimensions.CaptionFontSize,
             color = MaterialTheme.colorScheme.error,
             modifier = Modifier.fillMaxWidth(),
         )

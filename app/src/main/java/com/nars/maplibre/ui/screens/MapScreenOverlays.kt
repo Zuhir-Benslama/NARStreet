@@ -47,16 +47,12 @@ import kotlinx.coroutines.launch
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun MapScreenBody(
-    state: MapScreenViewState,
+    featureState: MapScreenFeatureState,
+    uiState: MapScreenControlState,
     callbacks: MapScreenCallbacks,
     snackbarHostState: SnackbarHostState,
-    showFeatureModal: Boolean,
-    editingFeature: NarsFeature?,
-    onEditFeature: (NarsFeature) -> Unit,
-    onDismissModal: () -> Unit,
-    onSaveFeature: (NarsFeature) -> Unit,
-    onSaveEdits: () -> Unit,
-    onCancelEdits: () -> Unit,
+    modalState: FeatureModalState,
+    modalActions: FeatureModalActions,
 ) {
     Scaffold(
         snackbarHost = {
@@ -71,16 +67,12 @@ internal fun MapScreenBody(
     ) { paddingValues ->
         MapScreenBoxContent(
             paddingValues = paddingValues,
-            state = state,
+            featureState = featureState,
+            uiState = uiState,
             callbacks = callbacks,
             snackbarHostState = snackbarHostState,
-            showFeatureModal = showFeatureModal,
-            editingFeature = editingFeature,
-            onEditFeature = onEditFeature,
-            onDismissModal = onDismissModal,
-            onSaveFeature = onSaveFeature,
-            onSaveEdits = onSaveEdits,
-            onCancelEdits = onCancelEdits,
+            modalState = modalState,
+            modalActions = modalActions,
         )
     }
 }
@@ -88,31 +80,25 @@ internal fun MapScreenBody(
 @Composable
 private fun MapScreenBoxContent(
     paddingValues: PaddingValues,
-    state: MapScreenViewState,
+    featureState: MapScreenFeatureState,
+    uiState: MapScreenControlState,
     callbacks: MapScreenCallbacks,
     snackbarHostState: SnackbarHostState,
-    showFeatureModal: Boolean,
-    editingFeature: NarsFeature?,
-    onEditFeature: (NarsFeature) -> Unit,
-    onDismissModal: () -> Unit,
-    onSaveFeature: (NarsFeature) -> Unit,
-    onSaveEdits: () -> Unit,
-    onCancelEdits: () -> Unit,
+    modalState: FeatureModalState,
+    modalActions: FeatureModalActions,
 ) {
     Box(
         modifier = Modifier
             .fillMaxSize()
-            // Use the color scheme's background so light mode isn't a solid dark
-            // screen — the glass panels on top keep their translucent look.
             .background(MaterialTheme.colorScheme.background)
             .padding(paddingValues),
     ) {
         MapScreenMapOverlay(
             viewModel = callbacks.viewModel,
             handlers = callbacks.handlers,
-            drawingEnabled = state.drawingEnabled,
-            editModeEnabled = state.editModeEnabled,
-            onEditFeature = onEditFeature,
+            drawingEnabled = uiState.drawingEnabled,
+            editModeEnabled = uiState.editModeEnabled,
+            onEditFeature = modalActions.onEditFeature,
         )
         MapScreenProfileOverlay(
             modifier = Modifier.align(Alignment.TopEnd),
@@ -122,36 +108,36 @@ private fun MapScreenBoxContent(
         )
         MapScreenSidePanelWrapper(
             modifier = Modifier.align(Alignment.CenterEnd),
-            currentPhase = state.currentPhase,
-            featureCounts = state.featureCounts,
-            baseLayer = state.baseLayer,
+            currentPhase = featureState.currentPhase,
+            featureCounts = featureState.featureCounts,
+            baseLayer = uiState.baseLayer,
             viewModel = callbacks.viewModel,
             onUndo = { callbacks.handlers.undo() },
             snackbarHostState = snackbarHostState,
         )
         MapScreenCompactInfo(
             modifier = Modifier.align(Alignment.BottomStart),
-            featureCounts = state.featureCounts,
-            totalFeatures = state.allFeatures.size,
+            featureCounts = featureState.featureCounts,
+            totalFeatures = featureState.allFeatures.size,
         )
-        MapLoadingOverlay(isLoading = state.uiState.isLoading)
+        MapLoadingOverlay(isLoading = uiState.uiState.isLoading)
         MapScreenBottomSheet(
             modifier = Modifier.align(Alignment.BottomCenter),
-            selectedFeature = state.selectedFeature,
-            editModeEnabled = state.editModeEnabled,
-            editingFeature = editingFeature,
+            selectedFeature = featureState.selectedFeature,
+            editModeEnabled = uiState.editModeEnabled,
+            editingFeature = modalState.editingFeature,
             onDismissFeature = { callbacks.viewModel.clearSelection() },
-            onEditGeometry = { callbacks.handlers.toggleEditing(state.editModeEnabled) },
-            onEditFeature = onEditFeature,
-            onSaveEdits = onSaveEdits,
-            onCancelEdits = onCancelEdits,
+            onEditGeometry = { callbacks.handlers.toggleEditing(uiState.editModeEnabled) },
+            onEditFeature = modalActions.onEditFeature,
+            onSaveEdits = modalActions.onSaveEdits,
+            onCancelEdits = modalActions.onCancelEdits,
         )
         FeatureModalOverlay(
-            editingFeature = editingFeature,
-            currentPhase = state.currentPhase,
-            showFeatureModal = showFeatureModal,
-            onSave = onSaveFeature,
-            onDismiss = onDismissModal,
+            editingFeature = modalState.editingFeature,
+            currentPhase = modalState.currentPhase,
+            showFeatureModal = modalState.show,
+            onSave = modalActions.onSaveFeature,
+            onDismiss = modalActions.onDismissModal,
         )
     }
 }
@@ -165,23 +151,25 @@ private fun MapScreenMapOverlay(
     onEditFeature: (NarsFeature) -> Unit,
 ) {
     NarsMap(
+        callbacks = com.nars.maplibre.ui.components.NarsMapCallbacks(
+            onMapReady = { mv, map ->
+                handlers.initializeNarsGeoman(mv, map)
+                viewModel.loadFeatures()
+                handlers.replayInteractionMode()
+            },
+            onStyleLoaded = {
+                handlers.narsGeoman?.displayManager?.onStyleReloaded(viewModel.allFeatures.value)
+            },
+            onMapClick = { latLng -> handlers.handleMapClick(latLng, drawingEnabled, editModeEnabled) },
+            onMapLongClick = { latLng ->
+                val clicked = handlers.handleMapLongClick(latLng)
+                if (clicked != null) {
+                    onEditFeature(clicked)
+                }
+            },
+            shouldHandleClick = { !drawingEnabled && !editModeEnabled },
+        ),
         viewModel = viewModel,
-        onMapReady = { mv, map ->
-            handlers.initializeNarsGeoman(mv, map)
-            viewModel.loadFeatures()
-            handlers.replayInteractionMode()
-        },
-        onStyleLoaded = {
-            handlers.narsGeoman?.displayManager?.onStyleReloaded(viewModel.allFeatures.value)
-        },
-        onMapClick = { latLng -> handlers.handleMapClick(latLng, drawingEnabled, editModeEnabled) },
-        onMapLongClick = { latLng ->
-            val clicked = handlers.handleMapLongClick(latLng)
-            if (clicked != null) {
-                onEditFeature(clicked)
-            }
-        },
-        shouldHandleClick = { !drawingEnabled && !editModeEnabled },
         modifier = Modifier.fillMaxSize(),
     )
 }
@@ -255,8 +243,6 @@ private fun MapScreenSidePanel(
             currentPhaseIndex = currentPhase?.let { Phases.getIndexByKey(it.key) } ?: 0,
             phaseCounts = featureCounts,
             onPhaseSelected = { phase ->
-                // Blocked transitions surface their (specific) message via
-                // viewModel.errorMessage — do not double-show a generic one.
                 viewModel.setCurrentPhase(phase)?.let {
                     val phaseLabel = Phases.getDisplayLabel(phase, context)
                     scope.launch { snackbarHostState.showSnackbar("$phaseChangedText: $phaseLabel") }

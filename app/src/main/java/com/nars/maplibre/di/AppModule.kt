@@ -6,6 +6,7 @@ import com.nars.maplibre.LoginViewModel
 import com.nars.maplibre.MapViewModel
 import com.nars.maplibre.SettingsViewModel
 import com.nars.maplibre.data.api.ApiService
+import com.nars.maplibre.data.api.BackendInteractor
 import com.nars.maplibre.data.api.SessionManager
 import com.nars.maplibre.data.store.FeatureStore
 import com.nars.maplibre.data.store.FeatureStoreInterface
@@ -89,9 +90,11 @@ val appModule =
 
         single { ApiService(get(), get()) }
 
+        single { BackendInteractor(get()) }
+
         single { SessionManager(get(), get()) }
 
-        viewModel { MapViewModel(get(), get(), get(), get(), get()) }
+        viewModel { MapViewModel(get(), get(), get(), get(), get(), get()) }
         viewModel { SettingsViewModel(get(), get()) }
         viewModel { LoginViewModel(get(), get()) }
     }

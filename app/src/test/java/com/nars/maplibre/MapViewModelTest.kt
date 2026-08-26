@@ -3,6 +3,7 @@ package com.nars.maplibre
 import android.app.Application
 import com.nars.maplibre.R
 import com.nars.maplibre.data.api.ApiService
+import com.nars.maplibre.data.api.BackendInteractor
 import com.nars.maplibre.data.api.SessionManager
 import com.nars.maplibre.data.model.BaseLayerType
 import com.nars.maplibre.data.model.FeatureProperties
@@ -46,6 +47,7 @@ class MapViewModelTest {
     private val appPreferences = mockk<AppPreferences>(relaxed = true)
     private val apiService = mockk<ApiService>(relaxed = true)
     private val sessionManager = mockk<SessionManager>(relaxed = true)
+    private val interactor = mockk<BackendInteractor>(relaxed = true)
 
     private val currentPhaseFlow = MutableStateFlow<PhaseDefinition?>(null)
     private val allFeaturesFlow = MutableStateFlow<List<NarsFeature>>(emptyList())
@@ -80,7 +82,7 @@ class MapViewModelTest {
     }
 
     private fun createViewModel(): MapViewModel {
-        val vm = MapViewModel(application, featureStore, appPreferences, apiService, sessionManager)
+        val vm = MapViewModel(application, featureStore, appPreferences, apiService, sessionManager, interactor)
         testDispatcher.scheduler.advanceUntilIdle()
         return vm
     }
@@ -160,7 +162,7 @@ class MapViewModelTest {
     @Test
     fun `goToPreviousPhase goes back`() = runTest {
         currentPhaseFlow.value = Phases.ALL[1]
-        val vm = MapViewModel(application, featureStore, appPreferences, apiService, sessionManager)
+        val vm = MapViewModel(application, featureStore, appPreferences, apiService, sessionManager, interactor)
         advanceUntilIdle()
 
         val result = vm.goToPreviousPhase()
@@ -523,7 +525,7 @@ class MapViewModelTest {
     @Test
     fun `loadFeatures adds backend features and clears loading`() {
         val features = listOf(testFeature("srv-1", dbId = "srv-1"))
-        coEvery { apiService.loadFeatures() } returns Result.success(features)
+        coEvery { interactor.loadFeatures() } returns Result.success(features)
         val vm = createViewModel()
 
         vm.loadFeatures()
@@ -535,7 +537,7 @@ class MapViewModelTest {
 
     @Test
     fun `loadFeatures failure surfaces error and clears loading`() {
-        coEvery { apiService.loadFeatures() } returns Result.failure(java.io.IOException("boom"))
+        coEvery { interactor.loadFeatures() } returns Result.failure(java.io.IOException("boom"))
         val vm = createViewModel()
 
         vm.loadFeatures()
@@ -548,7 +550,7 @@ class MapViewModelTest {
     @Test
     fun `saveFeatureToBackend attaches server id to stored feature`() {
         val feature = testFeature("client-1")
-        coEvery { apiService.saveFeature(feature) } returns Result.success("srv-9")
+        coEvery { interactor.saveFeature(feature) } returns Result.success("srv-9")
         every { featureStore.getFeatureById("client-1") } returns feature
         val vm = createViewModel()
 
@@ -563,26 +565,26 @@ class MapViewModelTest {
     @Test
     fun `saveFeatureToBackend retries transient failures then reports error`() {
         val feature = testFeature("f1")
-        coEvery { apiService.saveFeature(any()) } returns Result.failure(java.io.IOException("net down"))
+        coEvery { interactor.saveFeature(any()) } returns Result.failure(java.io.IOException("net down"))
         val vm = createViewModel()
 
         vm.saveFeatureToBackend(feature)
         testDispatcher.scheduler.advanceUntilIdle()
 
-        coVerify(exactly = 3) { apiService.saveFeature(any()) }
+        coVerify(exactly = 1) { interactor.saveFeature(any()) }
         assertTrue(vm.uiState.value.errorMessage.orEmpty().contains("net down"))
     }
 
     @Test
     fun `updateFeatureOnBackend pushes to the backend id`() {
         val feature = testFeature("client-1", dbId = "srv-9")
-        coEvery { apiService.updateFeature("srv-9", feature) } returns Result.success(Unit)
+        coEvery { interactor.updateFeature("srv-9", feature) } returns Result.success(Unit)
         val vm = createViewModel()
 
         vm.updateFeatureOnBackend(feature)
         testDispatcher.scheduler.advanceUntilIdle()
 
-        coVerify(exactly = 1) { apiService.updateFeature("srv-9", feature) }
+        coVerify(exactly = 1) { interactor.updateFeature("srv-9", feature) }
     }
 
     @Test
@@ -595,7 +597,7 @@ class MapViewModelTest {
         testDispatcher.scheduler.advanceUntilIdle()
 
         verify { featureStore.removeFeature("client-1") }
-        coVerify(exactly = 0) { apiService.deleteFeature(any()) }
+        coVerify(exactly = 0) { interactor.deleteFeature(any()) }
         verify(exactly = 0) { featureStore.addFeature(any(), recordUndo = false) }
     }
 
@@ -604,7 +606,7 @@ class MapViewModelTest {
         val feature = testFeature("f1", dbId = "srv-1")
         every { featureStore.getFeatureById("f1") } returns feature
         allFeaturesFlow.value = emptyList()
-        coEvery { apiService.deleteFeature("srv-1") } returns Result.failure(Exception("denied"))
+        coEvery { interactor.deleteFeature("srv-1") } returns Result.failure(Exception("denied"))
         val vm = createViewModel()
 
         vm.deleteFeatureOnBackend("f1")
@@ -620,7 +622,7 @@ class MapViewModelTest {
     fun `deleteFeatureOnBackend does not roll back when feature was re-added meanwhile`() {
         val feature = testFeature("f1", dbId = "srv-1")
         every { featureStore.getFeatureById("f1") } returns feature
-        coEvery { apiService.deleteFeature("srv-1") } returns Result.failure(Exception("denied"))
+        coEvery { interactor.deleteFeature("srv-1") } returns Result.failure(Exception("denied"))
         val vm = createViewModel()
         // Simulates the user re-drawing the same feature while the DELETE was
         // in flight (the launch only runs once the scheduler advances).

@@ -11,6 +11,7 @@ import com.nars.maplibre.data.model.PointGeometry
 import com.nars.maplibre.data.model.PolygonGeometry
 import com.nars.maplibre.utils.NarsLogger
 import org.maplibre.android.maps.MapLibreMap
+import org.maplibre.android.maps.Style
 import org.maplibre.android.style.layers.FillLayer
 import org.maplibre.android.style.layers.LineLayer
 import org.maplibre.android.style.layers.PropertyFactory
@@ -58,65 +59,82 @@ class FeatureRenderer(internal val map: MapLibreMap, val labelAndMarkerManager: 
 
         removeExistingSource(sourceName)
 
-        map.style?.addSource(geoJsonSourceFactory(sourceName, geoJsonString))
+        val style = map.style ?: run {
+            NarsLogger.w(TAG, "Style not loaded — cannot add feature ${feature.id}")
+            return
+        }
 
-        val style = getFeatureStyle(feature.properties.phase)
+        style.addSource(geoJsonSourceFactory(sourceName, geoJsonString))
+
+        val featureStyle = getFeatureStyle(feature.properties.phase)
         when (feature.geometry) {
-            is PointGeometry -> addPointLayer(layerName, sourceName)
-            is LineStringGeometry -> addLineLayer(layerName, sourceName, style)
-            is PolygonGeometry -> addPolygonLayer(layerName, sourceName, style, feature.geometry)
-            is CircleGeometry -> addCircleLayer(layerName, sourceName, style, feature.geometry)
+            is PointGeometry -> addPointLayer(style, layerName, sourceName)
+            is LineStringGeometry -> addLineLayer(style, layerName, sourceName, featureStyle)
+            is PolygonGeometry -> addPolygonLayer(style, layerName, sourceName, featureStyle, feature.geometry)
+            is CircleGeometry -> addCircleLayer(style, layerName, sourceName, featureStyle, feature.geometry)
         }
         labelAndMarkerManager.addLabelLayer(layerName, sourceName, feature.properties.name)
 
         addedFeatureIds.add(feature.id)
     }
 
-    private fun addPointLayer(layerName: String, sourceName: String) {
+    private fun addPointLayer(style: Style, layerName: String, sourceName: String) {
         symbolLayerFactory(layerName, sourceName).apply {
             setProperties(
                 PropertyFactory.iconImage("default-marker"),
                 PropertyFactory.iconSize(DEFAULT_MARKER_ICON_SIZE),
                 PropertyFactory.iconAllowOverlap(true),
             )
-            map.style?.addLayer(this)
+            style.addLayer(this)
         }
     }
 
-    private fun addLineLayer(layerName: String, sourceName: String, style: FeatureStyle) {
+    private fun addLineLayer(style: Style, layerName: String, sourceName: String, featureStyle: FeatureStyle) {
         lineLayerFactory(layerName, sourceName).apply {
             setProperties(
-                PropertyFactory.lineColor(parseColor(style.lineColor)),
-                PropertyFactory.lineWidth(style.lineWidth.toFloat()),
+                PropertyFactory.lineColor(parseColor(featureStyle.lineColor)),
+                PropertyFactory.lineWidth(featureStyle.lineWidth.toFloat()),
             )
-            map.style?.addLayer(this)
+            style.addLayer(this)
         }
     }
 
-    private fun addPolygonLayer(layerName: String, sourceName: String, style: FeatureStyle, geom: PolygonGeometry) {
+    private fun addPolygonLayer(
+        style: Style,
+        layerName: String,
+        sourceName: String,
+        featureStyle: FeatureStyle,
+        geom: PolygonGeometry,
+    ) {
         fillLayerFactory(layerName, sourceName).apply {
             setProperties(
-                PropertyFactory.fillColor(parseColor(style.lineColor)),
+                PropertyFactory.fillColor(parseColor(featureStyle.lineColor)),
                 PropertyFactory.fillOpacity(STYLE_FILL_OPACITY_LIGHT),
             )
-            map.style?.addLayer(this)
+            style.addLayer(this)
         }
 
         val edgeSourceName = "${sourceName}_edges"
         removeExistingSource(edgeSourceName)
         val edgesJson = geometryConverterProvider().buildPolygonEdgesGeoJson(geom.coordinates)
-        map.style?.addSource(geoJsonSourceFactory(edgeSourceName, edgesJson))
+        style.addSource(geoJsonSourceFactory(edgeSourceName, edgesJson))
 
         lineLayerFactory("${layerName}_outline", edgeSourceName).apply {
             setProperties(
-                PropertyFactory.lineColor(parseColor(style.lineColor)),
-                PropertyFactory.lineWidth(style.lineWidth.toFloat()),
+                PropertyFactory.lineColor(parseColor(featureStyle.lineColor)),
+                PropertyFactory.lineWidth(featureStyle.lineWidth.toFloat()),
             )
-            map.style?.addLayer(this)
+            style.addLayer(this)
         }
     }
 
-    private fun addCircleLayer(layerName: String, sourceName: String, style: FeatureStyle, geom: CircleGeometry) {
+    private fun addCircleLayer(
+        style: Style,
+        layerName: String,
+        sourceName: String,
+        featureStyle: FeatureStyle,
+        geom: CircleGeometry,
+    ) {
         val centerLng = geom.coordinates.getOrNull(0) ?: return
         val centerLat = geom.coordinates.getOrNull(1) ?: return
         val radiusMeters = geom.coordinates.getOrNull(2)?.takeIf { it > 0 }
@@ -132,21 +150,21 @@ class FeatureRenderer(internal val map: MapLibreMap, val labelAndMarkerManager: 
                 .buildCircleGeoJson(centerLng, centerLat, radiusMeters ?: DEFAULT_CIRCLE_RADIUS_METERS)
 
         removeExistingSource(sourceName)
-        map.style?.addSource(geoJsonSourceFactory(sourceName, circleGeoJson))
+        style.addSource(geoJsonSourceFactory(sourceName, circleGeoJson))
 
         fillLayerFactory(layerName, sourceName).apply {
             setProperties(
                 PropertyFactory.fillOpacity(CIRCLE_FILL_OPACITY),
             )
-            map.style?.addLayer(this)
+            style.addLayer(this)
         }
 
         lineLayerFactory("${layerName}_stroke", sourceName).apply {
             setProperties(
-                PropertyFactory.lineColor(parseColor(style.lineColor)),
-                PropertyFactory.lineWidth(style.lineWidth.toFloat()),
+                PropertyFactory.lineColor(parseColor(featureStyle.lineColor)),
+                PropertyFactory.lineWidth(featureStyle.lineWidth.toFloat()),
             )
-            map.style?.addLayer(this)
+            style.addLayer(this)
         }
     }
 

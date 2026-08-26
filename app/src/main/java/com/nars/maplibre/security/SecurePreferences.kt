@@ -62,7 +62,7 @@ class SecurePreferences internal constructor(private val prefs: SharedPreference
         val userJson =
             try {
                 cipher.decrypt(storedValue)
-            } catch (@Suppress("TooGenericExceptionCaught") e: Exception) {
+            } catch (e: java.security.GeneralSecurityException) {
                 NarsLogger.w(TAG, "User entry unreadable — treating as absent", e)
                 return null
             }
@@ -108,7 +108,7 @@ class SecurePreferences internal constructor(private val prefs: SharedPreference
         val storedValue = prefs.getString(key, null) ?: return null
         try {
             cipher.decrypt(storedValue)
-        } catch (@Suppress("TooGenericExceptionCaught") e: Exception) {
+        } catch (e: java.security.GeneralSecurityException) {
             NarsLogger.w(TAG, "Entry '$key' unreadable — treating as absent", e)
             null
         }

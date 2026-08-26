@@ -29,6 +29,7 @@ class LabelAndMarkerManager(private val map: MapLibreMap) {
         private const val VERTEX_CIRCLE_RADIUS = 6f
         private const val ROAD_MARKER_RADIUS = 14f
         private const val ROAD_MARKER_STROKE_WIDTH = 3f
+        private const val VERTEX_STROKE_WIDTH = 2f
     }
 
     fun addLabelLayer(layerName: String, sourceName: String, labelText: String?) {
@@ -270,7 +271,7 @@ class LabelAndMarkerManager(private val map: MapLibreMap) {
                 org.maplibre.android.style.layers.PropertyFactory
                     .circleStrokeColor(Color.WHITE),
                 org.maplibre.android.style.layers.PropertyFactory
-                    .circleStrokeWidth(2f),
+                    .circleStrokeWidth(VERTEX_STROKE_WIDTH),
             )
         }
 

@@ -25,6 +25,9 @@ import kotlinx.serialization.json.putJsonArray
 import java.util.GregorianCalendar
 import java.util.TimeZone
 
+private const val COORDS_PER_POINT = 2
+private const val MIN_COORDS_FOR_LINESTRING = COORDS_PER_POINT * 2
+
 val apiJson =
     Json {
         ignoreUnknownKeys = true
@@ -97,10 +100,10 @@ data class ApiFeatureResult(
                 lat != null && lng != null ->
                     PointGeometry(coordinates = listOf(lng, lat))
 
-                coords != null && coords.size >= 4 ->
+                coords != null && coords.size >= MIN_COORDS_FOR_LINESTRING ->
                     LineStringGeometry(coordinates = coords)
 
-                coords != null && coords.size == 2 ->
+                coords != null && coords.size == COORDS_PER_POINT ->
                     PointGeometry(coordinates = coords)
 
                 else -> null
@@ -249,7 +252,7 @@ private fun FeatureProperties.apiType(): String = when (this) {
 private fun JsonObjectBuilder.addGeometryPayload(geometry: Geometry) {
     putJsonArray("coordinates") {
         geometry.coordinates.chunked(2).forEach { pair ->
-            if (pair.size == 2) {
+            if (pair.size == COORDS_PER_POINT) {
                 add(
                     buildJsonObject {
                         put("lat", pair[1])
