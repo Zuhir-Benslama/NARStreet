@@ -7,7 +7,6 @@ import com.geoman.maplibre.geoman.types.events.GmEditEvent
 import com.geoman.maplibre.geoman.types.events.GmMapEvent
 import com.geoman.maplibre.geoman.types.geojson.LngLat
 import com.geoman.maplibre.geoman.types.geojson.Polygon
-import com.geoman.maplibre.geoman.utils.GeometryUtils
 import com.nars.maplibre.data.model.CircleGeometry
 import com.nars.maplibre.data.model.FeatureProperties
 import com.nars.maplibre.data.model.Geometry
@@ -208,11 +207,7 @@ class GeomanEventHandler(
                 val avgLat = sumLat / ring.size
                 val centerPoint = LngLat(avgLon, avgLat)
                 val centerLngLat = ring.first()
-                val calcRadius =
-                    GeometryUtils.calculateDistance(
-                        centerPoint,
-                        centerLngLat,
-                    )
+                val calcRadius = centerPoint.distanceTo(centerLngLat)
                 return CircleGeometry(coordinates = listOf(avgLon, avgLat, calcRadius))
             }
         }
