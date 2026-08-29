@@ -83,10 +83,10 @@ class GeometryConverter {
             geometry = geometry,
             properties =
             mapOf(
-                "id" to narsFeature.id,
-                "type" to narsFeature.type.value,
+                GeoJsonProps.ID to narsFeature.id,
+                GeoJsonProps.TYPE to narsFeature.type.value,
                 "phase" to narsFeature.properties.phase,
-                "name" to (narsFeature.properties.name ?: ""),
+                GeoJsonProps.NAME to (narsFeature.properties.name ?: ""),
                 "color" to narsFeature.properties.color,
             ),
         )
@@ -146,30 +146,30 @@ class GeometryConverter {
         buildJsonObject {
             when (geometry) {
                 is Point -> {
-                    put("type", "Point")
-                    putJsonArray("coordinates") {
+                    put(GeoJsonProps.TYPE, GeoJsonProps.POINT)
+                    putJsonArray(GeoJsonProps.COORDINATES) {
                         add(geometry.coordinates.getOrNull(0) ?: 0.0)
                         add(geometry.coordinates.getOrNull(1) ?: 0.0)
                     }
                 }
 
                 is LineString -> {
-                    put("type", "LineString")
-                    putJsonArray("coordinates") {
+                    put(GeoJsonProps.TYPE, GeoJsonProps.LINE_STRING)
+                    putJsonArray(GeoJsonProps.COORDINATES) {
                         geometry.coordinates.forEach { addPosition(it) }
                     }
                 }
 
                 is Polygon -> {
-                    put("type", "Polygon")
-                    putJsonArray("coordinates") {
+                    put(GeoJsonProps.TYPE, GeoJsonProps.POLYGON)
+                    putJsonArray(GeoJsonProps.COORDINATES) {
                         geometry.coordinates.forEach { addRing(it) }
                     }
                 }
 
                 is MultiPolygon -> {
-                    put("type", "MultiPolygon")
-                    putJsonArray("coordinates") {
+                    put(GeoJsonProps.TYPE, GeoJsonProps.MULTI_POLYGON)
+                    putJsonArray(GeoJsonProps.COORDINATES) {
                         geometry.coordinates.forEach { addPolygon(it) }
                     }
                 }
@@ -208,9 +208,9 @@ class GeometryConverter {
     private fun buildFeatureWrapper(
         geometry: kotlinx.serialization.json.JsonObject,
     ): kotlinx.serialization.json.JsonObject = buildJsonObject {
-        put("type", "Feature")
-        put("geometry", geometry)
-        putJsonObject("properties") {}
+        put(GeoJsonProps.TYPE, GeoJsonProps.FEATURE)
+        put(GeoJsonProps.GEOMETRY, geometry)
+        putJsonObject(GeoJsonProps.PROPERTIES) {}
     }
 
     private fun coordinatesToLngLats(coords: List<Double>): List<LngLat> = coords
@@ -232,8 +232,8 @@ class GeometryConverter {
             }
 
         val geometry = buildJsonObject {
-            put("type", "LineString")
-            putJsonArray("coordinates") {
+            put(GeoJsonProps.TYPE, GeoJsonProps.LINE_STRING)
+            putJsonArray(GeoJsonProps.COORDINATES) {
                 add(buildRingCoordinates(ring.filterNotNull()))
             }
         }
@@ -258,8 +258,8 @@ class GeometryConverter {
             }
 
         val geometry = buildJsonObject {
-            put("type", "Polygon")
-            putJsonArray("coordinates") {
+            put(GeoJsonProps.TYPE, GeoJsonProps.POLYGON)
+            putJsonArray(GeoJsonProps.COORDINATES) {
                 add(buildJsonArray { add(buildRingCoordinates(ring)) })
             }
         }
@@ -271,13 +271,13 @@ class GeometryConverter {
      */
     fun buildFeatureGeoJson(feature: Feature, properties: Map<String, Any?>? = feature.properties): String =
         buildJsonObject {
-            put("type", "Feature")
-            put("id", feature.id ?: "")
-            put("geometry", geometryToJsonElement(feature.geometry))
-            putJsonObject("properties") {
+            put(GeoJsonProps.TYPE, GeoJsonProps.FEATURE)
+            put(GeoJsonProps.ID, feature.id ?: "")
+            put(GeoJsonProps.GEOMETRY, geometryToJsonElement(feature.geometry))
+            putJsonObject(GeoJsonProps.PROPERTIES) {
                 val mutableProps = properties?.toMutableMap() ?: mutableMapOf()
-                if (mutableProps.containsKey("name") && !mutableProps.containsKey("label")) {
-                    mutableProps["label"] = mutableProps["name"]
+                if (mutableProps.containsKey(GeoJsonProps.NAME) && !mutableProps.containsKey(GeoJsonProps.LABEL)) {
+                    mutableProps[GeoJsonProps.LABEL] = mutableProps[GeoJsonProps.NAME]
                 }
                 mutableProps.forEach { (key, value) ->
                     put(key, value?.toString() ?: "")

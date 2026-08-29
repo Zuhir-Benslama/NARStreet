@@ -11,7 +11,7 @@ import kotlin.concurrent.withLock
 
 @Suppress("TooManyFunctions")
 class FeatureStore : FeatureStoreInterface {
-    val undoManager = UndoManager(this)
+    private val undoManager = UndoManager(this)
     private val lock = ReentrantLock()
 
     private val _featuresByPhase = MutableStateFlow<Map<String, List<NarsFeature>>>(emptyMap())
@@ -71,22 +71,37 @@ class FeatureStore : FeatureStoreInterface {
 
     override fun addFeatures(features: List<NarsFeature>) = lock.withLock {
         val existing = _allFeatures.value
+        if (features.isEmpty()) return@withLock
+
+        // Resolve membership once, in O(1) per lookup, instead of re-scanning
+        // the entire list for every incoming feature (which made large reloads
+        // — 500 features a page — quadratic).
+        val existingIds = existing.mapTo(hashSetOf()) { it.id }
+        val existingDbIds = existing.mapNotNullTo(hashSetOf()) { it.dbId }
+        fun matchesIncoming(incoming: NarsFeature): Boolean =
+            incoming.id in existingIds || (incoming.dbId != null && incoming.dbId in existingDbIds)
+
+        // Map every incoming feature to the existing-feature id it replaces
+        // (matched by id, or by dbId when the id differs), so we can find the
+        // replacement in O(1) per existing entry.
+        val indexByDbId = existing.mapNotNull { it.dbId?.let { dbId -> dbId to it.id } }.toMap()
+        val replacementByExistingId = mutableMapOf<String, NarsFeature>()
+        for (incoming in features) {
+            val existingId =
+                if (incoming.id in existingIds) {
+                    incoming.id
+                } else {
+                    incoming.dbId?.let { indexByDbId[it] }
+                }
+            if (existingId != null) replacementByExistingId[existingId] = incoming
+        }
 
         // Upsert: existing entries are replaced in place by an incoming feature
         // with the same id/dbId (so a reload picks up server-side changes), and
         // genuinely new incoming features are appended.
         val merged =
-            existing.map { existingFeature ->
-                features.firstOrNull { incoming ->
-                    incoming.id == existingFeature.id ||
-                        (incoming.dbId != null && incoming.dbId == existingFeature.dbId)
-                } ?: existingFeature
-            } + features.filter { incoming ->
-                existing.none { existingFeature ->
-                    existingFeature.id == incoming.id ||
-                        (incoming.dbId != null && incoming.dbId == existingFeature.dbId)
-                }
-            }
+            existing.map { replacementByExistingId[it.id] ?: it } +
+                features.filterNot { matchesIncoming(it) }
         rebuildPhaseMap(merged)
         _allFeatures.value = merged
     }
@@ -99,16 +114,15 @@ class FeatureStore : FeatureStoreInterface {
         }
     }
 
-    override fun updateFeatureWithUndo(featureId: String, updatedFeature: NarsFeature): NarsFeature? = lock.withLock {
-        val previous = _allFeatures.value.find { it.id == featureId } ?: return@withLock null
-        if (previous == updatedFeature) return@withLock null
+    override fun updateFeatureWithUndo(featureId: String, updatedFeature: NarsFeature) = lock.withLock {
+        val previous = _allFeatures.value.find { it.id == featureId } ?: return@withLock
+        if (previous == updatedFeature) return@withLock
         _allFeatures.value = _allFeatures.value.map { if (it.id == featureId) updatedFeature else it }
         rebuildPhaseMap(_allFeatures.value)
         if (_selectedFeature.value?.id == featureId) {
             _selectedFeature.value = updatedFeature
         }
         undoManager.addUndoAction(UndoAction.Update(oldFeature = previous, newFeature = updatedFeature))
-        previous
     }
 
     override fun removeFeature(featureId: String) = lock.withLock {

@@ -64,7 +64,7 @@ class NarsGeoman internal constructor(
                         useControlsUi = true,
                         showControlsOnMap = false,
                         enableSnap = true,
-                        snapDistance = Config.SNAP_THRESHOLD_PX.toFloat(),
+                        snapDistance = Config.GEOMAN_SNAP_THRESHOLD_PX.toFloat(),
                     ),
                 )
             val geoman = Geoman(mapView, map, options)
@@ -192,15 +192,11 @@ class NarsGeoman internal constructor(
 
     fun onMapClick(latLng: LatLng) {
         if (_isDrawing.value) {
-            val enabledModes = geoman.getEnabledModes()
-            val drawMode = enabledModes.find { it.first == com.geoman.maplibre.geoman.types.ModeType.DRAW }
-            drawMode?.let { (_, modeName) ->
+            enabledModeName(ModeType.DRAW)?.let { modeName ->
                 geoman.handleDrawClick(modeName, latLng)
             }
         } else if (_isEditing.value) {
-            val enabledModes = geoman.getEnabledModes()
-            val editMode = enabledModes.find { it.first == com.geoman.maplibre.geoman.types.ModeType.EDIT }
-            editMode?.let { (_, modeName) ->
+            enabledModeName(ModeType.EDIT)?.let { modeName ->
                 geoman.handleEditClick(modeName, latLng)
             }
         }
@@ -208,13 +204,14 @@ class NarsGeoman internal constructor(
 
     fun onMapLongClick(latLng: LatLng) {
         if (_isDrawing.value) {
-            val enabledModes = geoman.getEnabledModes()
-            val drawMode = enabledModes.find { it.first == com.geoman.maplibre.geoman.types.ModeType.DRAW }
-            drawMode?.let { (_, modeName) ->
+            enabledModeName(ModeType.DRAW)?.let { modeName ->
                 geoman.handleDrawLongPress(modeName, latLng)
             }
         }
     }
+
+    private fun enabledModeName(type: ModeType): String? =
+        geoman.getEnabledModes().firstOrNull { it.first == type }?.second
 
     private val destroyLock = Any()
 

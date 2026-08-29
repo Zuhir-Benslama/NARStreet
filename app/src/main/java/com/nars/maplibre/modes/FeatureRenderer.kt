@@ -34,8 +34,9 @@ class FeatureRenderer(internal val map: MapLibreMap, val labelAndMarkerManager: 
     companion object {
         private val sharedGeometryConverter = GeometryConverter()
         private const val TAG = "FeatureRenderer"
-        private const val DEFAULT_FALLBACK_COLOR = "#8e44ad"
+        private const val DEFAULT_FALLBACK_COLOR = Phases.NAMING_PANELS_COLOR
         private const val DEFAULT_MARKER_ICON_SIZE = 0.5f
+        private const val DEFAULT_MARKER_ICON = "default-marker"
         internal const val DEFAULT_CIRCLE_RADIUS_METERS = 50.0
         private const val CIRCLE_FILL_OPACITY = 0f
 
@@ -81,7 +82,7 @@ class FeatureRenderer(internal val map: MapLibreMap, val labelAndMarkerManager: 
     private fun addPointLayer(style: Style, layerName: String, sourceName: String) {
         symbolLayerFactory(layerName, sourceName).apply {
             setProperties(
-                PropertyFactory.iconImage("default-marker"),
+                PropertyFactory.iconImage(DEFAULT_MARKER_ICON),
                 PropertyFactory.iconSize(DEFAULT_MARKER_ICON_SIZE),
                 PropertyFactory.iconAllowOverlap(true),
             )

@@ -25,8 +25,8 @@ data class NarsFeature(
     val type: NarsFeatureType,
     val geometry: Geometry,
     val properties: FeatureProperties,
-    val createdAt: Long = System.currentTimeMillis(),
-    val updatedAt: Long = System.currentTimeMillis(),
+    val createdAt: Long? = null,
+    val updatedAt: Long? = null,
 )
 
 @Serializable

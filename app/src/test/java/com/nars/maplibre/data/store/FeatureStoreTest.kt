@@ -37,7 +37,7 @@ class FeatureStoreTest {
 
         assertEquals(1, store.allFeatures.value.size)
         assertEquals(feature, store.allFeatures.value[0])
-        assertTrue(store.undoManager.canUndo)
+        assertTrue(store.canUndo)
     }
 
     @Test
@@ -124,11 +124,11 @@ class FeatureStoreTest {
     fun `clearAll clears the undo stack`() {
         val store = FeatureStore()
         store.addFeature(createRoad("r1"), recordUndo = true)
-        assertTrue(store.undoManager.canUndo)
+        assertTrue(store.canUndo)
 
         store.clearAll()
 
-        assertFalse(store.undoManager.canUndo)
+        assertFalse(store.canUndo)
         assertFalse(store.undoState.value)
     }
 
@@ -198,15 +198,18 @@ class FeatureStoreTest {
     fun `undo stack has max 50 items`() {
         val store = FeatureStore()
         for (i in 0 until 60) {
-            store.undoManager.addUndoAction(UndoAction.Create(createRoad("r$i")))
+            store.addUndoAction(UndoAction.Create(createRoad("r$i")))
         }
 
-        assertTrue(store.undoManager.canUndo)
-        // 50 max, so pop 51 times should return null on the last
-        for (i in 0 until 50) {
-            assertNotNull(store.undoManager.popUndoAction())
+        assertTrue(store.canUndo)
+        // 50 max, so after 50 undos only null remains
+        var undone = 0
+        var action = store.executeUndo()
+        while (action != null) {
+            undone++
+            action = store.executeUndo()
         }
-        assertNull(store.undoManager.popUndoAction())
+        assertEquals(50, undone)
     }
 
     @Test
@@ -223,7 +226,7 @@ class FeatureStoreTest {
     @Test
     fun `executeUndo returns null when stack is empty`() {
         val store = FeatureStore()
-        assertNull(store.undoManager.executeUndo())
+        assertNull(store.executeUndo())
     }
 
     @Test
@@ -233,7 +236,7 @@ class FeatureStoreTest {
         store.addFeature(feature, recordUndo = true)
         assertNotNull(store.getFeatureById("r1"))
 
-        val action = store.undoManager.executeUndo()
+        val action = store.executeUndo()
         assertTrue(action is UndoAction.Create)
         assertNull(store.getFeatureById("r1"))
     }
@@ -247,11 +250,11 @@ class FeatureStoreTest {
         val updatedProps = (original.properties as FeatureProperties.RoadProperties).copy(name = "Renamed")
         val updated = original.copy(properties = updatedProps)
         store.updateFeature("r1", updated)
-        store.undoManager.addUndoAction(
+        store.addUndoAction(
             UndoAction.Update(oldFeature = original, newFeature = updated),
         )
 
-        val action = store.undoManager.executeUndo()
+        val action = store.executeUndo()
         assertTrue(action is UndoAction.Update)
         assertEquals("Road r1", store.getFeatureById("r1")?.properties?.name)
     }
@@ -264,13 +267,13 @@ class FeatureStoreTest {
 
         val mid = original.copy(geometry = PointGeometry(coordinates = listOf(1.0, 1.0)))
         val final = original.copy(geometry = PointGeometry(coordinates = listOf(2.0, 2.0)))
-        store.undoManager.addUndoAction(UndoAction.Update(oldFeature = original, newFeature = mid))
-        store.undoManager.addUndoAction(UndoAction.Update(oldFeature = mid, newFeature = final))
+        store.addUndoAction(UndoAction.Update(oldFeature = original, newFeature = mid))
+        store.addUndoAction(UndoAction.Update(oldFeature = mid, newFeature = final))
 
-        val action = store.undoManager.executeUndo() as UndoAction.Update
+        val action = store.executeUndo() as UndoAction.Update
         assertEquals(original, action.oldFeature)
         assertEquals(final, action.newFeature)
-        assertNull(store.undoManager.executeUndo())
+        assertNull(store.executeUndo())
     }
 
     @Test
@@ -278,12 +281,12 @@ class FeatureStoreTest {
         val store = FeatureStore()
         val feature = createRoad("r1")
         store.addFeature(feature)
-        store.undoManager.addUndoAction(UndoAction.Delete(feature = feature))
+        store.addUndoAction(UndoAction.Delete(feature = feature))
 
         store.removeFeature("r1")
         assertNull(store.getFeatureById("r1"))
 
-        val action = store.undoManager.executeUndo()
+        val action = store.executeUndo()
         assertTrue(action is UndoAction.Delete)
         assertNotNull(store.getFeatureById("r1"))
     }
@@ -293,9 +296,9 @@ class FeatureStoreTest {
         val store = FeatureStore()
         val feature = createRoad("r1")
         store.addFeature(feature)
-        store.undoManager.addUndoAction(UndoAction.Delete(feature = feature))
+        store.addUndoAction(UndoAction.Delete(feature = feature))
 
-        store.undoManager.executeUndo()
+        store.executeUndo()
         // Re-add should not duplicate
         assertEquals(1, store.getFeaturesByPhase(Phases.ROADS_KEY).size)
     }
@@ -304,52 +307,52 @@ class FeatureStoreTest {
     fun `removeMostRecentActionForFeature removes the most recent matching action`() {
         val store = FeatureStore()
         val feature = createRoad("r1")
-        store.undoManager.addUndoAction(UndoAction.Create(feature))
-        store.undoManager.addUndoAction(UndoAction.Delete(feature))
+        store.addUndoAction(UndoAction.Create(feature))
+        store.addUndoAction(UndoAction.Delete(feature))
 
-        val removed = store.undoManager.removeMostRecentActionForFeature("r1")
+        val removed = store.removeMostRecentActionForFeature("r1")
         assertTrue(removed is UndoAction.Delete)
         // the earlier Create action remains untouched
-        assertTrue(store.undoManager.canUndo)
-        assertTrue(store.undoManager.popUndoAction() is UndoAction.Create)
+        assertTrue(store.canUndo)
+        assertTrue(store.executeUndo() is UndoAction.Create)
     }
 
     @Test
     fun `removeMostRecentActionForFeature returns null when no action matches`() {
         val store = FeatureStore()
         val feature = createRoad("r1")
-        store.undoManager.addUndoAction(UndoAction.Create(feature))
+        store.addUndoAction(UndoAction.Create(feature))
 
-        assertNull(store.undoManager.removeMostRecentActionForFeature("other-id"))
-        assertTrue(store.undoManager.canUndo)
+        assertNull(store.removeMostRecentActionForFeature("other-id"))
+        assertTrue(store.canUndo)
     }
 
     @Test
     fun `removeMostRecentActionForFeature only removes Delete actions`() {
         val store = FeatureStore()
         val feature = createRoad("r1")
-        store.undoManager.addUndoAction(UndoAction.Create(feature))
-        store.undoManager.addUndoAction(
+        store.addUndoAction(UndoAction.Create(feature))
+        store.addUndoAction(
             UndoAction.Update(oldFeature = feature, newFeature = createRoad("r1-updated")),
         )
 
         // A pending Update must not be removed by the failed-delete cleanup —
         // only a Delete action may be dropped.
-        assertNull(store.undoManager.removeMostRecentActionForFeature("r1"))
-        assertTrue(store.undoManager.canUndo)
+        assertNull(store.removeMostRecentActionForFeature("r1"))
+        assertTrue(store.canUndo)
     }
 
     @Test
     fun `removeMostRecentActionForFeature removes the most recent Delete for a feature`() {
         val store = FeatureStore()
         val feature = createRoad("r1")
-        store.undoManager.addUndoAction(UndoAction.Update(oldFeature = feature, newFeature = createRoad("r1-updated")))
-        store.undoManager.addUndoAction(UndoAction.Delete(feature))
+        store.addUndoAction(UndoAction.Update(oldFeature = feature, newFeature = createRoad("r1-updated")))
+        store.addUndoAction(UndoAction.Delete(feature))
 
-        val removed = store.undoManager.removeMostRecentActionForFeature("r1")
+        val removed = store.removeMostRecentActionForFeature("r1")
         assertTrue(removed is UndoAction.Delete)
         // the earlier Update action remains untouched
-        assertTrue(store.undoManager.popUndoAction() is UndoAction.Update)
+        assertTrue(store.executeUndo() is UndoAction.Update)
     }
 
     // ── referenceRoadDbId ─────────────────────────────────────────────────────
@@ -408,7 +411,7 @@ class FeatureStoreTest {
     fun `addFeature without undo does not record action`() {
         val store = FeatureStore()
         store.addFeature(createRoad("r1"), recordUndo = false)
-        assertFalse(store.undoManager.canUndo)
+        assertFalse(store.canUndo)
     }
 
     // ── featureCounts mapping ────────────────────────────────────────────────

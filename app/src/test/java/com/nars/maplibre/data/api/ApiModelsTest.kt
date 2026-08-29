@@ -228,7 +228,7 @@ class ApiModelsTest {
                 },
             ).toNarsFeature()!!
 
-        assertEquals(utcCalendar(2026, 8, 24, 12, 0, 0), result.createdAt)
+        assertEquals(utcCalendar(2026, 8, 24, 12, 0, 0), result.createdAt!!)
     }
 
     @Test
@@ -244,7 +244,7 @@ class ApiModelsTest {
                 },
             ).toNarsFeature()!!
 
-        assertEquals(utcCalendar(2026, 8, 24, 12, 30, 0), result.createdAt)
+        assertEquals(utcCalendar(2026, 8, 24, 12, 30, 0), result.createdAt!!)
     }
 
     @Test
@@ -260,7 +260,7 @@ class ApiModelsTest {
                 },
             ).toNarsFeature()!!
 
-        assertEquals(utcCalendar(2026, 8, 24, 12, 45, 0), result.createdAt)
+        assertEquals(utcCalendar(2026, 8, 24, 12, 45, 0), result.createdAt!!)
     }
 
     @Test
@@ -276,7 +276,7 @@ class ApiModelsTest {
                 },
             ).toNarsFeature()!!
 
-        assertEquals(utcCalendar(2026, 8, 24, 12, 0, 0), result.createdAt)
+        assertEquals(utcCalendar(2026, 8, 24, 12, 0, 0), result.createdAt!!)
     }
 
     @Test
@@ -294,7 +294,7 @@ class ApiModelsTest {
             ).toNarsFeature()!!
         val after = System.currentTimeMillis()
 
-        assertTrue(result.createdAt >= before && result.createdAt <= after + 5_000)
+        assertTrue(result.createdAt!! >= before && result.createdAt!! <= after + 5_000)
     }
 
     @Test
@@ -312,7 +312,7 @@ class ApiModelsTest {
             ).toNarsFeature()!!
         val after = System.currentTimeMillis()
 
-        assertTrue(result.createdAt >= before && result.createdAt <= after + 5_000)
+        assertTrue(result.createdAt!! >= before && result.createdAt!! <= after + 5_000)
     }
 
     @Test
@@ -328,7 +328,7 @@ class ApiModelsTest {
                 },
             ).toNarsFeature()!!
 
-        assertTrue(result.createdAt > 0)
+        assertTrue(result.createdAt!! > 0)
     }
 
     // ─── toApiSaveRequest / toApiUpdateRequest ───────────────────────────────

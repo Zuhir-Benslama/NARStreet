@@ -30,6 +30,7 @@ class LabelAndMarkerManager(private val map: MapLibreMap) {
         private const val ROAD_MARKER_RADIUS = 14f
         private const val ROAD_MARKER_STROKE_WIDTH = 3f
         private const val VERTEX_STROKE_WIDTH = 2f
+        private const val LABEL_FONT = "Noto Sans Regular"
     }
 
     fun addLabelLayer(layerName: String, sourceName: String, labelText: String?) {
@@ -45,13 +46,13 @@ class LabelAndMarkerManager(private val map: MapLibreMap) {
             SymbolLayer(labelLayerName, sourceName).apply {
                 setProperties(
                     org.maplibre.android.style.layers.PropertyFactory
-                        .textField(Expression.get("name")),
+                        .textField(Expression.get(GeoJsonProps.NAME)),
                     org.maplibre.android.style.layers.PropertyFactory
                         .textColor(Color.BLACK),
                     org.maplibre.android.style.layers.PropertyFactory
                         .textSize(LABEL_TEXT_SIZE),
                     org.maplibre.android.style.layers.PropertyFactory
-                        .textFont(arrayOf("Noto Sans Regular")),
+                        .textFont(arrayOf(LABEL_FONT)),
                     org.maplibre.android.style.layers.PropertyFactory
                         .textAllowOverlap(true),
                     org.maplibre.android.style.layers.PropertyFactory
@@ -123,18 +124,18 @@ class LabelAndMarkerManager(private val map: MapLibreMap) {
 
     private fun pointFeatureGeoJson(lon: Double, lat: Double, props: Map<String, String> = emptyMap()): String =
         buildJsonObject {
-            put("type", "FeatureCollection")
-            putJsonArray("features") {
+            put(GeoJsonProps.TYPE, GeoJsonProps.FEATURE_COLLECTION)
+            putJsonArray(GeoJsonProps.FEATURES) {
                 addJsonObject {
-                    put("type", "Feature")
-                    putJsonObject("geometry") {
-                        put("type", "Point")
-                        putJsonArray("coordinates") {
+                    put(GeoJsonProps.TYPE, GeoJsonProps.FEATURE)
+                    putJsonObject(GeoJsonProps.GEOMETRY) {
+                        put(GeoJsonProps.TYPE, GeoJsonProps.POINT)
+                        putJsonArray(GeoJsonProps.COORDINATES) {
                             add(lon)
                             add(lat)
                         }
                     }
-                    putJsonObject("properties") {
+                    putJsonObject(GeoJsonProps.PROPERTIES) {
                         props.forEach { (k, v) -> put(k, v) }
                     }
                 }
@@ -195,7 +196,7 @@ class LabelAndMarkerManager(private val map: MapLibreMap) {
                     org.maplibre.android.style.layers.PropertyFactory
                         .textSize(LABEL_TEXT_SIZE),
                     org.maplibre.android.style.layers.PropertyFactory
-                        .textFont(arrayOf("Noto Sans Regular")),
+                        .textFont(arrayOf(LABEL_FONT)),
                     org.maplibre.android.style.layers.PropertyFactory
                         .textAllowOverlap(true),
                     org.maplibre.android.style.layers.PropertyFactory
@@ -243,19 +244,19 @@ class LabelAndMarkerManager(private val map: MapLibreMap) {
         ?.map { doubleArrayOf(it[0], it[1]) }
 
     private fun vertexGeoJson(coordinates: List<DoubleArray>): String = buildJsonObject {
-        put("type", "FeatureCollection")
-        putJsonArray("features") {
+        put(GeoJsonProps.TYPE, GeoJsonProps.FEATURE_COLLECTION)
+        putJsonArray(GeoJsonProps.FEATURES) {
             coordinates.forEach { coord ->
                 addJsonObject {
-                    put("type", "Feature")
-                    putJsonObject("geometry") {
-                        put("type", "Point")
-                        putJsonArray("coordinates") {
+                    put(GeoJsonProps.TYPE, GeoJsonProps.FEATURE)
+                    putJsonObject(GeoJsonProps.GEOMETRY) {
+                        put(GeoJsonProps.TYPE, GeoJsonProps.POINT)
+                        putJsonArray(GeoJsonProps.COORDINATES) {
                             add(coord[0])
                             add(coord[1])
                         }
                     }
-                    putJsonObject("properties") { put("isVertex", true) }
+                    putJsonObject(GeoJsonProps.PROPERTIES) { put("isVertex", true) }
                 }
             }
         }

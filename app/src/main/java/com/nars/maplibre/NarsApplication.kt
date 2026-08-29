@@ -25,6 +25,8 @@ class NarsApplication :
     KoinComponent {
     companion object {
         private const val TAG = "NarsApplication"
+        private const val SESSION_RESTORE_MAX_RETRIES = 5
+        private const val SESSION_RESTORE_RETRY_BASE_DELAY_MS = 100L
     }
 
     private val applicationScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
@@ -63,9 +65,7 @@ class NarsApplication :
         MapLibre.getInstance(this, null, WellKnownTileServer.MapTiler)
 
         applicationScope.launch {
-            val maxRetries = 5
-            val delayMs = 100L
-            repeat(maxRetries) { attempt ->
+            repeat(SESSION_RESTORE_MAX_RETRIES) { attempt ->
                 try {
                     val prefs: AppPreferences = get()
                     val apiService: ApiService = get()
@@ -79,12 +79,12 @@ class NarsApplication :
                     return@launch
                 } catch (e: IllegalStateException) {
                     NarsLogger.w(TAG, "Session check attempt ${attempt + 1} failed: Koin not ready", e)
-                    if (attempt < maxRetries - 1) {
-                        kotlinx.coroutines.delay(delayMs * (attempt + 1))
+                    if (attempt < SESSION_RESTORE_MAX_RETRIES - 1) {
+                        kotlinx.coroutines.delay(SESSION_RESTORE_RETRY_BASE_DELAY_MS * (attempt + 1))
                     }
                 }
             }
-            NarsLogger.w(TAG, "Session restoration failed after $maxRetries attempts")
+            NarsLogger.w(TAG, "Session restoration failed after $SESSION_RESTORE_MAX_RETRIES attempts")
         }
 
         registerTokenClearingOnBackground()

@@ -66,11 +66,6 @@ class FeatureDisplayManager(
         val toAdd = filtered.filter { it.id !in displayedFeatureIds }
         toAdd.forEach { addFeature(it) }
 
-        synchronized(displayedFeatureIds) {
-            displayedFeatureIds.retainAll(newIds)
-            displayedFeatureIds.addAll(newIds.filterNot { it in displayedFeatureIds })
-        }
-
         if (currentPhaseKey == Phases.ROADS_KEY) {
             val signature = roadEndpointSignature(allFeatures)
             if (signature != lastRoadEndpointSignature) {

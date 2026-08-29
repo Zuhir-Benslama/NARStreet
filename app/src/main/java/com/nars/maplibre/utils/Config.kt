@@ -23,7 +23,7 @@ object Config {
 
     const val MAP_DEFAULT_PITCH = 0.0
 
-    const val SNAP_THRESHOLD_PX = 20
+    const val GEOMAN_SNAP_THRESHOLD_PX = 20
 
     const val MIN_ROAD_LENGTH_METERS = 10
 
