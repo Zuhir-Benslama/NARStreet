@@ -119,32 +119,34 @@ class GeomanEventHandler(
 
         val safeGeometry = geometry ?: return null
 
-        return NarsFeature(
-            id =
-            featureData?.id ?: java.util.UUID
-                .randomUUID()
-                .toString(),
-            type = getFeatureTypeFromPhase(phase),
-            geometry = safeGeometry,
-            properties =
+        val (type, properties) =
             when (phase.key) {
                 Phases.ROADS_KEY -> {
-                    FeatureProperties.RoadProperties()
+                    NarsFeatureType.ROAD to FeatureProperties.RoadProperties()
                 }
 
                 Phases.HOUSE_ENTRANCES_KEY -> {
-                    FeatureProperties.HouseEntranceProperties()
+                    NarsFeatureType.HOUSE_ENTRANCE to FeatureProperties.HouseEntranceProperties()
                 }
 
                 Phases.NAMING_PANELS_KEY -> {
-                    FeatureProperties.NamingPanelProperties()
+                    NarsFeatureType.NAMING_PANEL to FeatureProperties.NamingPanelProperties()
                 }
 
                 else -> {
                     NarsLogger.e(TAG, "Unknown phase key: ${phase.key} — cannot create feature")
                     return null
                 }
-            },
+            }
+
+        return NarsFeature(
+            id =
+            featureData?.id ?: java.util.UUID
+                .randomUUID()
+                .toString(),
+            type = type,
+            geometry = safeGeometry,
+            properties = properties,
         )
     }
 
@@ -223,12 +225,5 @@ class GeomanEventHandler(
         destroyed = true
         eventJob?.cancel()
         eventJob = null
-    }
-
-    internal fun getFeatureTypeFromPhase(phase: PhaseDefinition): NarsFeatureType = when (phase.key) {
-        Phases.ROADS_KEY -> NarsFeatureType.ROAD
-        Phases.HOUSE_ENTRANCES_KEY -> NarsFeatureType.HOUSE_ENTRANCE
-        Phases.NAMING_PANELS_KEY -> NarsFeatureType.NAMING_PANEL
-        else -> NarsFeatureType.ROAD
     }
 }

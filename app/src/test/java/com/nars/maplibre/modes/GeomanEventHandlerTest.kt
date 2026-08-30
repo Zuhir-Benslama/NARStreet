@@ -16,16 +16,13 @@ import com.nars.maplibre.data.model.PhaseDefinition
 import com.nars.maplibre.data.model.Phases
 import com.nars.maplibre.data.model.PointGeometry
 import com.nars.maplibre.data.model.PolygonGeometry
-import io.mockk.Runs
 import io.mockk.every
-import io.mockk.just
 import io.mockk.mockk
 import io.mockk.slot
 import io.mockk.verify
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
-import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 
@@ -43,24 +40,6 @@ class GeomanEventHandlerTest {
             "roads",
             com.nars.maplibre.data.model.DrawType.POLYLINE,
             "#3498db",
-            "",
-        )
-    private val entrancePhase =
-        PhaseDefinition(
-            1,
-            Phases.HOUSE_ENTRANCES_KEY,
-            "entrances",
-            com.nars.maplibre.data.model.DrawType.MARKER,
-            "#27ae60",
-            "",
-        )
-    private val panelPhase =
-        PhaseDefinition(
-            2,
-            Phases.NAMING_PANELS_KEY,
-            "panels",
-            com.nars.maplibre.data.model.DrawType.MARKER,
-            "#9b59b6",
             "",
         )
 
@@ -107,29 +86,6 @@ class GeomanEventHandlerTest {
         handler.setEditingFeature(null, null)
         assertNull(handler.getEditingFeatureId())
         assertNull(handler.getEditingFeature())
-    }
-
-    // --- getFeatureTypeFromPhase ---
-
-    @Test
-    fun `getFeatureTypeFromPhase returns ROAD for roads key`() {
-        assertEquals(NarsFeatureType.ROAD, handler.getFeatureTypeFromPhase(roadPhase))
-    }
-
-    @Test
-    fun `getFeatureTypeFromPhase returns HOUSE_ENTRANCE for houseEntrances key`() {
-        assertEquals(NarsFeatureType.HOUSE_ENTRANCE, handler.getFeatureTypeFromPhase(entrancePhase))
-    }
-
-    @Test
-    fun `getFeatureTypeFromPhase returns NAMING_PANEL for namingPanels key`() {
-        assertEquals(NarsFeatureType.NAMING_PANEL, handler.getFeatureTypeFromPhase(panelPhase))
-    }
-
-    @Test
-    fun `getFeatureTypeFromPhase defaults to ROAD for unknown key`() {
-        val unknown = PhaseDefinition(99, "unknown", "?", com.nars.maplibre.data.model.DrawType.POLYGON, "#000", "")
-        assertEquals(NarsFeatureType.ROAD, handler.getFeatureTypeFromPhase(unknown))
     }
 
     // --- extractGeometryFromFeatureData ---
@@ -311,6 +267,20 @@ class GeomanEventHandlerTest {
         assertEquals(NarsFeatureType.ROAD, result.type)
         assertEquals(Phases.ROADS_KEY, result.properties.phase)
         assertEquals("#3498db", result.properties.color)
+    }
+
+    @Test
+    fun `createNarsFeatureFromFeatureData rejects unknown phase`() {
+        val point = mockk<Point>(relaxed = true)
+        every { point.coordinates } returns listOf(10.0, 20.0)
+        val featureData = mockk<FeatureData>(relaxed = true)
+        every { featureData.id } returns "f2"
+        every { featureData.properties } returns mutableMapOf<String, Any?>()
+        every { featureData.geometry } returns point
+
+        val unknown = PhaseDefinition(99, "unknown", "?", com.nars.maplibre.data.model.DrawType.POLYGON, "#000", "")
+
+        assertNull(handler.createNarsFeatureFromFeatureData(featureData, unknown))
     }
 
     @Test

@@ -7,8 +7,10 @@ import com.nars.maplibre.data.model.NarsFeature
 import com.nars.maplibre.data.model.NarsFeatureType
 import com.nars.maplibre.data.model.PointGeometry
 import com.nars.maplibre.data.model.PolygonGeometry
+import com.nars.maplibre.utils.GeometryUtils
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.maplibre.android.geometry.LatLng
@@ -80,7 +82,29 @@ class SnappingEngineTest {
     }
 
     @Test
-    fun `snapPoint snaps to circle center`() {
+    fun `snapPoint snaps to circle edge`() {
+        val center = LatLng(36.0, 3.0)
+        val radiusMeters = 100.0
+        val circle =
+            NarsFeature(
+                id = "c1",
+                type = NarsFeatureType.ROAD,
+                geometry = CircleGeometry(coordinates = listOf(3.0, 36.0, radiusMeters)),
+                properties = FeatureProperties.RoadProperties(),
+            )
+        // Due north of the center, beyond the radius — the nearest edge point
+        // lies exactly one radius from the center on the same bearing.
+        val point = LatLng(36.0015, 3.0)
+        val result = engine.snapPoint(point, listOf(circle), 200.0)
+
+        assertEquals(radiusMeters, result.distanceTo(center), 0.5)
+        assertEquals(Math.toDegrees(radiusMeters / GeometryUtils.EARTH_RADIUS_METERS), result.latitude - 36.0, 1e-5)
+        assertEquals(3.0, result.longitude, 1e-6)
+        assertTrue(result.latitude > 36.0)
+    }
+
+    @Test
+    fun `snapPoint returns original when point at circle center`() {
         val circle =
             NarsFeature(
                 id = "c1",
@@ -88,9 +112,9 @@ class SnappingEngineTest {
                 geometry = CircleGeometry(coordinates = listOf(3.0, 36.0, 100.0)),
                 properties = FeatureProperties.RoadProperties(),
             )
-        val point = LatLng(36.001, 3.001)
-        val result = engine.snapPoint(point, listOf(circle), 200.0)
-        assertEquals(LatLng(36.0, 3.0), result)
+        val center = LatLng(36.0, 3.0)
+        val result = engine.snapPoint(center, listOf(circle), 200.0)
+        assertEquals(center, result)
     }
 
     @Test

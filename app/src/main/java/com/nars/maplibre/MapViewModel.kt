@@ -319,8 +319,9 @@ class MapViewModel(
         _uiState.update { current ->
             current.copy(
                 isLoading = isLoading ?: current.isLoading,
-                errorMessage = errorMessage ?: current.errorMessage,
-                successMessage = successMessage ?: current.successMessage,
+                // A new message replaces the other kind so stale toasts do not linger.
+                errorMessage = errorMessage ?: if (successMessage != null) null else current.errorMessage,
+                successMessage = successMessage ?: if (errorMessage != null) null else current.successMessage,
             )
         }
     }

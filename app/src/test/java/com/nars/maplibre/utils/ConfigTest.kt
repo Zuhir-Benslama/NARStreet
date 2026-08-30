@@ -17,9 +17,16 @@ class ConfigTest {
     fun `constants expose expected defaults`() {
         assertEquals(DEFAULT_TIMEOUT_MS, Config.API_DEFAULT_TIMEOUT_MS)
         assertEquals(MAX_RETRIES, Config.API_MAX_RETRIES)
+        assertEquals(RETRY_BASE_DELAY_MS, Config.API_RETRY_BASE_DELAY_MS.toInt())
+        assertEquals(RETRY_MAX_DELAY_MS, Config.API_RETRY_MAX_DELAY_MS.toInt())
         assertEquals(MAX_ZOOM, Config.MAP_MAX_ZOOM)
         assertEquals(TILE_SIZE, Config.TILE_SIZE)
         assertEquals(STYLE_VERSION, Config.STYLE_VERSION)
+    }
+
+    @Test
+    fun `retry delays start below the max cap`() {
+        assertTrue(Config.API_RETRY_BASE_DELAY_MS < Config.API_RETRY_MAX_DELAY_MS)
     }
 
     private companion object {
@@ -29,6 +36,8 @@ class ConfigTest {
         const val DARK_PATH = "basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png"
         const val DEFAULT_TIMEOUT_MS = 15000
         const val MAX_RETRIES = 3
+        const val RETRY_BASE_DELAY_MS = 1000
+        const val RETRY_MAX_DELAY_MS = 10000
         const val MAX_ZOOM = 19
         const val TILE_SIZE = 256
         const val STYLE_VERSION = 8

@@ -132,9 +132,19 @@ class SnappingEngine {
     ): Pair<LatLng, Double> {
         val lon = geometry.coordinates.getOrNull(0) ?: return currentClosest to currentMinDist
         val lat = geometry.coordinates.getOrNull(1) ?: return currentClosest to currentMinDist
-        val cp = LatLng(lat, lon)
-        val d = point.distanceTo(cp)
-        return if (d < currentMinDist) cp to d else currentClosest to currentMinDist
+        val radiusMeters = geometry.coordinates.getOrNull(2)?.takeIf { it > 0 }
+            ?: return currentClosest to currentMinDist
+        val center = LatLng(lat, lon)
+        // Snap to the circumference, not the center: a feature has no location
+        // at its centroid, so snapping a vertex to the middle of the circle is
+        // never the user's intent.
+        val distanceToCenter = point.distanceTo(center)
+        if (distanceToCenter < DEGENERATE_SEGMENT_THRESHOLD_METERS) {
+            return currentClosest to currentMinDist
+        }
+        val snapped = interpolateBearing(center, bearingDeg(center, point), radiusMeters)
+        val d = point.distanceTo(snapped)
+        return if (d < currentMinDist) snapped to d else currentClosest to currentMinDist
     }
 
     fun nearestPointOnSegment(point: LatLng, p1: LatLng, p2: LatLng): LatLng {

@@ -39,6 +39,37 @@ class FeatureStore : FeatureStoreInterface {
         _featuresByPhase.value = features.groupBy { it.properties.phase }
     }
 
+    /**
+     * Updates a single feature in the phase map. When the phase is unchanged the
+     * feature is replaced in place (preserving bucket order); when it moved to a
+     * new phase it is removed from the old bucket and appended to the new one.
+     * Avoids the O(n) full [rebuildPhaseMap] on every edit, which a drag
+     * triggers once per ChangeEnd event.
+     */
+    private fun replaceInPhaseMap(previous: NarsFeature, updated: NarsFeature) {
+        withPhaseMap { map ->
+            val oldKey = previous.properties.phase
+            val newKey = updated.properties.phase
+            val oldBucket = map[oldKey] ?: emptyList()
+            if (oldKey == newKey) {
+                val index = oldBucket.indexOfFirst { it.id == previous.id }
+                if (index >= 0) {
+                    map[oldKey] = oldBucket.toMutableList().also { it[index] = updated }
+                } else {
+                    map[newKey] = (map[newKey] ?: emptyList()) + updated
+                }
+            } else {
+                val filtered = oldBucket.filterNot { it.id == previous.id }
+                if (filtered.isEmpty()) {
+                    map.remove(oldKey)
+                } else {
+                    map[oldKey] = filtered
+                }
+                map[newKey] = (map[newKey] ?: emptyList()).filterNot { it.id == previous.id } + updated
+            }
+        }
+    }
+
     init {
         _currentPhase.value = Phases.ALL.first()
     }
@@ -107,8 +138,9 @@ class FeatureStore : FeatureStoreInterface {
     }
 
     override fun updateFeature(featureId: String, updatedFeature: NarsFeature) = lock.withLock {
+        val previous = _allFeatures.value.find { it.id == featureId } ?: return@withLock
         _allFeatures.value = _allFeatures.value.map { if (it.id == featureId) updatedFeature else it }
-        rebuildPhaseMap(_allFeatures.value)
+        replaceInPhaseMap(previous, updatedFeature)
         if (_selectedFeature.value?.id == featureId) {
             _selectedFeature.value = updatedFeature
         }
@@ -118,7 +150,7 @@ class FeatureStore : FeatureStoreInterface {
         val previous = _allFeatures.value.find { it.id == featureId } ?: return@withLock
         if (previous == updatedFeature) return@withLock
         _allFeatures.value = _allFeatures.value.map { if (it.id == featureId) updatedFeature else it }
-        rebuildPhaseMap(_allFeatures.value)
+        replaceInPhaseMap(previous, updatedFeature)
         if (_selectedFeature.value?.id == featureId) {
             _selectedFeature.value = updatedFeature
         }
