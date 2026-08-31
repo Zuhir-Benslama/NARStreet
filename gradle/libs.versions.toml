@@ -24,7 +24,7 @@ compose-bom = "2026.08.00"
 compose-material3 = "1.4.0"
 
 # MapLibre
-maplibre-sdk = "13.5.1"
+maplibre-sdk = "13.6.0"
 
 # Koin (DI)
 koin = "4.2.2"
@@ -42,7 +42,7 @@ timber = "5.0.1"
 leakcanary = "2.14"
 
 # Formatting
-spotless = "8.10.0"
+spotless = "8.10.1"
 
 # Material (used by :geoman)
 material = "1.14.0"

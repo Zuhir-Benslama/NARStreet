@@ -383,4 +383,180 @@ class ApiModelsTest {
         assertEquals("Renamed", named.toApiUpdateRequest().label)
         assertNull(unnamed.toApiUpdateRequest().label)
     }
+
+    // ─── geometry edge cases in toNarsFeature ──────────────────────────────
+
+    @Test
+    fun `coordinate entry with missing lat or lng is filtered out`() {
+        val data = buildJsonObject {
+            put(
+                "coordinates",
+                kotlinx.serialization.json.buildJsonArray {
+                    add(buildJsonObject { put("lng", 11.0) })
+                    add(
+                        buildJsonObject {
+                            put("lat", 2.0)
+                            put("lng", 12.0)
+                        },
+                    )
+                    add(
+                        buildJsonObject {
+                            put("lat", 3.0)
+                            put("lng", 13.0)
+                        },
+                    )
+                },
+            )
+        }
+
+        val result =
+            ApiFeatureResult(id = "9", type = "road", data = data).toNarsFeature()!!
+
+        // two valid pairs -> LineString
+        assertEquals(LineStringGeometry(coordinates = listOf(12.0, 2.0, 13.0, 3.0)), result.geometry)
+    }
+
+    @Test
+    fun `coordinate entry that is not an object is filtered out`() {
+        val data = buildJsonObject {
+            put(
+                "coordinates",
+                kotlinx.serialization.json.buildJsonArray {
+                    add(kotlinx.serialization.json.JsonPrimitive("junk"))
+                    add(
+                        buildJsonObject {
+                            put("lat", 9.0)
+                            put("lng", 19.0)
+                        },
+                    )
+                },
+            )
+        }
+
+        val result =
+            ApiFeatureResult(id = "9", type = "road", data = data).toNarsFeature()!!
+
+        // a single valid pair -> PointGeometry
+        assertEquals(PointGeometry(coordinates = listOf(19.0, 9.0)), result.geometry)
+    }
+
+    @Test
+    fun `data with non-object json falls back to empty object`() {
+        val result =
+            ApiFeatureResult(id = "1", type = "road", data = kotlinx.serialization.json.JsonPrimitive("str"))
+                .toNarsFeature()
+        assertNull(result)
+    }
+
+    // ─── toApiData for each feature type ───────────────────────────────────
+
+    @Test
+    fun `circle toApiData includes radius`() {
+        val feature =
+            com.nars.maplibre.data.model.NarsFeature(
+                id = "c1",
+                type = NarsFeatureType.NAMING_PANEL,
+                geometry = CircleGeometry(coordinates = listOf(2.0, 1.0, 30.0)),
+                properties = FeatureProperties.NamingPanelProperties(name = "Circle"),
+            )
+
+        val data = feature.toApiData()
+
+        assertEquals(30.0, data["radius"].toString().toDouble(), 0.0001)
+        assertEquals(2.0, data["lng"].toString().toDouble(), 0.0001)
+        assertEquals(1.0, data["lat"].toString().toDouble(), 0.0001)
+    }
+
+    @Test
+    fun `house entrance toApiData includes property keys`() {
+        val feature =
+            com.nars.maplibre.data.model.NarsFeature(
+                id = "h1",
+                type = NarsFeatureType.HOUSE_ENTRANCE,
+                geometry = PointGeometry(coordinates = listOf(2.0, 1.0)),
+                properties =
+                FeatureProperties.HouseEntranceProperties(
+                    name = "Entrance",
+                    entranceTypeKey = "main",
+                    roadDbId = "r99",
+                    side = "left",
+                ),
+            )
+
+        val data = feature.toApiData()
+
+        assertEquals("house_entrance", data["type"].toString().replace("\"", ""))
+        assertEquals("main", data["entranceTypeKey"]?.toString()?.replace("\"", ""))
+        assertEquals("r99", data["roadDbId"]?.toString()?.replace("\"", ""))
+        assertEquals("left", data["side"]?.toString()?.replace("\"", ""))
+    }
+
+    @Test
+    fun `naming panel save request defaults layer`() {
+        val feature =
+            com.nars.maplibre.data.model.NarsFeature(
+                id = "n1",
+                type = NarsFeatureType.NAMING_PANEL,
+                geometry = PointGeometry(coordinates = listOf(2.0, 1.0)),
+                properties = FeatureProperties.NamingPanelProperties(),
+            )
+
+        assertEquals("naming_panel", feature.toApiSaveRequest().layer)
+        assertEquals("naming_panel", feature.toApiSaveRequest().type)
+    }
+
+    @Test
+    fun `house entrance save request defaults layer to main_entrance`() {
+        val feature =
+            com.nars.maplibre.data.model.NarsFeature(
+                id = "h1",
+                type = NarsFeatureType.HOUSE_ENTRANCE,
+                geometry = PointGeometry(coordinates = listOf(2.0, 1.0)),
+                properties = FeatureProperties.HouseEntranceProperties(),
+            )
+
+        assertEquals("main_entrance", feature.toApiSaveRequest().layer)
+    }
+
+    @Test
+    fun `naming panel deserializes data label`() {
+        val result =
+            ApiFeatureResult(
+                id = "p1",
+                type = "naming_panel",
+                data = buildJsonObject {
+                    put("lat", 1.0)
+                    put("lng", 2.0)
+                    put("label", "Panel A")
+                },
+            ).toNarsFeature()!!
+
+        val props = result.properties as FeatureProperties.NamingPanelProperties
+        assertEquals("Panel A", props.name)
+        assertEquals(Phases.NAMING_PANELS_KEY, props.phase)
+    }
+
+    // ─── ApiProblemDetails serialization ───────────────────────────────────
+
+    @Test
+    fun `ApiProblemDetails deserializes problem details`() {
+        val decoded =
+            kotlinx.serialization.json.Json
+                .decodeFromString(
+                    ApiProblemDetails.serializer(),
+                    """{"title":"Unauthorized","status":401,"detail":"bad credentials"}""",
+                )
+        assertEquals("Unauthorized", decoded.title)
+        assertEquals(401, decoded.status)
+        assertEquals("bad credentials", decoded.detail)
+    }
+
+    @Test
+    fun `ApiProblemDetails defaults are null`() {
+        val decoded =
+            kotlinx.serialization.json.Json.decodeFromString(ApiProblemDetails.serializer(), """{}""")
+        assertNull(decoded.title)
+        assertNull(decoded.status)
+        assertNull(decoded.detail)
+    }
 }
