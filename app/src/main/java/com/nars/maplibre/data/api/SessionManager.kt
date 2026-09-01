@@ -3,8 +3,14 @@ package com.nars.maplibre.data.api
 import com.nars.maplibre.AppPreferences
 import com.nars.maplibre.data.model.LoginResponse
 import com.nars.maplibre.utils.NarsLogger
+import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.withContext
 
-class SessionManager(private val apiService: ApiService, private val appPreferences: AppPreferences) {
+class SessionManager(
+    private val apiService: ApiService,
+    private val appPreferences: AppPreferences,
+    private val tokens: SessionTokens,
+) {
     companion object {
         private const val TAG = "SessionManager"
     }
@@ -30,15 +36,18 @@ class SessionManager(private val apiService: ApiService, private val appPreferen
      * Local state is always cleared (defensive, even if the server call throws
      * unexpectedly); the returned Result lets callers distinguish "fully logged
      * out" from "logged out locally but the server revocation failed".
+     *
+     * The whole body runs in a [NonCancellable] context so a caller's scope
+     * being cancelled mid-flight (e.g. a ViewModel cleared while the network
+     * call is in flight) cannot strand the device half-logged-out.
      */
-    @Suppress("TooGenericExceptionCaught")
-    suspend fun logout(): Result<Unit> {
+    suspend fun logout(): Result<Unit> = withContext(NonCancellable) {
         val result =
             try {
                 apiService.logout()
             } catch (e: kotlinx.coroutines.CancellationException) {
                 throw e
-            } catch (e: Exception) {
+            } catch (@Suppress("TooGenericExceptionCaught") e: Exception) {
                 NarsLogger.w(TAG, "Server-side logout threw — local session still cleared", e)
                 Result.failure(e)
             }
@@ -46,7 +55,7 @@ class SessionManager(private val apiService: ApiService, private val appPreferen
             NarsLogger.w(TAG, "Server-side logout failed — local session still cleared", e)
         }
         clearLocalSession()
-        return result
+        result
     }
 
     private fun clearLocalSession() {
@@ -54,8 +63,8 @@ class SessionManager(private val apiService: ApiService, private val appPreferen
         appPreferences.refreshToken = null
         appPreferences.user = null
         appPreferences.municipalityName = null
-        apiService.setSessionToken(null)
-        apiService.setRefreshToken(null)
+        tokens.setSessionToken(null)
+        tokens.setRefreshToken(null)
     }
 
     fun getUser() = appPreferences.user

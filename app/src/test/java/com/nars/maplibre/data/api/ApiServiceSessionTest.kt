@@ -82,8 +82,8 @@ class ApiServiceSessionTest {
         val result = apiService.login("testuser", "password")
 
         assertTrue(result.isSuccess)
-        assertEquals("test123", apiService.getSessionToken())
-        assertEquals("refresh456", apiService.getRefreshToken())
+        assertEquals("test123", apiService.tokens.getSessionToken())
+        assertEquals("refresh456", apiService.tokens.getRefreshToken())
     }
 
     @Test
@@ -124,8 +124,8 @@ class ApiServiceSessionTest {
 
     @Test
     fun `setSessionToken and getSessionToken round trip`() {
-        apiService.setSessionToken("token123")
-        assertEquals("token123", apiService.getSessionToken())
+        apiService.tokens.setSessionToken("token123")
+        assertEquals("token123", apiService.tokens.getSessionToken())
     }
 
     @Test
@@ -171,14 +171,14 @@ class ApiServiceSessionTest {
                 }
             }
         apiService = ApiService(client, appPreferences)
-        apiService.setRefreshToken("refresh-123")
+        apiService.tokens.setRefreshToken("refresh-123")
 
         val result = apiService.loadFeatures()
 
         assertTrue(result.isSuccess)
         assertEquals(3, callCount)
-        assertEquals("new-access", apiService.getSessionToken())
-        assertEquals("new-refresh", apiService.getRefreshToken())
+        assertEquals("new-access", apiService.tokens.getSessionToken())
+        assertEquals("new-refresh", apiService.tokens.getRefreshToken())
     }
 
     @Test
@@ -229,14 +229,14 @@ class ApiServiceSessionTest {
                 }
             }
         apiService = ApiService(client, appPreferences)
-        apiService.setSessionToken("stale-access")
-        apiService.setRefreshToken("revoked-refresh")
+        apiService.tokens.setSessionToken("stale-access")
+        apiService.tokens.setRefreshToken("revoked-refresh")
 
         val result = apiService.loadFeatures()
 
         assertTrue(result.isFailure)
-        assertEquals(null, apiService.getSessionToken())
-        assertEquals(null, apiService.getRefreshToken())
+        assertEquals(null, apiService.tokens.getSessionToken())
+        assertEquals(null, apiService.tokens.getRefreshToken())
         verify { appPreferences.authToken = null }
         verify { appPreferences.refreshToken = null }
     }
@@ -265,16 +265,16 @@ class ApiServiceSessionTest {
                 }
             }
         apiService = ApiService(client, appPreferences)
-        apiService.setSessionToken("stale-access")
-        apiService.setRefreshToken("valid-refresh")
+        apiService.tokens.setSessionToken("stale-access")
+        apiService.tokens.setRefreshToken("valid-refresh")
 
         val result = apiService.loadFeatures()
 
         // A transient 5xx on refresh must NOT destroy a valid session — the user
         // should be able to retry the action instead of being logged out.
         assertTrue(result.isFailure)
-        assertEquals("stale-access", apiService.getSessionToken())
-        assertEquals("valid-refresh", apiService.getRefreshToken())
+        assertEquals("stale-access", apiService.tokens.getSessionToken())
+        assertEquals("valid-refresh", apiService.tokens.getRefreshToken())
         verify(exactly = 0) { appPreferences.authToken = null }
         verify(exactly = 0) { appPreferences.refreshToken = null }
     }
@@ -297,8 +297,8 @@ class ApiServiceSessionTest {
                 }
             }
         apiService = ApiService(client, appPreferences)
-        apiService.setSessionToken("stale-access")
-        apiService.setRefreshToken("revoked-refresh")
+        apiService.tokens.setSessionToken("stale-access")
+        apiService.tokens.setRefreshToken("revoked-refresh")
         var expired = false
         backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
             apiService.sessionExpired.collect { expired = true }
@@ -353,8 +353,8 @@ class ApiServiceSessionTest {
                 }
             }
         apiService = ApiService(client, appPreferences)
-        apiService.setSessionToken("old-access")
-        apiService.setRefreshToken("refresh-123")
+        apiService.tokens.setSessionToken("old-access")
+        apiService.tokens.setRefreshToken("refresh-123")
 
         val result = apiService.loadFeatures()
 
@@ -362,7 +362,7 @@ class ApiServiceSessionTest {
         // refresh succeeded — the original request must be retried.
         assertTrue(result.isSuccess)
         assertEquals(3, callCount)
-        assertEquals("new-refresh", apiService.getRefreshToken())
+        assertEquals("new-refresh", apiService.tokens.getRefreshToken())
     }
 
     @Test
@@ -395,8 +395,8 @@ class ApiServiceSessionTest {
         val result = apiService.login("testuser", "wrong")
 
         assertTrue(result.isFailure)
-        assertEquals(null, apiService.getSessionToken())
-        assertEquals(null, apiService.getRefreshToken())
+        assertEquals(null, apiService.tokens.getSessionToken())
+        assertEquals(null, apiService.tokens.getRefreshToken())
         verify(exactly = 0) { appPreferences.authToken = any() }
     }
 
@@ -430,8 +430,8 @@ class ApiServiceSessionTest {
         val result = apiService.login("testuser", "wrong")
 
         assertTrue(result.isFailure)
-        assertEquals(null, apiService.getSessionToken())
-        assertEquals(null, apiService.getRefreshToken())
+        assertEquals(null, apiService.tokens.getSessionToken())
+        assertEquals(null, apiService.tokens.getRefreshToken())
     }
 
     @Test
@@ -473,7 +473,7 @@ class ApiServiceSessionTest {
                 }
             }
         apiService = ApiService(client, appPreferences)
-        apiService.setSessionToken("stale-access")
+        apiService.tokens.setSessionToken("stale-access")
         every { appPreferences.refreshToken } returns "persisted-refresh"
 
         val result = apiService.loadFeatures()
@@ -481,7 +481,7 @@ class ApiServiceSessionTest {
         // Backgrounding clears the in-memory tokens; the refresh must still be
         // able to rotate using the persisted refresh token.
         assertTrue(result.isSuccess)
-        assertEquals("new-access", apiService.getSessionToken())
+        assertEquals("new-access", apiService.tokens.getSessionToken())
     }
 
     @Test
@@ -532,8 +532,8 @@ class ApiServiceSessionTest {
                 }
             }
         apiService = ApiService(client, appPreferences)
-        apiService.setSessionToken("old-access")
-        apiService.setRefreshToken("refresh-123")
+        apiService.tokens.setSessionToken("old-access")
+        apiService.tokens.setRefreshToken("refresh-123")
 
         val results =
             listOf(

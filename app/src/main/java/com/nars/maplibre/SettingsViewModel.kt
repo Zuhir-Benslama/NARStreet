@@ -20,14 +20,15 @@ class SettingsViewModel(private val appPreferences: AppPreferences, private val 
     }
 
     /**
-     * Revokes the session server-side, then hands control back for navigation.
-     * Runs in [viewModelScope] — previously this launched in a composition
-     * scope, so rotating during logout silently cancelled the revocation.
+     * Logs the user out. Navigation runs first (synchronously) so it can never
+     * be skipped by a cancelled [viewModelScope]; server-side session
+     * revocation then runs in the VM's scope and completes even if the VM is
+     * cleared mid-flight (SessionManager runs it non-cancellable).
      */
     fun logout(onLogout: () -> Unit) {
+        onLogout()
         viewModelScope.launch {
             sessionManager.logout()
-            onLogout()
         }
     }
 }

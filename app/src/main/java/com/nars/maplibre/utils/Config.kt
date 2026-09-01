@@ -1,7 +1,9 @@
 package com.nars.maplibre.utils
 
-import com.nars.maplibre.BuildConfig
-
+/**
+ * App-level constants: API timeouts, retry policy, default map camera, and
+ * drawing thresholds. Tile/style provider URLs live in [TileSources].
+ */
 object Config {
     const val API_DEFAULT_TIMEOUT_MS = 15000
 
@@ -26,30 +28,4 @@ object Config {
     const val GEOMAN_SNAP_THRESHOLD_PX = 20
 
     const val MIN_ROAD_LENGTH_METERS = 10
-
-    val TILE_SATELLITE: String =
-        BuildConfig.TILE_SATELLITE.ifBlank {
-            "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
-        }
-    val TILE_STREET: String =
-        BuildConfig.TILE_STREET.ifBlank {
-            "https://tile.openstreetmap.org/{z}/{x}/{y}.png"
-        }
-    val TILE_LIGHT: String =
-        BuildConfig.TILE_LIGHT.ifBlank {
-            "https://basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png"
-        }
-    val TILE_DARK: String =
-        BuildConfig.TILE_DARK.ifBlank {
-            "https://basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png"
-        }
-
-    const val GLYPHS = "https://fonts.openmaptiles.org/{fontstack}/{range}.pbf"
-    const val STYLE_VERSION = 8
-    const val TILE_SIZE = 256
-    const val MAP_MAX_ZOOM = 19
-
-    const val ATTR_ESRI = "Source: Esri, Maxar, Earthstar Geographics, and the GIS User Community"
-    const val ATTR_OSM = "© OpenStreetMap contributors"
-    const val ATTR_CARTO = "© OpenStreetMap contributors, © CARTO"
 }

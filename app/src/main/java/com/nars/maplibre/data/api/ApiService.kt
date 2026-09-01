@@ -8,6 +8,7 @@ import com.nars.maplibre.data.model.NarsFeature
 import com.nars.maplibre.data.model.User
 import com.nars.maplibre.utils.NarsLogger
 import io.ktor.client.HttpClient
+import io.ktor.client.request.HttpRequestBuilder
 import io.ktor.client.request.delete
 import io.ktor.client.request.get
 import io.ktor.client.request.header
@@ -29,12 +30,13 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
-@Suppress("TooManyFunctions")
+/**
+ * HTTP transport for the NARS API. Owns token rotation and session-expiry
+ * signalling; token storage itself lives in [SessionTokens].
+ */
 class ApiService(private val httpClient: HttpClient, private val preferences: AppPreferences) {
     companion object {
         private const val TAG = "ApiService"
-        private val COOKIE_ACCESS_TOKEN_REGEX = Regex("access_token=([^;]+)")
-        private val COOKIE_REFRESH_TOKEN_REGEX = Regex("refresh_token=([^;]+)")
 
         /** Max rows the backend returns per page (clamped server-side). */
         private const val FEATURES_PAGE_SIZE = 500
@@ -42,11 +44,7 @@ class ApiService(private val httpClient: HttpClient, private val preferences: Ap
 
     private val baseUrl: String = BuildConfig.API_BASE_URL.trimEnd('/')
 
-    private val tokenLock = Any()
-
-    @Volatile private var sessionToken: String? = null
-
-    @Volatile private var refreshToken: String? = null
+    val tokens = SessionTokens(preferences)
 
     /**
      * Serializes token refresh so concurrent 401s trigger a single rotation.
@@ -65,76 +63,10 @@ class ApiService(private val httpClient: HttpClient, private val preferences: Ap
     private val _sessionExpired = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
     val sessionExpired: SharedFlow<Unit> = _sessionExpired.asSharedFlow()
 
-    fun setSessionToken(token: String?) {
-        sessionToken = token
-    }
-
-    fun getSessionToken(): String? = sessionToken
-
-    fun setRefreshToken(token: String?) {
-        refreshToken = token
-    }
-
-    fun getRefreshToken(): String? = refreshToken
-
-    /**
-     * Drops in-memory tokens WITHOUT touching persisted storage. Used by the
-     * app-lifecycle security policy (NarsApplication): when the app is
-     * backgrounded the tokens must leave memory, but stay encrypted in prefs
-     * so the foreground restore can bring them back. Runs under [tokenLock]
-     * so a backgrounding clear is atomic against concurrent refresh/login
-     * cookie writes.
-     */
-    fun clearInMemoryTokens() {
-        synchronized(tokenLock) {
-            sessionToken = null
-            refreshToken = null
-        }
-    }
-
-    /**
-     * Extracts the access + refresh token cookies issued by the backend.
-     * The backend sets both cookies on signin and on every /api/refresh.
-     * Returns true when an access-token cookie was present, so callers can
-     * distinguish "a fresh access token was issued" from "nothing changed".
-     */
-    private fun extractAndSetCookies(response: io.ktor.client.statement.HttpResponse): Boolean {
-        var sawAccessToken = false
-        synchronized(tokenLock) {
-            response.headers.getAll(HttpHeaders.SetCookie)?.forEach { rawCookie ->
-                COOKIE_ACCESS_TOKEN_REGEX.find(rawCookie)?.let { match ->
-                    sessionToken = match.groupValues[1]
-                    sawAccessToken = true
-                }
-                COOKIE_REFRESH_TOKEN_REGEX.find(rawCookie)?.let { match ->
-                    refreshToken = match.groupValues[1]
-                }
-            }
-        }
-        return sawAccessToken
-    }
-
-    /**
-     * Persists the current in-memory session tokens so the session survives
-     * process death. Called from both login and token refresh, keeping the
-     * transport layer as the single owner of token persistence.
-     */
-    private fun persistTokens() {
-        synchronized(tokenLock) {
-            preferences.authToken = sessionToken
-            preferences.refreshToken = refreshToken
-        }
-    }
-
-    /**
-     * Drops the session entirely — used when the backend rejects a refresh
-     * (expired/revoked refresh token) or on logout.
-     */
-    private fun clearTokens() {
-        synchronized(tokenLock) {
-            sessionToken = null
-            refreshToken = null
-            persistTokens()
+    /** Attaches the current bearer token to a request, when one is set. */
+    private fun HttpRequestBuilder.applyAuthHeaders() {
+        tokens.getSessionToken()?.let { token ->
+            header(HttpHeaders.Authorization, "Bearer $token")
         }
     }
 
@@ -149,25 +81,17 @@ class ApiService(private val httpClient: HttpClient, private val preferences: Ap
         )
     }
 
-    private fun authHeaders(): Map<String, String> {
-        val headers = mutableMapOf<String, String>()
-        sessionToken?.let { token ->
-            headers["Authorization"] = "Bearer $token"
-        }
-        return headers
-    }
-
     /**
      * Executes an authenticated request, transparently refreshing the access
      * token once when the server responds 401 (access token expiry).
      */
     private suspend fun authenticatedRequest(block: suspend () -> HttpResponse): HttpResponse {
-        val accessTokenBeforeRequest = sessionToken
+        val accessTokenBeforeRequest = tokens.getSessionToken()
         var response = block()
         if (response.status == HttpStatusCode.Unauthorized) {
             val refreshed =
                 refreshMutex.withLock {
-                    if (sessionToken != accessTokenBeforeRequest) {
+                    if (tokens.getSessionToken() != accessTokenBeforeRequest) {
                         // Another coroutine already rotated the access token that
                         // this request used — reuse it instead of refreshing again.
                         true
@@ -190,7 +114,7 @@ class ApiService(private val httpClient: HttpClient, private val preferences: Ap
         // Fall back to the persisted token: the app clears the in-memory tokens
         // while backgrounded (see NarsApplication), so a request that 401s at
         // that moment must refresh from the encrypted prefs instead of failing.
-        val token = refreshToken ?: preferences.refreshToken ?: return false
+        val token = tokens.getRefreshToken() ?: preferences.refreshToken ?: return false
         return try {
             val response =
                 httpClient.post("$baseUrl/api/refresh") {
@@ -201,7 +125,7 @@ class ApiService(private val httpClient: HttpClient, private val preferences: Ap
             // failure is a transient server error — keep the session intact so a
             // later user action can simply retry.
             if (response.status == HttpStatusCode.Unauthorized || response.status == HttpStatusCode.Forbidden) {
-                clearTokens()
+                tokens.clear()
                 _sessionExpired.tryEmit(Unit)
                 return false
             }
@@ -209,8 +133,8 @@ class ApiService(private val httpClient: HttpClient, private val preferences: Ap
                 NarsLogger.w(TAG, "Token refresh failed (HTTP ${response.status.value}) — keeping session for retry")
                 return false
             }
-            val accessIssued = extractAndSetCookies(response)
-            persistTokens()
+            val accessIssued = tokens.adoptCookies(response)
+            tokens.persist()
             accessIssued
         } catch (e: CancellationException) {
             throw e
@@ -218,6 +142,34 @@ class ApiService(private val httpClient: HttpClient, private val preferences: Ap
             NarsLogger.w(TAG, "Token refresh failed", e)
             false
         }
+    }
+
+    /**
+     * Runs an authenticated request, maps a non-2xx response (and any I/O or
+     * deserialization error during the request or [onSuccess] mapping) into a
+     * failed [Result]. Cancellation is always rethrown.
+     */
+    private suspend fun <T> executeRequest(
+        action: String,
+        request: suspend () -> HttpResponse,
+        onSuccess: suspend (HttpResponse) -> T,
+    ): Result<T> = try {
+        val response = authenticatedRequest(request)
+        if (!response.status.isSuccess()) {
+            val error = Exception("$action failed: HTTP ${response.status.value}")
+            NarsLogger.e(TAG, "$action failed", error)
+            Result.failure(error)
+        } else {
+            Result.success(onSuccess(response))
+        }
+    } catch (e: CancellationException) {
+        throw e
+    } catch (e: kotlinx.serialization.SerializationException) {
+        NarsLogger.e(TAG, "$action failed", e)
+        Result.failure(e)
+    } catch (e: java.io.IOException) {
+        NarsLogger.e(TAG, "$action failed", e)
+        Result.failure(e)
     }
 
     /**
@@ -249,14 +201,12 @@ class ApiService(private val httpClient: HttpClient, private val preferences: Ap
             // Only adopt the session cookies after the response has been fully
             // validated — otherwise a failed login (bad body or success=false)
             // would still leave live tokens in memory while reporting failure.
-            extractAndSetCookies(response)
+            tokens.adoptCookies(response)
 
             val token = apiResponse.token ?: apiResponse.accessToken
-            synchronized(tokenLock) {
-                token?.let { sessionToken = it }
-            }
+            token?.let { tokens.setSessionToken(it) }
 
-            persistTokens()
+            tokens.persist()
 
             val user = buildUserFromResponse(apiResponse)
             NarsLogger.logAuthEvent(TAG, "Login successful", username)
@@ -291,148 +241,65 @@ class ApiService(private val httpClient: HttpClient, private val preferences: Ap
         return null
     }
 
-    suspend fun logout(): Result<Unit> = try {
-        // Go through authenticatedRequest so a stale access token is refreshed
-        // first — otherwise logout would 401 and the refresh token would never
-        // be revoked on the server.
-        val response =
-            authenticatedRequest {
-                httpClient.post("$baseUrl/api/logout") {
-                    authHeaders().forEach { (k, v) -> headers.append(k, v) }
-                    contentType(ContentType.Application.Json)
-                }
-            }
-        if (!response.status.isSuccess()) {
-            Result.failure(Exception("Logout failed: HTTP ${response.status.value}"))
-        } else {
-            Result.success(Unit)
+    suspend fun logout(): Result<Unit> = executeRequest("Logout", {
+        httpClient.post("$baseUrl/api/logout") {
+            applyAuthHeaders()
+            contentType(ContentType.Application.Json)
         }
-    } catch (e: CancellationException) {
-        throw e
-    } catch (e: java.io.IOException) {
-        NarsLogger.e(TAG, "Logout failed", e)
-        Result.failure(e)
-    }
+    }) {}
 
-    private suspend fun fetchFeaturesPage(skip: Int): Result<ApiLoadFeaturesResponse?> {
-        val response =
-            authenticatedRequest {
-                httpClient.get("$baseUrl/api/features") {
-                    authHeaders().forEach { (k, v) -> headers.append(k, v) }
-                    parameter("skip", skip)
-                    parameter("take", FEATURES_PAGE_SIZE)
-                }
-            }
-        if (!response.status.isSuccess()) {
-            val error = Exception("Load failed: HTTP ${response.status.value}")
-            NarsLogger.e(TAG, "loadFeatures failed", error)
-            return Result.failure(error)
+    private suspend fun fetchFeaturesPage(skip: Int): Result<ApiLoadFeaturesResponse?> = executeRequest("Load", {
+        httpClient.get("$baseUrl/api/features") {
+            applyAuthHeaders()
+            parameter("skip", skip)
+            parameter("take", FEATURES_PAGE_SIZE)
         }
-        val body = response.bodyAsText()
-        return Result.success(
-            body.ifBlank { null }?.let {
-                apiJson.decodeFromString<ApiLoadFeaturesResponse>(it)
-            },
-        )
+    }) { response ->
+        response.bodyAsText().ifBlank { null }?.let {
+            apiJson.decodeFromString<ApiLoadFeaturesResponse>(it)
+        }
     }
 
     suspend fun loadFeatures(): Result<List<NarsFeature>> {
-        return try {
-            val allFeatures = mutableListOf<NarsFeature>()
-            var skip = 0
-            var hasMore = true
-            while (hasMore) {
-                val page = fetchFeaturesPage(skip).getOrElse { return Result.failure(it) }
-                if (page == null) {
-                    hasMore = false
-                } else {
-                    val features = page.features
-                    allFeatures += features.mapNotNull { it.toNarsFeature() }
-                    skip += features.size
-                    hasMore = features.isNotEmpty() && page.count > skip
-                }
+        val allFeatures = mutableListOf<NarsFeature>()
+        var skip = 0
+        var hasMore = true
+        while (hasMore) {
+            val page = fetchFeaturesPage(skip).getOrElse { return Result.failure(it) }
+            if (page == null) {
+                hasMore = false
+            } else {
+                val features = page.features
+                allFeatures += features.mapNotNull { it.toNarsFeature() }
+                skip += features.size
+                hasMore = features.isNotEmpty() && page.count > skip
             }
-            Result.success(allFeatures)
-        } catch (e: CancellationException) {
-            throw e
-        } catch (e: kotlinx.serialization.SerializationException) {
-            NarsLogger.e(TAG, "loadFeatures failed", e)
-            Result.failure(e)
-        } catch (e: java.io.IOException) {
-            NarsLogger.e(TAG, "loadFeatures failed", e)
-            Result.failure(e)
         }
+        return Result.success(allFeatures)
     }
 
-    suspend fun saveFeature(feature: NarsFeature): Result<String> = try {
-        val requestBody = apiJson.encodeToString(feature.toApiSaveRequest())
-        val response =
-            authenticatedRequest {
-                httpClient.post("$baseUrl/api/features") {
-                    authHeaders().forEach { (k, v) -> headers.append(k, v) }
-                    contentType(ContentType.Application.Json)
-                    setBody(requestBody)
-                }
-            }
-        if (!response.status.isSuccess()) {
-            val error = Exception("Save failed: HTTP ${response.status.value}")
-            NarsLogger.e(TAG, "saveFeature failed", error)
-            return Result.failure(error)
+    suspend fun saveFeature(feature: NarsFeature): Result<String> = executeRequest("Save", {
+        httpClient.post("$baseUrl/api/features") {
+            applyAuthHeaders()
+            contentType(ContentType.Application.Json)
+            setBody(apiJson.encodeToString(feature.toApiSaveRequest()))
         }
-        val id =
-            apiJson.decodeFromString<ApiSaveFeatureResponse>(response.bodyAsText()).id
-                ?: feature.id
-        Result.success(id)
-    } catch (e: CancellationException) {
-        throw e
-    } catch (e: kotlinx.serialization.SerializationException) {
-        NarsLogger.e(TAG, "saveFeature failed", e)
-        Result.failure(e)
-    } catch (e: java.io.IOException) {
-        NarsLogger.e(TAG, "saveFeature failed", e)
-        Result.failure(e)
+    }) { response ->
+        apiJson.decodeFromString<ApiSaveFeatureResponse>(response.bodyAsText()).id
+            ?: feature.id
     }
 
-    suspend fun updateFeature(featureId: String, feature: NarsFeature): Result<Unit> = try {
-        val requestBody = apiJson.encodeToString(feature.toApiUpdateRequest())
-        val response =
-            authenticatedRequest {
-                httpClient.put("$baseUrl/api/features/$featureId") {
-                    authHeaders().forEach { (k, v) -> headers.append(k, v) }
-                    contentType(ContentType.Application.Json)
-                    setBody(requestBody)
-                }
-            }
-        if (!response.status.isSuccess()) {
-            val error = Exception("Update failed: HTTP ${response.status.value}")
-            NarsLogger.e(TAG, "updateFeature failed", error)
-            return Result.failure(error)
+    suspend fun updateFeature(featureId: String, feature: NarsFeature): Result<Unit> = executeRequest("Update", {
+        httpClient.put("$baseUrl/api/features/$featureId") {
+            applyAuthHeaders()
+            contentType(ContentType.Application.Json)
+            setBody(apiJson.encodeToString(feature.toApiUpdateRequest()))
         }
-        Result.success(Unit)
-    } catch (e: CancellationException) {
-        throw e
-    } catch (e: java.io.IOException) {
-        NarsLogger.e(TAG, "updateFeature failed", e)
-        Result.failure(e)
-    }
+    }) {}
 
-    suspend fun deleteFeature(featureId: String): Result<Unit> = try {
-        val response =
-            authenticatedRequest {
-                httpClient.delete("$baseUrl/api/features/$featureId") {
-                    authHeaders().forEach { (k, v) -> headers.append(k, v) }
-                }
-            }
-        if (!response.status.isSuccess()) {
-            val error = Exception("Delete failed: HTTP ${response.status.value}")
-            NarsLogger.e(TAG, "deleteFeature failed", error)
-            return Result.failure(error)
+    suspend fun deleteFeature(featureId: String): Result<Unit> = executeRequest("Delete", {
+        httpClient.delete("$baseUrl/api/features/$featureId") {
+            applyAuthHeaders()
         }
-        Result.success(Unit)
-    } catch (e: CancellationException) {
-        throw e
-    } catch (e: java.io.IOException) {
-        NarsLogger.e(TAG, "deleteFeature failed", e)
-        Result.failure(e)
-    }
+    }) {}
 }

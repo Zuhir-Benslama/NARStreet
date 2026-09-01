@@ -19,11 +19,12 @@ import org.junit.Test
 class SessionManagerTest {
     private val apiService: ApiService = mockk()
     private val appPreferences: AppPreferences = mockk()
+    private val tokens: SessionTokens = mockk()
     private lateinit var sessionManager: SessionManager
 
     @Before
     fun setUp() {
-        sessionManager = SessionManager(apiService, appPreferences)
+        sessionManager = SessionManager(apiService, appPreferences, tokens)
     }
 
     @Test
@@ -59,8 +60,8 @@ class SessionManagerTest {
         every { appPreferences.refreshToken = null } just runs
         every { appPreferences.user = null } just runs
         every { appPreferences.municipalityName = null } just runs
-        every { apiService.setSessionToken(null) } just runs
-        every { apiService.setRefreshToken(null) } just runs
+        every { tokens.setSessionToken(null) } just runs
+        every { tokens.setRefreshToken(null) } just runs
 
         sessionManager.logout()
 
@@ -68,8 +69,8 @@ class SessionManagerTest {
         verify { appPreferences.refreshToken = null }
         verify { appPreferences.user = null }
         verify { appPreferences.municipalityName = null }
-        verify { apiService.setSessionToken(null) }
-        verify { apiService.setRefreshToken(null) }
+        verify { tokens.setSessionToken(null) }
+        verify { tokens.setRefreshToken(null) }
     }
 
     @Test

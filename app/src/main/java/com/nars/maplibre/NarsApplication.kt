@@ -5,7 +5,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.ProcessLifecycleOwner
 import com.geoman.maplibre.geoman.GeomanLogger
-import com.nars.maplibre.data.api.ApiService
+import com.nars.maplibre.data.api.SessionTokens
 import com.nars.maplibre.di.appModule
 import com.nars.maplibre.utils.NarsLogger
 import kotlinx.coroutines.CoroutineScope
@@ -68,13 +68,13 @@ class NarsApplication :
             repeat(SESSION_RESTORE_MAX_RETRIES) { attempt ->
                 try {
                     val prefs: AppPreferences = get()
-                    val apiService: ApiService = get()
+                    val tokens: SessionTokens = get()
                     prefs.authToken?.let { token ->
-                        apiService.setSessionToken(token)
+                        tokens.setSessionToken(token)
                         NarsLogger.d(TAG, "User session found on startup")
                     }
                     prefs.refreshToken?.let { token ->
-                        apiService.setRefreshToken(token)
+                        tokens.setRefreshToken(token)
                     }
                     return@launch
                 } catch (e: IllegalStateException) {
@@ -104,11 +104,11 @@ class NarsApplication :
     private fun onAppBackgrounded() {
         lifecycleEpoch++
         try {
-            val apiService: ApiService = get()
-            // clearInMemoryTokens takes ApiService's token lock, so the clear
+            val tokens: SessionTokens = get()
+            // clearInMemoryTokens takes SessionTokens' token lock, so the clear
             // is atomic against concurrent refresh/login cookie writes and can
             // never leave a half-cleared state.
-            apiService.clearInMemoryTokens()
+            tokens.clearInMemoryTokens()
             NarsLogger.d(TAG, "In-memory tokens cleared (app backgrounded)")
         } catch (e: IllegalStateException) {
             NarsLogger.w(TAG, "Token clearing skipped: Koin not ready", e)
@@ -119,7 +119,7 @@ class NarsApplication :
         val epoch = ++lifecycleEpoch
         applicationScope.launch {
             try {
-                val apiService: ApiService = get()
+                val tokens: SessionTokens = get()
                 val prefs: AppPreferences = get()
                 // Slow part first: EncryptedSharedPreferences decrypts lazily
                 // (~100ms). Read everything before touching the token fields.
@@ -130,14 +130,14 @@ class NarsApplication :
                     return@launch
                 }
                 authToken?.let { token ->
-                    apiService.setSessionToken(token)
+                    tokens.setSessionToken(token)
                     NarsLogger.d(TAG, "In-memory tokens restored (app foregrounded)")
                 }
-                refreshToken?.let { token -> apiService.setRefreshToken(token) }
+                refreshToken?.let { token -> tokens.setRefreshToken(token) }
                 if (epoch != lifecycleEpoch) {
                     // A backgrounding landed while we were applying — undo so
                     // the final in-memory state matches the newest transition.
-                    apiService.clearInMemoryTokens()
+                    tokens.clearInMemoryTokens()
                 }
             } catch (e: IllegalStateException) {
                 NarsLogger.w(TAG, "Token restore skipped: Koin not ready", e)

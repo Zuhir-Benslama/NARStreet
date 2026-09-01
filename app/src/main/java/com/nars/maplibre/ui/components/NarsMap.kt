@@ -23,6 +23,7 @@ import com.nars.maplibre.data.model.BaseLayerType
 import com.nars.maplibre.data.model.NarsFeature
 import com.nars.maplibre.utils.Config
 import com.nars.maplibre.utils.NarsLogger
+import com.nars.maplibre.utils.TileSources
 import kotlinx.serialization.json.add
 import kotlinx.serialization.json.addJsonObject
 import kotlinx.serialization.json.buildJsonArray
@@ -237,49 +238,49 @@ private fun getStyleJson(layer: BaseLayerType): String {
         BaseLayerType.SATELLITE -> LayerConfig(
             "esri-satellite",
             "satellite-layer",
-            Config.TILE_SATELLITE,
-            Config.ATTR_ESRI,
+            TileSources.SATELLITE,
+            TileSources.ATTR_ESRI,
         )
 
         BaseLayerType.STREET -> LayerConfig(
             "osm-tiles",
             "osm-layer",
-            Config.TILE_STREET,
-            Config.ATTR_OSM,
+            TileSources.STREET,
+            TileSources.ATTR_OSM,
         )
 
         BaseLayerType.LIGHT -> LayerConfig(
             "carto-light",
             "carto-light-layer",
-            Config.TILE_LIGHT,
-            Config.ATTR_CARTO,
+            TileSources.LIGHT,
+            TileSources.ATTR_CARTO,
         )
 
         BaseLayerType.DARK -> LayerConfig(
             "carto-dark",
             "carto-dark-layer",
-            Config.TILE_DARK,
-            Config.ATTR_CARTO,
+            TileSources.DARK,
+            TileSources.ATTR_CARTO,
         )
     }
     return buildJsonObject {
-        put("version", Config.STYLE_VERSION)
+        put("version", TileSources.STYLE_VERSION)
         putJsonObject("sources") {
             putJsonObject(cfg.sourceId) {
                 put("type", "raster")
                 putJsonArray("tiles") { add(cfg.tiles) }
-                put("tileSize", Config.TILE_SIZE)
+                put("tileSize", TileSources.TILE_SIZE)
                 put("attribution", cfg.attribution)
             }
         }
-        put("glyphs", Config.GLYPHS)
+        put("glyphs", TileSources.GLYPHS)
         putJsonArray("layers") {
             addJsonObject {
                 put("id", cfg.layerId)
                 put("type", "raster")
                 put("source", cfg.sourceId)
                 put("minzoom", 0)
-                put("maxzoom", Config.MAP_MAX_ZOOM)
+                put("maxzoom", TileSources.MAP_MAX_ZOOM)
             }
         }
     }.toString()
