@@ -1,6 +1,6 @@
 [versions]
 # Android Gradle Plugin - Compatible with Gradle 9.6.1 + JDK 21
-agp = "9.3.2"
+agp = "9.4.0"
 
 # Kotlin - Compatible with JDK 21
 kotlin = "2.4.10"
