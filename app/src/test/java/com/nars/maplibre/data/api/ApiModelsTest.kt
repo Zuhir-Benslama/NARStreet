@@ -294,7 +294,8 @@ class ApiModelsTest {
             ).toNarsFeature()!!
         val after = System.currentTimeMillis()
 
-        assertTrue(result.createdAt!! >= before && result.createdAt!! <= after + 5_000)
+        val createdAt = result.createdAt
+        assertTrue(createdAt != null && createdAt >= before && createdAt <= after + 5_000)
     }
 
     @Test
@@ -312,7 +313,8 @@ class ApiModelsTest {
             ).toNarsFeature()!!
         val after = System.currentTimeMillis()
 
-        assertTrue(result.createdAt!! >= before && result.createdAt!! <= after + 5_000)
+        val createdAt = result.createdAt
+        assertTrue(createdAt != null && createdAt >= before && createdAt <= after + 5_000)
     }
 
     @Test

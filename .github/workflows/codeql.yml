@@ -42,7 +42,14 @@ jobs:
         uses: android-actions/setup-android@v3
 
       - name: Create local.properties
-        run: cp local.properties.example local.properties
+        run: |
+          if [ ! -f local.properties ]; then
+            if [ -f local.properties.example ]; then
+              cp local.properties.example local.properties
+            else
+              echo "# Auto-generated for CI" > local.properties
+            fi
+          fi
 
       - name: Initialize CodeQL
         uses: github/codeql-action/init@v3

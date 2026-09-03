@@ -9,8 +9,8 @@ class ConfigTest {
     fun `constants expose expected defaults`() {
         assertEquals(DEFAULT_TIMEOUT_MS, Config.API_DEFAULT_TIMEOUT_MS)
         assertEquals(MAX_RETRIES, Config.API_MAX_RETRIES)
-        assertEquals(RETRY_BASE_DELAY_MS, Config.API_RETRY_BASE_DELAY_MS.toInt())
-        assertEquals(RETRY_MAX_DELAY_MS, Config.API_RETRY_MAX_DELAY_MS.toInt())
+        assertEquals(RETRY_BASE_DELAY_MS, Config.API_RETRY_BASE_DELAY_MS)
+        assertEquals(RETRY_MAX_DELAY_MS, Config.API_RETRY_MAX_DELAY_MS)
     }
 
     @Test
