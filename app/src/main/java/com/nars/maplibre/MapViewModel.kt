@@ -300,18 +300,8 @@ class MapViewModel(
         }
     }
 
-    /**
-     * Logs the user out. Navigation runs first (synchronously) so it can never
-     * be skipped by a cancelled [viewModelScope]; server-side session
-     * revocation then runs in the VM's scope. [SessionManager] clears the local
-     * session regardless of the server outcome and runs non-cancellable, so a
-     * scope cancellation cannot leave a half-logged-out device.
-     */
     fun logout(onLogout: () -> Unit) {
-        onLogout()
-        viewModelScope.launch {
-            sessionManager.logout()
-        }
+        sessionManager.logout(onLogout, viewModelScope)
     }
 
     private fun appString(resId: Int): String = getApplication<Application>().getString(resId)

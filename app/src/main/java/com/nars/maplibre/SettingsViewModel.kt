@@ -7,7 +7,6 @@ import com.nars.maplibre.ui.theme.ThemeMode
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.launch
 
 class SettingsViewModel(private val appPreferences: AppPreferences, private val sessionManager: SessionManager) :
     ViewModel() {
@@ -26,9 +25,6 @@ class SettingsViewModel(private val appPreferences: AppPreferences, private val 
      * cleared mid-flight (SessionManager runs it non-cancellable).
      */
     fun logout(onLogout: () -> Unit) {
-        onLogout()
-        viewModelScope.launch {
-            sessionManager.logout()
-        }
+        sessionManager.logout(onLogout, viewModelScope)
     }
 }

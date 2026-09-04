@@ -26,7 +26,6 @@ data class NarsFeature(
     val geometry: Geometry,
     val properties: FeatureProperties,
     val createdAt: Long? = null,
-    val updatedAt: Long? = null,
 )
 
 @Serializable

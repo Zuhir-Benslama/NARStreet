@@ -49,4 +49,39 @@ class RetryTest {
         assertTrue(result.isFailure)
         assertEquals(3, calls)
     }
+
+    @Test
+    fun `single attempt succeeds on first try`() = runTest {
+        val result = retryOnTransientFailure(attempts = 1, backoffMs = 1) {
+            Result.success(42)
+        }
+
+        assertTrue(result.isSuccess)
+        assertEquals(42, result.getOrNull())
+    }
+
+    @Test
+    fun `single attempt fails`() = runTest {
+        var calls = 0
+        val result = retryOnTransientFailure(attempts = 1, backoffMs = 1) {
+            calls++
+            Result.failure<Int>(IOException("boom"))
+        }
+
+        assertTrue(result.isFailure)
+        assertEquals(1, calls)
+    }
+
+    @Test
+    fun `zero attempts still calls block once`() = runTest {
+        var calls = 0
+        val result = retryOnTransientFailure(attempts = 0, backoffMs = 1) {
+            calls++
+            Result.success(42)
+        }
+
+        assertTrue(result.isSuccess)
+        assertEquals(1, calls)
+        assertEquals(42, result.getOrNull())
+    }
 }

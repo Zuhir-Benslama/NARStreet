@@ -4,7 +4,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
-class UndoManager(private val featureStore: FeatureStoreInterface) {
+class UndoManager {
     companion object {
         private const val MAX_UNDO_SIZE = 50
     }
@@ -69,26 +69,5 @@ class UndoManager(private val featureStore: FeatureStoreInterface) {
         val action = undoStack.removeAt(index)
         syncState()
         action
-    }
-
-    fun executeUndo(): UndoAction? {
-        val action = synchronized(lock) { popUndoAction() } ?: return null
-
-        when (action) {
-            is UndoAction.Delete -> {
-                val feature = action.feature
-                if (featureStore.getFeatureById(feature.id) == null) featureStore.addFeature(feature)
-            }
-
-            is UndoAction.Create -> {
-                featureStore.removeFeature(action.feature.id)
-            }
-
-            is UndoAction.Update -> {
-                featureStore.updateFeature(action.newFeature.id, action.oldFeature)
-            }
-        }
-
-        return action
     }
 }

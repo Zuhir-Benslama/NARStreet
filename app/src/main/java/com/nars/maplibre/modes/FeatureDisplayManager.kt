@@ -9,7 +9,6 @@ import com.nars.maplibre.data.model.Phases
 import com.nars.maplibre.data.model.PolygonGeometry
 import com.nars.maplibre.utils.NarsLogger
 import org.maplibre.android.maps.MapLibreMap
-import java.util.Collections
 
 val GEOMAN_SOURCE_NAMES =
     listOf(
@@ -25,14 +24,15 @@ class FeatureDisplayManager(
     private val geometryConverter: GeometryConverter,
     private val map: MapLibreMap?,
 ) {
-    private val displayedFeatureIds: MutableSet<String> = Collections.synchronizedSet(mutableSetOf())
+    private val displayLock = Any()
+    private val displayedFeatureIds = mutableSetOf<String>()
 
     @Volatile
     var currentPhase: PhaseDefinition? = null
 
     private var lastRoadEndpointSignature: String? = null
 
-    fun addFeature(feature: NarsFeature) {
+    fun addFeature(feature: NarsFeature) = synchronized(displayLock) {
         displayedFeatureIds.add(feature.id)
         featureRenderer.addFeature(feature)
         val geoJsonFeature = geometryConverter.convertToGeoJson(feature)
@@ -50,7 +50,7 @@ class FeatureDisplayManager(
         filtered.forEach { addFeature(it) }
     }
 
-    fun updateDisplayedFeatures(allFeatures: List<NarsFeature>) {
+    fun updateDisplayedFeatures(allFeatures: List<NarsFeature>) = synchronized(displayLock) {
         val currentPhaseKey = currentPhase?.key
         val filtered =
             if (currentPhaseKey != null) {
@@ -61,7 +61,7 @@ class FeatureDisplayManager(
         val newIds = filtered.map { it.id }.toSet()
 
         val toRemove = displayedFeatureIds - newIds
-        toRemove.forEach { removeFeature(it) }
+        toRemove.forEach { removeFeatureById(it) }
 
         val toAdd = filtered.filter { it.id !in displayedFeatureIds }
         toAdd.forEach { addFeature(it) }
@@ -129,7 +129,7 @@ class FeatureDisplayManager(
      * layers that were added to the previous style, so tracking sets are reset
      * and everything is re-added to the new style.
      */
-    fun onStyleReloaded(allFeatures: List<NarsFeature>) {
+    fun onStyleReloaded(allFeatures: List<NarsFeature>) = synchronized(displayLock) {
         displayedFeatureIds.clear()
         featureRenderer.clearTracking()
         lastRoadEndpointSignature = null
@@ -137,7 +137,11 @@ class FeatureDisplayManager(
         updateDisplayedFeatures(allFeatures)
     }
 
-    fun removeFeature(featureId: String) {
+    fun removeFeature(featureId: String) = synchronized(displayLock) {
+        removeFeatureById(featureId)
+    }
+
+    private fun removeFeatureById(featureId: String) {
         displayedFeatureIds.remove(featureId)
         for (sourceName in GEOMAN_SOURCE_NAMES) {
             val featureData = geoman.features.getFeature(sourceName, featureId)
@@ -184,7 +188,7 @@ class FeatureDisplayManager(
         NarsLogger.d("FeatureDisplayManager", "Removed feature $featureId")
     }
 
-    fun clearAllFeatures() {
+    fun clearAllFeatures() = synchronized(displayLock) {
         displayedFeatureIds.clear()
         lastRoadEndpointSignature = null
         geoman.clearAllFeatures()

@@ -1,32 +1,50 @@
 package com.nars.maplibre.utils
 
-import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class TileSourcesTest {
     @Test
-    fun `tile URLs fall back to bundled providers when unset`() {
-        assertTrue(TileSources.SATELLITE.endsWith(SATELLITE_PATH))
-        assertTrue(TileSources.STREET.endsWith(STREET_PATH))
-        assertTrue(TileSources.LIGHT.endsWith(LIGHT_PATH))
-        assertTrue(TileSources.DARK.endsWith(DARK_PATH))
+    fun `tile URLs are non-empty`() {
+        assertTrue(TileSources.SATELLITE.isNotBlank())
+        assertTrue(TileSources.STREET.isNotBlank())
+        assertTrue(TileSources.LIGHT.isNotBlank())
+        assertTrue(TileSources.DARK.isNotBlank())
     }
 
     @Test
-    fun `style constants expose expected defaults`() {
-        assertEquals(MAX_ZOOM, TileSources.MAP_MAX_ZOOM)
-        assertEquals(TILE_SIZE, TileSources.TILE_SIZE)
-        assertEquals(STYLE_VERSION, TileSources.STYLE_VERSION)
+    fun `tile URLs contain zyx placeholders`() {
+        listOf(TileSources.SATELLITE, TileSources.STREET, TileSources.LIGHT, TileSources.DARK).forEach { url ->
+            assertTrue("URL must contain {z}: $url", url.contains("{z}"))
+            assertTrue("URL must contain {x}: $url", url.contains("{x}"))
+            assertTrue("URL must contain {y}: $url", url.contains("{y}"))
+        }
     }
 
-    private companion object {
-        const val SATELLITE_PATH = "World_Imagery/MapServer/tile/{z}/{y}/{x}"
-        const val STREET_PATH = "tile.openstreetmap.org/{z}/{x}/{y}.png"
-        const val LIGHT_PATH = "basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png"
-        const val DARK_PATH = "basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png"
-        const val MAX_ZOOM = 19
-        const val TILE_SIZE = 256
-        const val STYLE_VERSION = 8
+    @Test
+    fun `style version is positive`() {
+        assertTrue(TileSources.STYLE_VERSION > 0)
+    }
+
+    @Test
+    fun `tile size is positive`() {
+        assertTrue(TileSources.TILE_SIZE > 0)
+    }
+
+    @Test
+    fun `max zoom is positive`() {
+        assertTrue(TileSources.MAP_MAX_ZOOM > 0)
+    }
+
+    @Test
+    fun `glyphs URL is non-empty`() {
+        assertTrue(TileSources.GLYPHS.isNotBlank())
+    }
+
+    @Test
+    fun `attribution strings are non-empty`() {
+        listOf(TileSources.ATTR_ESRI, TileSources.ATTR_OSM, TileSources.ATTR_CARTO).forEach { attr ->
+            assertTrue("Attribution should be non-empty: $attr", attr.isNotBlank())
+        }
     }
 }

@@ -34,12 +34,6 @@ class UserTest {
     }
 
     @Test
-    fun `isFieldWorker true only for field_worker role`() {
-        assertTrue(User(username = "f", name = "F", role = "field_worker").isFieldWorker())
-        assertFalse(User(username = "c", name = "C", role = "commune_user").isFieldWorker())
-    }
-
-    @Test
     fun `User defaults to commune_user role and empty id`() {
         val user = User(username = "u", name = "U")
         assertEquals("", user.id)

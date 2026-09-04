@@ -5,7 +5,6 @@ import com.nars.maplibre.data.model.LineStringGeometry
 import com.nars.maplibre.data.model.NarsFeature
 import com.nars.maplibre.data.model.NarsFeatureType
 import com.nars.maplibre.data.model.PointGeometry
-import io.mockk.mockk
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -25,7 +24,7 @@ class UndoManagerTest {
 
     @Before
     fun setUp() {
-        undoManager = UndoManager(mockk(relaxed = true))
+        undoManager = UndoManager()
     }
 
     @Test

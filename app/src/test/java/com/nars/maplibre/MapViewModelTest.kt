@@ -639,11 +639,14 @@ class MapViewModelTest {
     fun `logout clears session then invokes navigation callback`() {
         val vm = createViewModel()
         var navigated = false
+        every { sessionManager.logout(any(), any()) } answers {
+            firstArg<() -> Unit>()()
+        }
 
         vm.logout { navigated = true }
         testDispatcher.scheduler.advanceUntilIdle()
 
-        coVerify { sessionManager.logout() }
+        verify { sessionManager.logout(any(), any()) }
         assertTrue(navigated)
     }
 }

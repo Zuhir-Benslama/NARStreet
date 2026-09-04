@@ -26,11 +26,6 @@ data class User(
      * Check if user has commune location
      */
     fun hasCommuneLocation(): Boolean = communeLatitude != null && communeLongitude != null
-
-    /**
-     * Check if the user is a field worker
-     */
-    fun isFieldWorker(): Boolean = role == "field_worker"
 }
 
 /**

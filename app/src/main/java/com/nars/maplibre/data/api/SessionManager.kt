@@ -3,7 +3,9 @@ package com.nars.maplibre.data.api
 import com.nars.maplibre.AppPreferences
 import com.nars.maplibre.data.model.LoginResponse
 import com.nars.maplibre.utils.NarsLogger
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 class SessionManager(
@@ -70,4 +72,17 @@ class SessionManager(
     fun getUser() = appPreferences.user
 
     fun getMunicipalityName() = appPreferences.municipalityName
+
+    /**
+     * Orchestrates logout: navigation runs first (synchronously) so it can
+     * never be skipped by a cancelled scope; server-side revocation runs in
+     * the caller's scope and completes even if the VM is cleared mid-flight
+     * (the underlying [logout] runs non-cancellable).
+     */
+    fun logout(onLogout: () -> Unit, scope: CoroutineScope) {
+        onLogout()
+        scope.launch {
+            logout()
+        }
+    }
 }

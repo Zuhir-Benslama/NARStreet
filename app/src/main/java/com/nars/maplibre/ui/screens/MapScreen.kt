@@ -41,7 +41,7 @@ fun MapScreen(onNavigateToSettings: () -> Unit, onLogout: () -> Unit) {
     val drawingEnabled by viewModel.drawingEnabled.collectAsState()
     val editModeEnabled by viewModel.editModeEnabled.collectAsState()
 
-    val handlers = remember {
+    val handlers = remember(viewModel) {
         MapScreenHandlers(viewModel, context.applicationContext, scope) { msg ->
             scope.launch { snackbarHostState.showSnackbar(msg) }
         }

@@ -9,8 +9,9 @@ import androidx.test.platform.app.InstrumentationRegistry
 import com.nars.maplibre.AppPreferences
 import com.nars.maplibre.SettingsViewModel
 import com.nars.maplibre.data.api.SessionManager
-import io.mockk.coVerify
 import io.mockk.mockk
+import io.mockk.slot
+import io.mockk.verify
 import org.junit.After
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -73,7 +74,9 @@ class SettingsScreenTest {
 
         composeTestRule.waitForIdle()
 
-        coVerify { mockSessionManager.logout() }
+        val logoutSlot = slot<() -> Unit>()
+        verify { mockSessionManager.logout(capture(logoutSlot), any()) }
+        logoutSlot.captured()
         assertTrue("onLogout should be called after confirm", loggedOut)
     }
 }

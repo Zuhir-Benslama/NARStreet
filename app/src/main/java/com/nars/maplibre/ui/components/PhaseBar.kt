@@ -26,7 +26,6 @@ import com.nars.maplibre.data.model.PhaseDefinition
 import com.nars.maplibre.data.model.Phases
 import com.nars.maplibre.ui.theme.GlassBackground
 import com.nars.maplibre.ui.theme.GlassBorder
-import com.nars.maplibre.ui.theme.TextMuted
 import com.nars.maplibre.ui.theme.TextPrimary
 import com.nars.maplibre.ui.theme.TextSecondary
 
@@ -155,88 +154,4 @@ private fun PhaseConnector(isDone: Boolean, modifier: Modifier = Modifier) {
                 if (isDone) GlassBorder else GlassBackground.copy(alpha = 0.4f),
             ),
     )
-}
-
-/**
- * Compact phase selector (for smaller screens)
- */
-@Composable
-fun CompactPhaseSelector(
-    currentPhase: PhaseDefinition?,
-    phaseCounts: Map<String, Int>,
-    onPhaseSelected: (PhaseDefinition) -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(horizontal = 12.dp, vertical = 8.dp),
-        horizontalArrangement = Arrangement.SpaceEvenly,
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Phases.ALL.forEachIndexed { index, phase ->
-            val state = computePhaseState(index, phase, currentPhase, phaseCounts)
-
-            CompactPhaseItem(
-                badge = state.badge,
-                count = state.count,
-                phaseColor = state.phaseColor,
-                isActive = state.isActive,
-                isDone = state.isDone,
-                onClick = { onPhaseSelected(phase) },
-            )
-        }
-    }
-}
-
-/**
- * Compact phase item
- */
-@Composable
-private fun CompactPhaseItem(
-    badge: String,
-    count: Int,
-    phaseColor: Color,
-    isActive: Boolean,
-    isDone: Boolean,
-    onClick: () -> Unit,
-) {
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = Modifier.clickable(onClick = onClick),
-    ) {
-        Box(
-            modifier = Modifier
-                .size(36.dp)
-                .clip(RoundedCornerShape(10.dp))
-                .background(
-                    when {
-                        isDone -> phaseColor
-                        isActive -> phaseColor.copy(alpha = 0.8f)
-                        else -> GlassBackground.copy(alpha = 0.5f)
-                    },
-                )
-                .clickable(onClick = onClick),
-            contentAlignment = Alignment.Center,
-        ) {
-            Text(
-                text = badge,
-                fontSize = 14.sp,
-                fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
-                color = when {
-                    isDone || isActive -> Color.White
-                    else -> TextSecondary
-                },
-            )
-        }
-
-        if (count > 0) {
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                text = count.toString(),
-                fontSize = 10.sp,
-                color = if (isActive) phaseColor else TextMuted,
-            )
-        }
-    }
 }

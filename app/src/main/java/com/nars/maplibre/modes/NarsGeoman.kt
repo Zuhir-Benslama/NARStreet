@@ -219,12 +219,12 @@ class NarsGeoman internal constructor(
         synchronized(destroyLock) {
             if (destroyed) return
             destroyed = true
+            eventHandler.destroy()
+            stopDrawing()
+            stopEditing()
+            geoman.destroy()
+            scope.cancel()
         }
-        eventHandler.destroy()
-        stopDrawing()
-        stopEditing()
-        geoman.destroy()
-        scope.cancel()
     }
 }
 

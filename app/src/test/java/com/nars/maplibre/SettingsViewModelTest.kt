@@ -60,13 +60,16 @@ class SettingsViewModelTest {
     @Test
     fun `logout revokes session then invokes navigation callback`() = runTest {
         coEvery { sessionManager.logout() } returns Result.success(Unit)
+        every { sessionManager.logout(any(), any()) } answers {
+            firstArg<() -> Unit>()()
+        }
         val viewModel = SettingsViewModel(appPreferences, sessionManager)
         var navigated = false
 
         viewModel.logout { navigated = true }
         testDispatcher.scheduler.advanceUntilIdle()
 
-        coVerify(exactly = 1) { sessionManager.logout() }
+        verify { sessionManager.logout(any(), any()) }
         assertTrue(navigated)
     }
 
@@ -75,6 +78,9 @@ class SettingsViewModelTest {
         // SessionManager.logout never throws — it returns a failed Result after
         // clearing local state. Navigation must still happen.
         coEvery { sessionManager.logout() } returns Result.failure(java.io.IOException("offline"))
+        every { sessionManager.logout(any(), any()) } answers {
+            firstArg<() -> Unit>()()
+        }
         val viewModel = SettingsViewModel(appPreferences, sessionManager)
         var navigated = false
 
