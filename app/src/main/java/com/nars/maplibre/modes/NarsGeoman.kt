@@ -211,7 +211,7 @@ class NarsGeoman internal constructor(
     }
 
     private fun enabledModeName(type: ModeType): String? =
-        geoman.getEnabledModes().firstOrNull { it.first == type }?.second
+        geoman.getEnabledModes().firstOrNull { it.type == type }?.name
 
     private val destroyLock = Any()
 

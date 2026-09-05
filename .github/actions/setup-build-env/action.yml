@@ -1,0 +1,41 @@
+name: "Setup Android build environment"
+description: "Checks out the pinned geoman module, sets up JDK 21 and the Android SDK, caches Gradle, and creates local.properties."
+
+runs:
+  using: "composite"
+  steps:
+    - name: Checkout maplibre-geoman-android
+      uses: actions/checkout@v4
+      with:
+        repository: Zuhir-Benslama/maplibre-geoman-android
+        ref: ca53d5c6c21eddc0ffe27a0337cc0cce4aab885e
+        path: maplibre-geoman-android
+
+    - name: Set up JDK 21
+      uses: actions/setup-java@v4
+      with:
+        java-version: 21
+        distribution: temurin
+
+    - name: Set up Android SDK
+      uses: android-actions/setup-android@v3
+
+    - name: Cache Gradle
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.gradle/caches
+          ~/.gradle/wrapper
+        key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle.kts', 'gradle/libs.versions.toml', 'gradle/wrapper/gradle-wrapper.properties') }}
+        restore-keys: ${{ runner.os }}-gradle-
+
+    - name: Create local.properties
+      shell: bash
+      run: |
+        if [ ! -f local.properties ]; then
+          if [ -f local.properties.example ]; then
+            cp local.properties.example local.properties
+          else
+            echo "# Auto-generated for CI" > local.properties
+          fi
+        fi
