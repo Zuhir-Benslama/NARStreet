@@ -8,7 +8,7 @@ runs:
       uses: actions/checkout@v4
       with:
         repository: Zuhir-Benslama/maplibre-geoman-android
-        ref: ca53d5c6c21eddc0ffe27a0337cc0cce4aab885e
+        ref: ebd6be6d35499900c248682404ff93344d257fbb
         path: maplibre-geoman-android
 
     - name: Set up JDK 21
