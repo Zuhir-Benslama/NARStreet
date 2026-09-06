@@ -5,6 +5,7 @@ import com.geoman.maplibre.geoman.core.GeomanCoreConstants
 import com.geoman.maplibre.geoman.core.features.FeatureData
 import com.geoman.maplibre.geoman.types.DrawModeName
 import com.geoman.maplibre.geoman.types.EditModeName
+import com.geoman.maplibre.geoman.types.ModeKey
 import com.geoman.maplibre.geoman.types.ModeType
 import com.geoman.maplibre.geoman.types.geojson.Feature
 import com.nars.maplibre.data.model.CircleGeometry
@@ -322,7 +323,7 @@ class NarsGeomanTest {
         narsGeoman.startDrawing()
         val latLng = LatLng(36.0, 3.0)
 
-        every { geoman.getEnabledModes() } returns listOf(Pair(ModeType.DRAW, "line"))
+        every { geoman.getEnabledModes() } returns listOf(ModeKey(ModeType.DRAW, "line"))
 
         narsGeoman.onMapClick(latLng)
 
@@ -343,7 +344,7 @@ class NarsGeomanTest {
         narsGeoman.startDrawing()
         val latLng = LatLng(36.0, 3.0)
 
-        every { geoman.getEnabledModes() } returns listOf(Pair(ModeType.DRAW, "line"))
+        every { geoman.getEnabledModes() } returns listOf(ModeKey(ModeType.DRAW, "line"))
 
         narsGeoman.onMapLongClick(latLng)
 
