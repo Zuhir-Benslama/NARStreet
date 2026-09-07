@@ -4,7 +4,8 @@ import kotlinx.coroutines.delay
 import java.io.IOException
 
 /**
- * Retries a suspend operation on transient network failures (IOException).
+ * Retries a suspend operation on transient network failures ([IOException],
+ * including [TransientHttpException]).
  *
  * Non-transient failures (auth, serialization, HTTP errors) are returned
  * immediately. Delays grow linearly with the attempt number (1x, 2x, ...),

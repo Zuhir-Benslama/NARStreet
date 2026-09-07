@@ -196,12 +196,16 @@ private fun configureMap(
         }
     }
 
-    // Add map long click listener — always forward long clicks (needed for
-    // finishing shapes in drawing mode). Feature-selection long clicks are
-    // handled upstream in MapScreen.
+    // Add map long click listener — forwarded so Geoman can finish shapes in
+    // drawing mode. Feature-selection long clicks only run when not drawing or
+    // editing, mirroring the click listener to avoid opening the edit modal
+    // mid-gesture. The listener always returns false so Geoman still receives
+    // the long-press to complete an in-progress shape.
     onMapLongClick?.let { longClickHandler ->
         map.addOnMapLongClickListener { latLng ->
-            longClickHandler(latLng)
+            if (shouldHandleClick?.invoke() != false) {
+                longClickHandler(latLng)
+            }
             false // Return false to allow Geoman's listener to also process
         }
     }

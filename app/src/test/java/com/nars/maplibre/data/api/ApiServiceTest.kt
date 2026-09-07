@@ -5,6 +5,7 @@ import com.nars.maplibre.data.model.FeatureProperties
 import com.nars.maplibre.data.model.NarsFeature
 import com.nars.maplibre.data.model.NarsFeatureType
 import com.nars.maplibre.data.model.PointGeometry
+import com.nars.maplibre.utils.TransientHttpException
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.mock.MockEngine
 import io.ktor.client.engine.mock.respond
@@ -309,5 +310,62 @@ class ApiServiceTest {
         val result = apiService.deleteFeature("feature-1")
 
         assertTrue(result.isSuccess)
+    }
+
+    @Test
+    fun `loadFeatures surfaces a 503 as a retryable transient failure`() = runTest {
+        engine =
+            MockEngine { _ ->
+                respond(
+                    content = "unavailable",
+                    status = HttpStatusCode.ServiceUnavailable,
+                )
+            }
+        val client =
+            HttpClient(engine) {
+                install(ContentNegotiation) {
+                    json(
+                        Json {
+                            ignoreUnknownKeys = true
+                            isLenient = true
+                        },
+                    )
+                }
+            }
+        apiService = ApiService(client, appPreferences)
+
+        val result = apiService.loadFeatures()
+
+        assertTrue(result.isFailure)
+        assertTrue(result.exceptionOrNull() is TransientHttpException)
+        assertEquals(503, (result.exceptionOrNull() as TransientHttpException).statusCode)
+    }
+
+    @Test
+    fun `loadFeatures surfaces a 400 as a non retryable failure`() = runTest {
+        engine =
+            MockEngine { _ ->
+                respond(
+                    content = "bad request",
+                    status = HttpStatusCode.BadRequest,
+                )
+            }
+        val client =
+            HttpClient(engine) {
+                install(ContentNegotiation) {
+                    json(
+                        Json {
+                            ignoreUnknownKeys = true
+                            isLenient = true
+                        },
+                    )
+                }
+            }
+        apiService = ApiService(client, appPreferences)
+
+        val result = apiService.loadFeatures()
+
+        assertTrue(result.isFailure)
+        assertTrue(result.exceptionOrNull() !is TransientHttpException)
     }
 }

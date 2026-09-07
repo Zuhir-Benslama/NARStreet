@@ -25,12 +25,14 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.nars.maplibre.R
 import com.nars.maplibre.data.model.NarsFeature
 import com.nars.maplibre.data.model.PhaseDefinition
+import com.nars.maplibre.data.model.Phases
 import com.nars.maplibre.ui.components.FeatureValidationModal
 import com.nars.maplibre.ui.theme.GlassBackground
 import com.nars.maplibre.ui.theme.TextPrimary
@@ -125,7 +127,7 @@ private fun SelectedFeatureCard(
                         color = TextPrimary,
                     )
                     Text(
-                        text = feature.properties.phase,
+                        text = displayPhaseLabel(feature),
                         fontSize = 12.sp,
                         color = TextSecondary,
                     )
@@ -144,6 +146,16 @@ private fun SelectedFeatureCard(
             )
         }
     }
+}
+
+@Composable
+private fun displayPhaseLabel(feature: NarsFeature): String {
+    val context = LocalContext.current
+    val phase = Phases.getByKey(feature.properties.phase)
+    // Prefer the localized label for a known phase; fall back to the raw key
+    // only for unrecognized/migration values.
+    return phase?.let { Phases.getDisplayLabel(it, context) }
+        ?: feature.properties.phase.ifBlank { stringResource(R.string.map_feature_phase_unknown) }
 }
 
 @Composable

@@ -204,7 +204,7 @@ class NarsGeomanTest {
         every { geoman.features.getFeature(GeomanCoreConstants.SOURCE_LINES, original.id) } returns featureData
 
         val updatedGeometry = LineStringGeometry(coordinates = listOf(3.0, 37.0, 3.1, 37.1))
-        every { eventHandler.extractGeometryFromFeatureData(featureData) } returns updatedGeometry
+        every { eventHandler.extractUpdatedGeometry(featureData, original) } returns updatedGeometry
 
         val capturedFeature = slot<NarsFeature>()
         every { onFeatureUpdated(capture(capturedFeature)) } just Runs
@@ -214,6 +214,27 @@ class NarsGeomanTest {
         assertEquals(updatedGeometry, capturedFeature.captured.geometry)
         verify { onFeatureUpdated(any()) }
         assertFalse(narsGeoman.isEditing.value)
+    }
+
+    @Test
+    fun `commitEdits preserves circle geometry for circle features`() {
+        val original = createRoad("Circle road", geometry = CircleGeometry(coordinates = listOf(3.0, 36.0, 100.0)))
+        every { eventHandler.getEditingFeature() } returns original
+
+        val featureData = mockk<FeatureData>(relaxed = true)
+        every { geoman.features.getFeature(any(), original.id) } returns featureData
+
+        val updatedGeometry = CircleGeometry(coordinates = listOf(3.5, 36.5, 120.0))
+        every { eventHandler.extractUpdatedGeometry(featureData, original) } returns updatedGeometry
+
+        val capturedFeature = slot<NarsFeature>()
+        every { onFeatureUpdated(capture(capturedFeature)) } just Runs
+
+        narsGeoman.commitEdits()
+
+        assertEquals(updatedGeometry, capturedFeature.captured.geometry)
+        assertTrue(capturedFeature.captured.geometry is CircleGeometry)
+        verify { eventHandler.extractUpdatedGeometry(featureData, original) }
     }
 
     @Test

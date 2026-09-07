@@ -15,13 +15,14 @@ import org.junit.Test
 /** Reversible fake so JVM tests can observe the encrypt/decrypt boundary. */
 private object FakeCipher : ValueCipher {
     const val UNREADABLE_PAYLOAD = "!!unreadable!!"
+    const val MALFORMED_PAYLOAD = "!!malformed!!"
 
     override fun encrypt(plainText: String): String = plainText.reversed()
 
-    override fun decrypt(payload: String): String = if (payload == UNREADABLE_PAYLOAD) {
-        throw java.security.GeneralSecurityException("simulated keystore failure")
-    } else {
-        payload.reversed()
+    override fun decrypt(payload: String): String = when (payload) {
+        UNREADABLE_PAYLOAD -> throw java.security.GeneralSecurityException("simulated keystore failure")
+        MALFORMED_PAYLOAD -> throw IllegalArgumentException("simulated malformed ciphertext")
+        else -> payload.reversed()
     }
 }
 
@@ -63,6 +64,13 @@ class SecurePreferencesTest {
     @Test
     fun `getAuthToken degrades to null when decryption fails instead of crashing`() {
         every { prefs.getString("auth_token", null) } returns FakeCipher.UNREADABLE_PAYLOAD
+
+        assertNull(createSecurePrefs().getAuthToken())
+    }
+
+    @Test
+    fun `getAuthToken degrades to null on malformed ciphertext instead of crashing`() {
+        every { prefs.getString("auth_token", null) } returns FakeCipher.MALFORMED_PAYLOAD
 
         assertNull(createSecurePrefs().getAuthToken())
     }
@@ -139,6 +147,13 @@ class SecurePreferencesTest {
     @Test
     fun `getUser returns null when decryption fails`() {
         every { prefs.getString("user", null) } returns FakeCipher.UNREADABLE_PAYLOAD
+
+        assertNull(createSecurePrefs().getUser())
+    }
+
+    @Test
+    fun `getUser returns null on malformed ciphertext instead of crashing`() {
+        every { prefs.getString("user", null) } returns FakeCipher.MALFORMED_PAYLOAD
 
         assertNull(createSecurePrefs().getUser())
     }

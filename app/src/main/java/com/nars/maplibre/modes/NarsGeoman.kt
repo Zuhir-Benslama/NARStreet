@@ -160,7 +160,7 @@ class NarsGeoman internal constructor(
         for (sourceName in GEOMAN_SOURCE_NAMES) {
             val featureData = geoman.features.getFeature(sourceName, originalFeature.id)
             if (featureData != null) {
-                updatedGeometry = eventHandler.extractGeometryFromFeatureData(featureData)
+                updatedGeometry = eventHandler.extractUpdatedGeometry(featureData, originalFeature)
                 break
             }
         }

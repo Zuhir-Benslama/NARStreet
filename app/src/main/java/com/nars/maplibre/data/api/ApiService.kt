@@ -7,6 +7,7 @@ import com.nars.maplibre.data.model.LoginResponse
 import com.nars.maplibre.data.model.NarsFeature
 import com.nars.maplibre.data.model.User
 import com.nars.maplibre.utils.NarsLogger
+import com.nars.maplibre.utils.TransientHttpException
 import io.ktor.client.HttpClient
 import io.ktor.client.request.HttpRequestBuilder
 import io.ktor.client.request.delete
@@ -24,11 +25,13 @@ import io.ktor.http.HttpStatusCode
 import io.ktor.http.contentType
 import io.ktor.http.isSuccess
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
 
 /**
  * HTTP transport for the NARS API. Owns token rotation and session-expiry
@@ -37,6 +40,9 @@ import kotlinx.coroutines.sync.withLock
 class ApiService(private val httpClient: HttpClient, private val preferences: AppPreferences) {
     companion object {
         private const val TAG = "ApiService"
+
+        /** HTTP status codes 500–599 share the leading digit used by [isRetryable]. */
+        private const val SERVER_ERROR_STATUS_GROUP = 5
 
         /** Max rows the backend returns per page (clamped server-side). */
         private const val FEATURES_PAGE_SIZE = 500
@@ -116,25 +122,31 @@ class ApiService(private val httpClient: HttpClient, private val preferences: Ap
         // that moment must refresh from the encrypted prefs instead of failing.
         val token = tokens.getRefreshToken() ?: preferences.refreshToken ?: return false
         return try {
-            val response =
-                httpClient.post("$baseUrl/api/refresh") {
-                    header(HttpHeaders.Cookie, "refresh_token=$token")
+            val accessIssued = withContext(Dispatchers.IO) {
+                val response =
+                    httpClient.post("$baseUrl/api/refresh") {
+                        header(HttpHeaders.Cookie, "refresh_token=$token")
+                    }
+                // A rejected refresh token (401/403) means the session is permanently
+                // dead: clear it and let observers navigate to login. Any other
+                // failure is a transient server error — keep the session intact so a
+                // later user action can simply retry.
+                if (response.status == HttpStatusCode.Unauthorized || response.status == HttpStatusCode.Forbidden) {
+                    tokens.clear()
+                    _sessionExpired.tryEmit(Unit)
+                    return@withContext false
                 }
-            // A rejected refresh token (401/403) means the session is permanently
-            // dead: clear it and let observers navigate to login. Any other
-            // failure is a transient server error — keep the session intact so a
-            // later user action can simply retry.
-            if (response.status == HttpStatusCode.Unauthorized || response.status == HttpStatusCode.Forbidden) {
-                tokens.clear()
-                _sessionExpired.tryEmit(Unit)
-                return false
+                if (!response.status.isSuccess()) {
+                    NarsLogger.w(
+                        TAG,
+                        "Token refresh failed (HTTP ${response.status.value}) — keeping session for retry",
+                    )
+                    return@withContext false
+                }
+                val adopted = tokens.adoptCookies(response)
+                tokens.persist()
+                adopted
             }
-            if (!response.status.isSuccess()) {
-                NarsLogger.w(TAG, "Token refresh failed (HTTP ${response.status.value}) — keeping session for retry")
-                return false
-            }
-            val accessIssued = tokens.adoptCookies(response)
-            tokens.persist()
             accessIssued
         } catch (e: CancellationException) {
             throw e
@@ -147,20 +159,35 @@ class ApiService(private val httpClient: HttpClient, private val preferences: Ap
     /**
      * Runs an authenticated request, maps a non-2xx response (and any I/O or
      * deserialization error during the request or [onSuccess] mapping) into a
-     * failed [Result]. Cancellation is always rethrown.
+     * failed [Result]. Cancellation is always rethrown. Transient server
+     * errors (408/429/5xx) surface as [TransientHttpException] so the
+     * [com.nars.maplibre.utils.retryOnTransientFailure] wrapper can retry them;
+     * everything else fails immediately.
+     *
+     * Ktor's suspend calls do not block the calling thread, but reading the body
+     * and JSON (de)serialization are CPU/IO-bound — callers use
+     * [kotlinx.coroutines.viewModelScope] which pipes into Dispatchers.Main, so
+     * the request and body handling run on [Dispatchers.IO] to keep the main
+     * thread responsive.
      */
     private suspend fun <T> executeRequest(
         action: String,
         request: suspend () -> HttpResponse,
         onSuccess: suspend (HttpResponse) -> T,
     ): Result<T> = try {
-        val response = authenticatedRequest(request)
+        val response = withContext(Dispatchers.IO) { authenticatedRequest(request) }
         if (!response.status.isSuccess()) {
-            val error = Exception("$action failed: HTTP ${response.status.value}")
-            NarsLogger.e(TAG, "$action failed", error)
-            Result.failure(error)
+            if (response.status.isRetryable()) {
+                val error = TransientHttpException(response.status.value)
+                NarsLogger.w(TAG, "$action failed (HTTP ${response.status.value}) — retrying")
+                Result.failure(error)
+            } else {
+                val error = Exception("$action failed: HTTP ${response.status.value}")
+                NarsLogger.e(TAG, "$action failed", error)
+                Result.failure(error)
+            }
         } else {
-            Result.success(onSuccess(response))
+            Result.success(withContext(Dispatchers.IO) { onSuccess(response) })
         }
     } catch (e: CancellationException) {
         throw e
@@ -171,6 +198,11 @@ class ApiService(private val httpClient: HttpClient, private val preferences: Ap
         NarsLogger.e(TAG, "$action failed", e)
         Result.failure(e)
     }
+
+    /** Server errors (5xx) plus 408/429 are worth retrying. */
+    private fun HttpStatusCode.isRetryable(): Boolean = value == HttpStatusCode.RequestTimeout.value ||
+        value == HttpStatusCode.TooManyRequests.value ||
+        value / 100 == SERVER_ERROR_STATUS_GROUP
 
     /**
      * Authenticate with the NARS API.
@@ -191,8 +223,12 @@ class ApiService(private val httpClient: HttpClient, private val preferences: Ap
                 return Result.failure(Exception(errorMessage))
             }
 
-            val body = response.bodyAsText()
-            val apiResponse = apiJson.decodeFromString<LoginApiResponse>(body)
+            val body = withContext(Dispatchers.IO) {
+                response.bodyAsText()
+            }
+            val apiResponse = withContext(Dispatchers.IO) {
+                apiJson.decodeFromString<LoginApiResponse>(body)
+            }
 
             if (!apiResponse.success) {
                 return Result.failure(Exception(apiResponse.message ?: "Login failed"))
@@ -206,7 +242,7 @@ class ApiService(private val httpClient: HttpClient, private val preferences: Ap
             val token = apiResponse.token ?: apiResponse.accessToken
             token?.let { tokens.setSessionToken(it) }
 
-            tokens.persist()
+            withContext(Dispatchers.IO) { tokens.persist() }
 
             val user = buildUserFromResponse(apiResponse)
             NarsLogger.logAuthEvent(TAG, "Login successful", username)

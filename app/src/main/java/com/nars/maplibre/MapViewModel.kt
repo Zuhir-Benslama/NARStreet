@@ -42,9 +42,6 @@ class MapViewModel(
     val allFeatures: StateFlow<List<NarsFeature>> = featureStore.allFeatures
     val selectedFeature: StateFlow<NarsFeature?> = featureStore.selectedFeature
 
-    /** Re-emitted when the backend rejects a refresh token (session dead). */
-    val sessionExpired = apiService.sessionExpired
-
     val currentUser get() = appPreferences.user
 
     private val _uiState = MutableStateFlow(UiState())

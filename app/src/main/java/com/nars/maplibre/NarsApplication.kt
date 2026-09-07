@@ -8,6 +8,7 @@ import com.geoman.maplibre.geoman.GeomanLogger
 import com.nars.maplibre.data.api.SessionTokens
 import com.nars.maplibre.di.appModule
 import com.nars.maplibre.utils.NarsLogger
+import com.nars.maplibre.utils.ProductionLogTree
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -43,7 +44,14 @@ class NarsApplication :
 
     override fun onCreate() {
         super.onCreate()
-        if (BuildConfig.DEBUG) Timber.plant(Timber.DebugTree())
+        if (BuildConfig.DEBUG) {
+            Timber.plant(Timber.DebugTree())
+        } else {
+            // Debug/verbose/info are gated off in NarsLogger for release builds,
+            // but warnings/errors/wtf must still reach logcat — a missing sink
+            // would silently drop every production diagnostic.
+            Timber.plant(ProductionLogTree())
+        }
         GeomanLogger.delegate =
             object : GeomanLogger.Delegate {
                 override fun d(tag: String, message: String) {

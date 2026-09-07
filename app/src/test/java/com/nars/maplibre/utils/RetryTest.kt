@@ -38,6 +38,37 @@ class RetryTest {
     }
 
     @Test
+    fun `retries transient http failures until success`() = runTest {
+        var calls = 0
+        val result =
+            retryOnTransientFailure(attempts = 3, backoffMs = 1) {
+                calls++
+                if (calls < 3) {
+                    Result.failure(TransientHttpException(503))
+                } else {
+                    Result.success(calls)
+                }
+            }
+
+        assertTrue(result.isSuccess)
+        assertEquals(3, result.getOrNull())
+    }
+
+    @Test
+    fun `exhausts attempts on persistent http failures`() = runTest {
+        var calls = 0
+        val result =
+            retryOnTransientFailure(attempts = 3, backoffMs = 1) {
+                calls++
+                Result.failure<Int>(TransientHttpException(502))
+            }
+
+        assertTrue(result.isFailure)
+        assertTrue(result.exceptionOrNull() is TransientHttpException)
+        assertEquals(3, calls)
+    }
+
+    @Test
     fun `exhausts attempts then returns last failure`() = runTest {
         var calls = 0
         val result =

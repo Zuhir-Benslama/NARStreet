@@ -11,7 +11,7 @@ import timber.log.Timber
  * - Provides consistent log formatting
  */
 object NarsLogger {
-    private const val DEFAULT_TAG = "NARS"
+    const val DEFAULT_TAG = "NARS"
 
     /**
      * Whether verbose/debug/info logging is enabled.

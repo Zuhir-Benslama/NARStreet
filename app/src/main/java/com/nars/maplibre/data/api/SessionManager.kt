@@ -4,6 +4,7 @@ import com.nars.maplibre.AppPreferences
 import com.nars.maplibre.data.model.LoginResponse
 import com.nars.maplibre.utils.NarsLogger
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -22,12 +23,18 @@ class SessionManager(
     suspend fun login(username: String, password: String): Result<LoginResponse> {
         val result = apiService.login(username, password)
         result.onSuccess { response ->
-            appPreferences.user =
-                response.user.copy(
-                    username = username,
-                    name = response.user.name.ifBlank { username },
-                )
-            appPreferences.municipalityName = response.municipalityName
+            // Persist user/municipality to encrypted prefs off the main thread.
+            // Keystore encryption costs ~100 ms; the network call above may have
+            // already offloaded body reading via Dispatchers.IO, but this write
+            // originally ran on the caller's (main) dispatcher.
+            withContext(Dispatchers.IO) {
+                appPreferences.user =
+                    response.user.copy(
+                        username = username,
+                        name = response.user.name.ifBlank { username },
+                    )
+                appPreferences.municipalityName = response.municipalityName
+            }
             NarsLogger.logAuthEvent(TAG, "Session created", username)
         }
         return result
@@ -60,11 +67,14 @@ class SessionManager(
         result
     }
 
-    private fun clearLocalSession() {
-        appPreferences.authToken = null
-        appPreferences.refreshToken = null
-        appPreferences.user = null
-        appPreferences.municipalityName = null
+    private suspend fun clearLocalSession() {
+        // Encrypted preference writes (Keystore) are IO-bound.
+        withContext(Dispatchers.IO) {
+            appPreferences.authToken = null
+            appPreferences.refreshToken = null
+            appPreferences.user = null
+            appPreferences.municipalityName = null
+        }
         tokens.setSessionToken(null)
         tokens.setRefreshToken(null)
     }

@@ -59,13 +59,7 @@ class SecurePreferences internal constructor(private val prefs: SharedPreference
 
     fun getUser(): User? = synchronized(lock) {
         val storedValue = prefs.getString(KEY_USER, null) ?: return null
-        val userJson =
-            try {
-                cipher.decrypt(storedValue)
-            } catch (e: java.security.GeneralSecurityException) {
-                NarsLogger.w(TAG, "User entry unreadable — treating as absent", e)
-                return null
-            }
+        val userJson = decryptOrNull(KEY_USER, storedValue) ?: return null
         try {
             json.decodeFromString(User.serializer(), userJson)
         } catch (e: kotlinx.serialization.SerializationException) {
@@ -106,12 +100,24 @@ class SecurePreferences internal constructor(private val prefs: SharedPreference
      */
     private fun getDecrypted(key: String): String? = synchronized(lock) {
         val storedValue = prefs.getString(key, null) ?: return null
-        try {
-            cipher.decrypt(storedValue)
-        } catch (e: java.security.GeneralSecurityException) {
-            NarsLogger.w(TAG, "Entry '$key' unreadable — treating as absent", e)
-            null
-        }
+        decryptOrNull(key, storedValue)
+    }
+
+    /**
+     * Decrypts a stored value, degrading to null on any failure instead of
+     * crashing. Catches both crypto failures ([java.security.GeneralSecurityException],
+     * e.g. a rotated/lost keystore key or a failed AEAD tag check) and malformed
+     * payloads ([IllegalArgumentException] from invalid Base64 or a truncated
+     * ciphertext) that can occur after a device restore with a stale backup.
+     */
+    private fun decryptOrNull(key: String, storedValue: String): String? = try {
+        cipher.decrypt(storedValue)
+    } catch (e: java.security.GeneralSecurityException) {
+        NarsLogger.w(TAG, "Entry '$key' unreadable — treating as absent", e)
+        null
+    } catch (e: IllegalArgumentException) {
+        NarsLogger.w(TAG, "Entry '$key' malformed — treating as absent", e)
+        null
     }
 
     private fun removeKey(key: String) = synchronized(lock) {

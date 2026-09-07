@@ -59,30 +59,39 @@ class GeomanEventHandler(
         eventJob = scope.launch {
             geoman.events.events.collect { event ->
                 if (destroyed) return@collect
-                when (event) {
-                    is GmMapEvent.Loaded -> {
-                        NarsLogger.d(TAG, "Geoman loaded")
-                    }
+                try {
+                    when (event) {
+                        is GmMapEvent.Loaded -> {
+                            NarsLogger.d(TAG, "Geoman loaded")
+                        }
 
-                    is GmDrawEvent.Create -> {
-                        NarsLogger.d(TAG, "GmDrawEvent.Create received: shape=${event.shape}")
-                        handleFeatureCreated(event.feature)
-                    }
+                        is GmDrawEvent.Create -> {
+                            NarsLogger.d(TAG, "GmDrawEvent.Create received: shape=${event.shape}")
+                            handleFeatureCreated(event.feature)
+                        }
 
-                    is GmDrawEvent.EditEnd -> {
-                        NarsLogger.d(TAG, "Edit ended: ${event.shape}")
-                        handleEditEnd()
-                    }
+                        is GmDrawEvent.EditEnd -> {
+                            NarsLogger.d(TAG, "Edit ended: ${event.shape}")
+                            handleEditEnd()
+                        }
 
-                    is GmEditEvent.ChangeEnd -> {
-                        NarsLogger.d(TAG, "Geometry changed")
-                        handleGeometryChanged(event.feature)
-                    }
+                        is GmEditEvent.ChangeEnd -> {
+                            NarsLogger.d(TAG, "Geometry changed")
+                            handleGeometryChanged(event.feature)
+                        }
 
-                    is GmEditEvent.Delete -> {
-                        NarsLogger.d(TAG, "Feature deleted")
-                        handleDeleted()
+                        is GmEditEvent.Delete -> {
+                            NarsLogger.d(TAG, "Feature deleted")
+                            handleDeleted()
+                        }
                     }
+                } catch (e: kotlinx.coroutines.CancellationException) {
+                    throw e
+                } catch (@Suppress("TooGenericExceptionCaught") e: Exception) {
+                    // A failure in one handler must not terminate the collector —
+                    // otherwise every subsequent draw/edit/delete event is silently
+                    // dropped and the map becomes unresponsive to drawing.
+                    NarsLogger.e(TAG, "Error handling Geoman event ${event::class.simpleName}", e)
                 }
             }
         }
@@ -160,22 +169,28 @@ class GeomanEventHandler(
     internal fun handleGeometryChanged(featureData: FeatureData?) {
         val data = featureData ?: return
         val original = getEditingFeature() ?: return
-        // Circles are reported by Geoman as a polygon approximation during edit
-        // — reconstruct the CircleGeometry so the radius is not lost.
-        val geometry =
-            if (original.geometry is CircleGeometry) {
-                extractCircleGeometry(data) ?: run {
-                    NarsLogger.e(TAG, "Failed to extract circle geometry during edit — skipping update")
-                    return
-                }
-            } else {
-                extractGeometryFromFeatureData(data) ?: run {
-                    NarsLogger.e(TAG, "Failed to extract geometry during edit — skipping update")
-                    return
-                }
-            }
+        val geometry = extractUpdatedGeometry(data, original) ?: return
         val updated = original.copy(geometry = geometry)
         onFeatureUpdated(updated)
+    }
+
+    /**
+     * Extracts the geometry for an edited feature, preserving the circle type.
+     * Geoman reports circles as a polygon approximation during edit, so the
+     * [CircleGeometry] (center + radius) must be reconstructed rather than
+     * degrading to a fixed polygon.
+     */
+    internal fun extractUpdatedGeometry(featureData: FeatureData, original: NarsFeature): Geometry? {
+        val geometry =
+            if (original.geometry is CircleGeometry) {
+                extractCircleGeometry(featureData)
+            } else {
+                extractGeometryFromFeatureData(featureData)
+            }
+        if (geometry == null) {
+            NarsLogger.e(TAG, "Failed to extract geometry during edit — skipping update")
+        }
+        return geometry
     }
 
     internal fun handleDeleted() {

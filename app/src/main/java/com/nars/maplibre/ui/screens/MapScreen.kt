@@ -58,8 +58,8 @@ fun MapScreen(onNavigateToSettings: () -> Unit, onLogout: () -> Unit) {
         allFeatures.groupingBy { it.properties.phase }.eachCount()
     }
 
-    val effectContext = remember(viewModel, handlers, onLogout, snackbarHostState) {
-        MapScreenEffectContext(viewModel, handlers, onLogout, snackbarHostState)
+    val effectContext = remember(viewModel, handlers, snackbarHostState) {
+        MapScreenEffectContext(viewModel, handlers, snackbarHostState)
     }
 
     MapScreenEffects(effectContext, currentPhase, allFeatures, uiState)
@@ -95,14 +95,6 @@ private fun MapScreenEffects(
     allFeatures: List<NarsFeature>,
     uiState: UiState,
 ) {
-    LaunchedEffect(Unit) {
-        ctx.viewModel.sessionExpired.collect {
-            NarsLogger.w("MapScreen", "Session expired — returning to login")
-            ctx.viewModel.clearAll()
-            ctx.handlers.narsGeoman?.displayManager?.updateDisplayedFeatures(emptyList())
-            ctx.onSessionExpired()
-        }
-    }
     LaunchedEffect(uiState.errorMessage) {
         uiState.errorMessage?.let {
             ctx.snackbarHostState.showSnackbar(it)
@@ -133,7 +125,6 @@ private fun MapScreenEffects(
 internal data class MapScreenEffectContext(
     val viewModel: MapViewModel,
     val handlers: MapScreenHandlers,
-    val onSessionExpired: () -> Unit,
     val snackbarHostState: SnackbarHostState,
 )
 
