@@ -88,12 +88,15 @@ jobs:
       - name: Set up build environment
         uses: ./.github/actions/setup-build-env
 
-      - name: Enable KVM group perms
+      - name: Enable KVM if available
+        shell: bash
         run: |
-          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
-          sudo udevadm control --reload-rules
-          sudo udevadm trigger --name-match=kvm
-          ls /dev/kvm
+          if [ -e /dev/kvm ]; then
+            echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+            sudo udevadm control --reload-rules
+            sudo udevadm trigger --name-match=kvm
+          fi
+          echo "KVM available: $([ -e /dev/kvm ] && echo yes || echo no)"
 
       - name: Run connected tests on emulator
         uses: reactivecircus/android-emulator-runner@v2
@@ -102,7 +105,9 @@ jobs:
           arch: x86_64
           disable-animations: true
           emulator-boot-timeout: 900
-          disable-linux-hw-accel: false
+          # GitHub-hosted runners have no KVM, so hardware acceleration is not
+          # available; keep software emulation enabled for hosted compatibility.
+          disable-linux-hw-accel: true
           script: |
             adb shell input keyevent 82
             sleep 10

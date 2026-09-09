@@ -17,14 +17,30 @@ def main() -> int:
     min_percent = float(sys.argv[2]) if len(sys.argv) > 2 else 30.0
 
     root = ET.parse(report_path).getroot()
-    counters = [c for c in root.iter() if c.tag.split("}")[-1] == "counter"]
 
-    covered = 0
-    missed = 0
-    for counter in counters:
-        if counter.get("type") == "LINE":
-            covered = int(counter.get("covered", 0))
-            missed = int(counter.get("missed", 0))
+    def local_name(element) -> str:
+        return element.tag.split("}")[-1]
+
+    def line_counter(element) -> tuple[int, int] | None:
+        for child in element:
+            if local_name(child) == "counter" and child.get("type") == "LINE":
+                return int(child.get("covered", 0)), int(child.get("missed", 0))
+        return None
+
+    # Prefer the report-level summary counter (direct child of <report>). If absent,
+    # fall back to summing each package's roll-up counter to avoid double-counting
+    # class- or sourcefile-level lines.
+    covered = missed = 0
+    summary = line_counter(root)
+    if summary is not None:
+        covered, missed = summary
+    else:
+        for package in root:
+            if local_name(package) != "package":
+                continue
+            if counter := line_counter(package):
+                covered += counter[0]
+                missed += counter[1]
 
     if covered + missed == 0:
         print(f"ERROR: no line coverage data found in {report_path}", file=sys.stderr)

@@ -7,6 +7,7 @@ import com.geoman.maplibre.geoman.core.options.SettingsOptions
 import com.geoman.maplibre.geoman.types.DrawModeName
 import com.geoman.maplibre.geoman.types.EditModeName
 import com.geoman.maplibre.geoman.types.ModeType
+import com.geoman.maplibre.geoman.types.geojson.LngLat
 import com.nars.maplibre.data.model.DrawType
 import com.nars.maplibre.data.model.NarsFeature
 import com.nars.maplibre.data.model.PhaseDefinition
@@ -192,26 +193,31 @@ class NarsGeoman internal constructor(
 
     fun onMapClick(latLng: LatLng) {
         if (_isDrawing.value) {
-            enabledModeName(ModeType.DRAW)?.let { modeName ->
-                geoman.handleDrawClick(modeName, latLng)
+            drawModeName()?.let { mode ->
+                geoman.handleDrawClick(mode, latLng.toLngLat())
             }
         } else if (_isEditing.value) {
-            enabledModeName(ModeType.EDIT)?.let { modeName ->
-                geoman.handleEditClick(modeName, latLng)
+            editModeName()?.let { mode ->
+                geoman.handleEditClick(mode, latLng.toLngLat())
             }
         }
     }
 
     fun onMapLongClick(latLng: LatLng) {
         if (_isDrawing.value) {
-            enabledModeName(ModeType.DRAW)?.let { modeName ->
-                geoman.handleDrawLongPress(modeName, latLng)
+            drawModeName()?.let { mode ->
+                geoman.handleDrawLongPress(mode, latLng.toLngLat())
             }
         }
     }
 
-    private fun enabledModeName(type: ModeType): String? =
-        geoman.getEnabledModes().firstOrNull { it.type == type }?.name
+    private fun drawModeName(): DrawModeName? = geoman.getEnabledModes().firstOrNull { it.type == ModeType.DRAW }?.name
+        ?.let { name -> DrawModeName.entries.firstOrNull { it.name == name } }
+
+    private fun editModeName(): EditModeName? = geoman.getEnabledModes().firstOrNull { it.type == ModeType.EDIT }?.name
+        ?.let { name -> EditModeName.entries.firstOrNull { it.name == name } }
+
+    private fun LatLng.toLngLat(): LngLat = LngLat(longitude, latitude)
 
     private val destroyLock = Any()
 
