@@ -2,8 +2,9 @@
 # Android Gradle Plugin - Compatible with Gradle 9.6.1 + JDK 21
 agp = "9.4.0"
 
-# Kotlin - Compatible with JDK 21
-kotlin = "2.4.20"
+# Kotlin - Compatible with JDK 21. Pinned to 2.4.10: 2.4.20 is not yet supported
+# by the CodeQL Java/Kotlin extractor (max <2.4.20).
+kotlin = "2.4.10"
 kotlinx-serialization = "1.11.0"
 kotlinx-coroutines = "1.11.0"
 
