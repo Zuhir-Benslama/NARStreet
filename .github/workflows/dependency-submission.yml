@@ -13,7 +13,7 @@ jobs:
     env:
       GEOMAN_DIR: ${{ github.workspace }}/maplibre-geoman-android/app
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Set up build environment
         uses: ./.github/actions/setup-build-env
